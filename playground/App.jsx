@@ -5,65 +5,118 @@ import Button from '../src/buttons/button.jsx';
 import FabButton from '../src/buttons/fabButton.jsx';
 import ButtonFullRounded from '../src/buttons/buttonFullRounded.jsx';
 import ButtonGroup from '../src/buttons/buttonGroup.jsx';
+import Badge from '../src/badge/badge.jsx';
+import Input from '../src/input/input.jsx';
+import Toast from '../src/toast/toast.jsx';
+
+function Section({ title, children }) {
+  return (
+    <section style={{ marginBottom: '2.5rem' }}>
+      <h2
+        style={{
+          fontSize: 'var(--text-lg)',
+          fontWeight: 700,
+          color: 'var(--dark-navy-text)',
+          marginBottom: '1rem',
+          paddingBottom: '0.5rem',
+          borderBottom: '1px solid var(--pale-gray-border)',
+        }}
+      >
+        {title}
+      </h2>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        {children}
+      </div>
+    </section>
+  );
+}
+
+function Row({ children }) {
+  return (
+    <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
+      {children}
+    </div>
+  );
+}
 
 export default function App() {
-  const [open, setOpen] = useState(false);
+  const [toasts, setToasts] = useState({ info: false, success: false, warning: false, danger: false });
+  const toggleToast = (variant) => setToasts((t) => ({ ...t, [variant]: !t[variant] }));
 
   return (
-    <div style={{ padding: '2rem' }}>
-      <button className='w-[20px] h-auto bg-amber-50' onClick={() => setOpen(true)}>Abrir modal (test)</button>
+    <div style={{ padding: '2rem', maxWidth: 960, margin: '0 auto' }}>
+      <h1
+        style={{
+          fontSize: 'var(--text-3xl)',
+          fontWeight: 700,
+          color: 'var(--dark-navy-text)',
+          marginBottom: '2rem',
+        }}
+      >
+        Mott Design Components — Playground
+      </h1>
 
-      <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginTop: '1rem', flexWrap: 'wrap' }}>
-        <Button variant="primary">Iniciar sesión</Button>
-        <Button variant="secondary">Continuar</Button>
-        <Button variant="outline">Cancelar</Button>
-        <Button variant="ghost">Omitir</Button>
-        <Button variant="danger">Eliminar</Button>
-        <Button variant="primary" disabled>Deshabilitado</Button>
-        <Button variant="outline">
-          <Icon name="favorite" size="sm" />
-          Con ícono
-        </Button>
-      </div>
-      <div style={{ marginTop: '1rem', maxWidth: 320 }}>
-        <Button variant="secondary" fullWidth>Ancho completo</Button>
-      </div>
+      <Section title="Button — variantes de color">
+        <Row>
+          <Button variant="primary">Iniciar sesión</Button>
+          <Button variant="secondary">Continuar</Button>
+          <Button variant="outline">Cancelar</Button>
+          <Button variant="ghost">Omitir</Button>
+          <Button variant="danger">Eliminar</Button>
+          <Button variant="primary" disabled>Deshabilitado</Button>
+        </Row>
+      </Section>
 
-      <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginTop: '1rem', flexWrap: 'wrap' }}>
-        <Button variant="outline">
-          <Icon name="add" size="sm" />
-          New task
-        </Button>
-        <Button variant="primary" shape="pill">Shape pill (viejo)</Button>
-      </div>
+      <Section title="Button — con ícono, ancho completo y shape">
+        <Row>
+          <Button variant="outline">
+            <Icon name="favorite" size="sm" />
+            Con ícono
+          </Button>
+          <Button variant="outline">
+            <Icon name="add" size="sm" />
+            New task
+          </Button>
+          <Button variant="primary" shape="pill">Shape pill</Button>
+        </Row>
+        <div style={{ maxWidth: 320 }}>
+          <Button variant="secondary" fullWidth>Ancho completo</Button>
+        </div>
+      </Section>
 
-      <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginTop: '1rem' }}>
-        <Button variant="ghost" iconOnly aria-label="Editar">
-          <Icon name="edit" size="sm" />
-        </Button>
-        <Button variant="outline" iconOnly aria-label="Editar">
-          <Icon name="edit" size="md" />
-        </Button>
-        <Button variant="primary" iconOnly aria-label="Editar">
-          <Icon name="edit" size="lg" />
-        </Button>
-      </div>
+      <Section title="Button — iconOnly (sm / md / lg)">
+        <Row>
+          <Button variant="ghost" iconOnly aria-label="Editar">
+            <Icon name="edit" size="sm" />
+          </Button>
+          <Button variant="outline" iconOnly aria-label="Editar">
+            <Icon name="edit" size="md" />
+          </Button>
+          <Button variant="primary" iconOnly aria-label="Editar">
+            <Icon name="edit" size="lg" />
+          </Button>
+        </Row>
+      </Section>
 
-      <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginTop: '1rem' }}>
-        <FabButton color="primary" icon="add" size="sm" aria-label="Nuevo (sm)" />
-        <FabButton color="secondary" icon="edit" size="md" aria-label="Editar (md)" />
-        <FabButton color="danger" icon="delete" size="lg" aria-label="Eliminar (lg)" />
-        <FabButton color="#7c3aed" icon="star" size="md" aria-label="Color custom" />
-      </div>
+      <Section title="FabButton (sm / md / lg / color custom)">
+        <Row>
+          <FabButton color="primary" icon="add" size="sm" aria-label="Nuevo (sm)" />
+          <FabButton color="secondary" icon="edit" size="md" aria-label="Editar (md)" />
+          <FabButton color="danger" icon="delete" size="lg" aria-label="Eliminar (lg)" />
+          <FabButton color="#7c3aed" icon="star" size="md" aria-label="Color custom" />
+        </Row>
+      </Section>
 
-      <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginTop: '1rem', flexWrap: 'wrap' }}>
-        <ButtonFullRounded color="primary" icon="add" size="sm" aria-label="Nuevo" />
-        <ButtonFullRounded color="secondary" icon="edit" size="md" aria-label="Editar" />
-        <ButtonFullRounded color="danger" icon="delete" size="lg" aria-label="Eliminar" />
-        <ButtonFullRounded color="#7c3aed" icon="star" size="md" aria-label="Color custom" />
-      </div>
+      <Section title="ButtonFullRounded (circular, solo ícono)">
+        <Row>
+          <ButtonFullRounded color="primary" icon="add" size="sm" aria-label="Nuevo" />
+          <ButtonFullRounded color="secondary" icon="edit" size="md" aria-label="Editar" />
+          <ButtonFullRounded color="danger" icon="delete" size="lg" aria-label="Eliminar" />
+          <ButtonFullRounded color="#7c3aed" icon="star" size="md" aria-label="Color custom" />
+        </Row>
+      </Section>
 
-      <div style={{ marginTop: '1rem' }}>
+      <Section title="ButtonGroup (selección única, morph animado)">
         <ButtonGroup
           color="secondary"
           buttons={[
@@ -74,7 +127,66 @@ export default function App() {
             { icon: 'wifi' },
           ]}
         />
-      </div>
+      </Section>
+
+      <Section title="Badge — soft / solid / extras / sizes">
+        <Row>
+          <Badge color="neutral">Neutral</Badge>
+          <Badge color="info">Info</Badge>
+          <Badge color="success">Success</Badge>
+          <Badge color="warning">Warning</Badge>
+          <Badge color="danger">Danger</Badge>
+        </Row>
+        <Row>
+          <Badge color="neutral" solid>Neutral</Badge>
+          <Badge color="info" solid>Info</Badge>
+          <Badge color="success" solid>Success</Badge>
+          <Badge color="warning" solid>Warning</Badge>
+          <Badge color="danger" solid>Danger</Badge>
+        </Row>
+        <Row>
+          <Badge color="success" dot>Activo</Badge>
+          <Badge color="warning" icon="warning">Atención</Badge>
+          <Badge color="#7c3aed">Color custom</Badge>
+        </Row>
+        <Row>
+          <Badge color="info" size="sm">Small</Badge>
+          <Badge color="info" size="md">Medium</Badge>
+          <Badge color="info" size="lg">Large</Badge>
+        </Row>
+      </Section>
+
+      <Section title="Input">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', maxWidth: 320 }}>
+          <Input label="Correo" type="email" placeholder="Escribe tu correo" />
+          <Input label="Contraseña" type="password" placeholder="Escribe tu contraseña" />
+          <Input placeholder="Sin label" />
+          <Input label="Deshabilitado" placeholder="No editable" disabled />
+        </div>
+      </Section>
+
+      <Section title="Toast — semántico, animado, arrastrable">
+        <Row>
+          <Button variant="outline" onClick={() => toggleToast('info')}>Toggle info</Button>
+          <Button variant="outline" onClick={() => toggleToast('success')}>Toggle success</Button>
+          <Button variant="outline" onClick={() => toggleToast('warning')}>Toggle warning</Button>
+          <Button variant="outline" onClick={() => toggleToast('danger')}>Toggle danger</Button>
+        </Row>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxWidth: 360 }}>
+          <Toast variant="info" title="Info" open={toasts.info} onClose={() => toggleToast('info')}>
+            Arrastrame o cerrame para probar la animación de salida.
+          </Toast>
+          <Toast variant="success" title="Listo" open={toasts.success} onClose={() => toggleToast('success')}>
+            La operación se completó con éxito.
+          </Toast>
+          <Toast variant="warning" title="Atención" open={toasts.warning} onClose={() => toggleToast('warning')}>
+            Revisá este dato antes de continuar.
+          </Toast>
+          <Toast variant="danger" title="Error" open={toasts.danger} onClose={() => toggleToast('danger')}>
+            Algo salió mal, intentá de nuevo.
+          </Toast>
+        </div>
+      </Section>
     </div>
   );
 }

@@ -200,7 +200,7 @@ var COLOR_PRESETS3 = {
   ghost: { bg: "transparent", fg: "var(--dark-navy-text)" },
   danger: { bg: "var(--color-danger)", fg: "var(--text-on-danger)" }
 };
-function ButtonGroup({ buttons, vertical = false, color = "primary", defaultSelected = null, onChange }) {
+function ButtonGroup({ buttons, vertical = true, color = "primary", defaultSelected = null, onChange }) {
   const [selectedButton, setSelectedButton] = useState(defaultSelected);
   const itemRefs = useRef([]);
   const containerRef = useRef(null);
@@ -259,47 +259,192 @@ function ButtonGroup({ buttons, vertical = false, color = "primary", defaultSele
 }
 
 // src/badge/badge.jsx
-function Badge() {
+import { jsx as jsx6, jsxs as jsxs2 } from "react/jsx-runtime";
+var COLOR_PRESETS4 = {
+  neutral: { bg: "var(--light-gray-background)", fg: "var(--dark-navy-text)", solidBg: "var(--dark-navy-text)", solidFg: "var(--white)" },
+  info: { bg: "var(--color-action-bg)", fg: "var(--color-action)", solidBg: "var(--color-action)", solidFg: "var(--text-on-action)" },
+  success: { bg: "var(--color-success-bg)", fg: "var(--color-success)", solidBg: "var(--color-success)", solidFg: "var(--text-on-success)" },
+  warning: { bg: "var(--color-warning-bg)", fg: "var(--color-warning)", solidBg: "var(--color-warning)", solidFg: "var(--text-on-warning)" },
+  danger: { bg: "var(--color-danger-bg)", fg: "var(--color-danger)", solidBg: "var(--color-danger)", solidFg: "var(--text-on-danger)" }
+};
+var SIZE2 = {
+  sm: { pad: "var(--pad-badge-sm)", text: "var(--text-xs)", icon: "12px", dot: 5 },
+  md: { pad: "var(--pad-badge-md)", text: "var(--text-sm)", icon: "14px", dot: 6 },
+  lg: { pad: "var(--pad-badge-lg)", text: "var(--text-base)", icon: "16px", dot: 7 }
+};
+function Badge({ children, color = "neutral", solid = false, size = "sm", icon, dot = false, style, ...props }) {
+  const preset = COLOR_PRESETS4[color];
+  const scale = SIZE2[size] ?? SIZE2.sm;
+  const background = preset ? solid ? preset.solidBg : preset.bg : color;
+  const foreground = preset ? solid ? preset.solidFg : preset.fg : "var(--white)";
+  return /* @__PURE__ */ jsxs2(
+    "span",
+    {
+      className: "inline-flex items-center gap-1 rounded-[var(--radius-full)] leading-[var(--leading-tight)] tracking-[var(--tracking-label)] font-[number:var(--font-medium)] whitespace-nowrap",
+      style: {
+        padding: scale.pad,
+        fontSize: scale.text,
+        backgroundColor: background,
+        color: foreground,
+        ...style
+      },
+      ...props,
+      children: [
+        dot && /* @__PURE__ */ jsx6("span", { "aria-hidden": "true", style: { width: scale.dot, height: scale.dot, borderRadius: "50%", backgroundColor: foreground, flexShrink: 0 } }),
+        icon && /* @__PURE__ */ jsx6(Icon, { name: icon, size: scale.icon }),
+        children
+      ]
+    }
+  );
 }
 
 // src/toast/toast.jsx
-import { cva as cva2 } from "class-variance-authority";
-import { twMerge as twMerge4 } from "tailwind-merge";
-function Toast() {
+import { useEffect, useRef as useRef2, useState as useState2 } from "react";
+import { useGSAP as useGSAP2 } from "@gsap/react";
+import gsap2 from "gsap";
+import { Draggable } from "gsap/Draggable";
+import { jsx as jsx7, jsxs as jsxs3 } from "react/jsx-runtime";
+gsap2.registerPlugin(Draggable);
+var VARIANTS = {
+  info: { bg: "var(--color-action-bg)", iconClass: "text-[var(--color-action)]", icon: "info" },
+  success: { bg: "var(--color-success-bg)", iconClass: "text-[var(--color-success)]", icon: "check_circle" },
+  warning: { bg: "var(--color-warning-bg)", iconClass: "text-[var(--color-warning)]", icon: "warning" },
+  danger: { bg: "var(--color-danger-bg)", iconClass: "text-[var(--color-danger)]", icon: "error" }
+};
+function Toast({ variant = "info", title, children, open, onClose }) {
+  const [rendered, setRendered] = useState2(open);
+  const toastRef = useRef2(null);
+  const preset = VARIANTS[variant] ?? VARIANTS.info;
+  useEffect(() => {
+    if (open) setRendered(true);
+  }, [open]);
+  useGSAP2(() => {
+    if (open && toastRef.current) {
+      gsap2.fromTo(
+        toastRef.current,
+        { opacity: 0, y: 24, scale: 0.95 },
+        { opacity: 1, y: 0, scale: 1, duration: 0.4, ease: "back.out(1.7)" }
+      );
+    }
+  }, { dependencies: [open, rendered] });
+  useEffect(() => {
+    if (!open && rendered && toastRef.current) {
+      gsap2.to(toastRef.current, {
+        opacity: 0,
+        y: 16,
+        scale: 0.95,
+        duration: 0.3,
+        ease: "power2.in",
+        onComplete: () => setRendered(false)
+      });
+    }
+  }, [open, rendered]);
+  useEffect(() => {
+    if (!rendered || !toastRef.current) return;
+    const [draggable] = Draggable.create(toastRef.current, {
+      type: "x",
+      onDrag: function() {
+        gsap2.set(toastRef.current, { opacity: 1 - Math.min(Math.abs(this.x) / 200, 0.8) });
+      },
+      onDragEnd: function() {
+        if (Math.abs(this.x) > 120) {
+          gsap2.to(toastRef.current, {
+            x: this.x > 0 ? 400 : -400,
+            opacity: 0,
+            duration: 0.3,
+            onComplete: () => onClose == null ? void 0 : onClose()
+          });
+        } else {
+          gsap2.to(toastRef.current, { x: 0, opacity: 1, duration: 0.3, ease: "power3.out" });
+        }
+      }
+    });
+    return () => draggable.kill();
+  }, [rendered, onClose]);
+  if (!rendered) return null;
+  return /* @__PURE__ */ jsxs3(
+    "div",
+    {
+      ref: toastRef,
+      role: "status",
+      className: "inline-flex items-start gap-3 rounded-[var(--radius-lg)] shadow-lg cursor-grab active:cursor-grabbing",
+      style: { padding: "var(--pad-stat)", backgroundColor: preset.bg },
+      children: [
+        /* @__PURE__ */ jsx7(Icon, { name: preset.icon, className: preset.iconClass }),
+        /* @__PURE__ */ jsxs3("div", { className: "flex flex-col gap-0.5", children: [
+          title && /* @__PURE__ */ jsx7("span", { className: "text-[length:var(--text-sm)] font-[number:var(--font-medium)] text-[var(--dark-navy-text)]", children: title }),
+          /* @__PURE__ */ jsx7("span", { className: "text-[length:var(--text-sm)] text-[var(--slate-gray-text)]", children })
+        ] })
+      ]
+    }
+  );
 }
 
 // src/input/input.jsx
-import { cva as cva3 } from "class-variance-authority";
-import { twMerge as twMerge5 } from "tailwind-merge";
-function Input() {
+import { useId } from "react";
+import { twMerge as twMerge4 } from "tailwind-merge";
+import { jsx as jsx8, jsxs as jsxs4 } from "react/jsx-runtime";
+function Input({
+  label,
+  type = "text",
+  id,
+  className,
+  style,
+  ...props
+}) {
+  const generatedId = useId();
+  const inputId = id ?? generatedId;
+  return /* @__PURE__ */ jsxs4("div", { className: "flex w-full flex-col gap-1", children: [
+    label && /* @__PURE__ */ jsx8(
+      "label",
+      {
+        htmlFor: inputId,
+        className: "text-[length:var(--text-sm)] leading-[var(--leading-tight)] tracking-[var(--tracking-body)] font-[number:var(--font-medium)] font-[family-name:var(--font-family)] text-[var(--slate-gray-text)]",
+        children: label
+      }
+    ),
+    /* @__PURE__ */ jsx8(
+      "input",
+      {
+        id: inputId,
+        type,
+        className: twMerge4(
+          "w-full rounded-[var(--radius-lg)] bg-[var(--light-gray-background)] text-[length:var(--text-base)] tracking-[var(--tracking-body)] font-[family-name:var(--font-family)] text-[var(--dark-navy-text)] placeholder:text-[var(--muted-gray-text)] outline-none transition-colors duration-150 focus:bg-[var(--pale-gray-hover)] disabled:opacity-50 disabled:cursor-not-allowed",
+          className
+        ),
+        style: { padding: "var(--pad-input)", ...style },
+        ...props
+      }
+    )
+  ] });
 }
 
 // src/textarea/textarea.jsx
-import { cva as cva4 } from "class-variance-authority";
-import { twMerge as twMerge6 } from "tailwind-merge";
+import { cva as cva2 } from "class-variance-authority";
+import { twMerge as twMerge5 } from "tailwind-merge";
 function Textarea() {
 }
 
 // src/select/select.jsx
-import { cva as cva5 } from "class-variance-authority";
-import { twMerge as twMerge7 } from "tailwind-merge";
+import { cva as cva3 } from "class-variance-authority";
+import { twMerge as twMerge6 } from "tailwind-merge";
 function Select() {
 }
 
 // src/modals/defaultModal.jsx
-import { useEffect, useRef as useRef2 } from "react";
-import { useGSAP as useGSAP2 } from "@gsap/react";
-import gsap2 from "gsap";
-import { jsx as jsx6 } from "react/jsx-runtime";
+import { useEffect as useEffect2, useRef as useRef3 } from "react";
+import { useGSAP as useGSAP3 } from "@gsap/react";
+import gsap3 from "gsap";
+import { jsx as jsx9 } from "react/jsx-runtime";
 function DefaultModal({ open, onClose, children }) {
-  const modalRef = useRef2(null);
-  const overlayRef = useRef2(null);
-  const panelRef = useRef2(null);
-  const tlRef = useRef2(null);
-  useGSAP2(() => {
-    tlRef.current = gsap2.timeline({ paused: true }).set(panelRef.current, { opacity: 0, y: 8 }).set(overlayRef.current, { opacity: 0 }).to(overlayRef.current, { opacity: 1, duration: 0.18, ease: "power1.out" }, 0).to(panelRef.current, { opacity: 1, y: 0, duration: 0.22, ease: "power3.out" }, 0);
+  const modalRef = useRef3(null);
+  const overlayRef = useRef3(null);
+  const panelRef = useRef3(null);
+  const tlRef = useRef3(null);
+  useGSAP3(() => {
+    tlRef.current = gsap3.timeline({ paused: true }).set(panelRef.current, { opacity: 0, y: 8 }).set(overlayRef.current, { opacity: 0 }).to(overlayRef.current, { opacity: 1, duration: 0.18, ease: "power1.out" }, 0).to(panelRef.current, { opacity: 1, y: 0, duration: 0.22, ease: "power3.out" }, 0);
   });
-  useEffect(() => {
+  useEffect2(() => {
     const modal = modalRef.current;
     const tl = tlRef.current;
     if (!modal || !tl) return;
@@ -316,7 +461,7 @@ function DefaultModal({ open, onClose, children }) {
     onClose == null ? void 0 : onClose();
   };
   const handleOverlayClick = () => onClose == null ? void 0 : onClose();
-  return /* @__PURE__ */ jsx6(
+  return /* @__PURE__ */ jsx9(
     "dialog",
     {
       ref: modalRef,

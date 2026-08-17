@@ -132,10 +132,12 @@
     --radius-full: 9999px;
     --pad-button: 18px 32px;
     --pad-button-icon: 12px;
-    --pad-input: 9px 14px;
+    --pad-input: 13px 18px;
     --pad-card: 24px;
     --pad-stat: 18px;
-    --pad-badge: 4px 10px;
+    --pad-badge-sm: 4px 10px;
+    --pad-badge-md: 6px 12px;
+    --pad-badge-lg: 8px 16px;
     
     /*margin tokens*/
     --gap-tight: 0.25rem; 
