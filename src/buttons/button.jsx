@@ -1,0 +1,66 @@
+'use client';
+import { cva } from 'class-variance-authority';
+import { twMerge } from 'tailwind-merge';
+
+const buttonVariants = cva(
+    'inline-flex items-center justify-center gap-2 font-medium transition-all duration-150 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-action)] focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none disabled:active:scale-100',
+    {
+        variants: {
+            variant: {
+                primary: 'bg-[var(--color-action)] text-[var(--text-on-action)] hover:bg-[var(--color-action-hover)]',
+                secondary: 'bg-[var(--dark-navy-text)] text-[var(--white)] hover:bg-[var(--dark-slate-surface)]',
+                outline: 'bg-[var(--light-gray-background)] text-[var(--dark-navy-text)] hover:bg-[var(--pale-gray-hover)]',
+                ghost: 'bg-transparent text-[var(--dark-navy-text)] hover:bg-[var(--pale-gray-hover)]',
+                danger: 'bg-[var(--color-danger)] text-[var(--text-on-danger)] hover:bg-[var(--color-danger-hover)]',
+            },
+            shape: {
+                rounded: 'rounded-[var(--radius-xl)]',
+                pill: 'rounded-[var(--radius-full)]',
+            },
+            iconOnly: {
+                true: 'aspect-square p-[var(--pad-button-icon)]',
+                false: 'p-[var(--pad-button)]',
+            },
+            fullWidth: {
+                true: 'w-full',
+            },
+        },
+        compoundVariants: [
+            {
+                shape: 'rounded',
+                iconOnly: true,
+                class: 'rounded-[var(--radius-lg)]',
+            },
+        ],
+        defaultVariants: {
+            variant: 'primary',
+            shape: 'rounded',
+            iconOnly: false,
+            fullWidth: false,
+        },
+    }
+);
+
+//component for button in mott-design
+export default function Button({
+    children,
+    variant,
+    shape,
+    iconOnly,
+    fullWidth,
+    className,
+    type = 'button',
+    onClick,
+    ...props
+}) {
+    return (
+        <button
+            type={type}
+            onClick={onClick}
+            className={twMerge(buttonVariants({ variant, shape, iconOnly, fullWidth }), className)}
+            {...props}
+        >
+            {children}
+        </button>
+    )
+}

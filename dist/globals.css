@@ -126,13 +126,15 @@
     }
     
     /*padding and border tokens*/
-    --radius-sm: 10px; 
-    --radius-lg: 16px; 
-    --radius-full: 9999px; 
-    --pad-button: 14px 24px; 
-    --pad-input: 9px 14px; 
-    --pad-card: 24px; 
-    --pad-stat: 18px; 
+    --radius-sm: 10px;
+    --radius-lg: 16px;
+    --radius-xl: 28px;
+    --radius-full: 9999px;
+    --pad-button: 14px 24px;
+    --pad-button-icon: 12px;
+    --pad-input: 9px 14px;
+    --pad-card: 24px;
+    --pad-stat: 18px;
     --pad-badge: 4px 10px;
     
     /*margin tokens*/
@@ -147,6 +149,13 @@
     --sm-icon: 16px;
     --md-icon: 20px;
     --lg-icon: 24px;
+    --xl-icon: 32px;
+
+    /*control sizes (dimensiones fijas cuadradas, reusable por cualquier control tipo FAB)*/
+    --control-size-sm: 40px;
+    --control-size-md: 56px;
+    --control-size-lg: 80px;
+    --control-radius: 28%; /* % en vez de px: mantiene la misma proporción de redondeo en cualquier tamaño de caja cuadrada */
 }
 
 

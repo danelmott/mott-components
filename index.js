@@ -1,5 +1,5 @@
-export { default as Button } from './src/button/button.jsx';
-export { default as ButtonGroup } from './src/buttonGroup/buttonGroup.jsx';
+export { default as Button } from './src/buttons/button.jsx';
+export { default as FabButton } from './src/buttons/fabButton.jsx';
 export { default as Badge } from './src/badge/badge.jsx';
 export { default as Toast } from './src/toast/toast.jsx';
 export { default as Input } from './src/input/input.jsx';

@@ -5,6 +5,7 @@ const SIZE_TOKEN = {
     sm: 'var(--sm-icon)',
     md: 'var(--md-icon)',
     lg: 'var(--lg-icon)',
+    xl: 'var(--xl-icon)',
 };
 
 
@@ -27,7 +28,7 @@ export default function Icon({
             className={twMerge('material-symbols-rounded select-none', className)}
             aria-hidden="true"
             style={{
-                iconSize,
+                fontSize: iconSize,
                 fontVariationSettings: `'FILL' ${filled ? 1 : 0}, 'wght' ${weight}, 'GRAD' ${grade}, 'opsz' ${opticalSize}`,
             }}
         >
