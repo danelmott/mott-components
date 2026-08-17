@@ -3,6 +3,8 @@ import DefaultModal from '../src/modals/defaultModal.jsx';
 import Icon from '../src/icon/icon.jsx';
 import Button from '../src/buttons/button.jsx';
 import FabButton from '../src/buttons/fabButton.jsx';
+import ButtonFullRounded from '../src/buttons/buttonFullRounded.jsx';
+import ButtonGroup from '../src/buttons/buttonGroup.jsx';
 
 export default function App() {
   const [open, setOpen] = useState(false);
@@ -52,6 +54,26 @@ export default function App() {
         <FabButton color="secondary" icon="edit" size="md" aria-label="Editar (md)" />
         <FabButton color="danger" icon="delete" size="lg" aria-label="Eliminar (lg)" />
         <FabButton color="#7c3aed" icon="star" size="md" aria-label="Color custom" />
+      </div>
+
+      <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', marginTop: '1rem', flexWrap: 'wrap' }}>
+        <ButtonFullRounded color="primary" icon="add" size="sm" aria-label="Nuevo" />
+        <ButtonFullRounded color="secondary" icon="edit" size="md" aria-label="Editar" />
+        <ButtonFullRounded color="danger" icon="delete" size="lg" aria-label="Eliminar" />
+        <ButtonFullRounded color="#7c3aed" icon="star" size="md" aria-label="Color custom" />
+      </div>
+
+      <div style={{ marginTop: '1rem' }}>
+        <ButtonGroup
+          color="secondary"
+          buttons={[
+            { icon: 'bluetooth' },
+            { icon: 'alarm' },
+            { icon: 'radio_button_unchecked' },
+            { icon: 'flashlight_on' },
+            { icon: 'wifi' },
+          ]}
+        />
       </div>
     </div>
   );

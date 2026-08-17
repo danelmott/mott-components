@@ -3,7 +3,7 @@ import { cva } from 'class-variance-authority';
 import { twMerge } from 'tailwind-merge';
 
 const buttonVariants = cva(
-    'inline-flex items-center justify-center gap-2 font-medium transition-all duration-150 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-action)] focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none disabled:active:scale-100',
+    'inline-flex items-center justify-center gap-2.5 text-[length:var(--text-md)] tracking-[var(--tracking-h4)] font-[number:var(--font-medium)] transition-all duration-150 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-action)] focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none disabled:active:scale-100',
     {
         variants: {
             variant: {
@@ -14,7 +14,7 @@ const buttonVariants = cva(
                 danger: 'bg-[var(--color-danger)] text-[var(--text-on-danger)] hover:bg-[var(--color-danger-hover)]',
             },
             shape: {
-                rounded: 'rounded-[var(--radius-xl)]',
+                rounded: 'rounded-[var(--radius-lg)]',
                 pill: 'rounded-[var(--radius-full)]',
             },
             iconOnly: {
@@ -25,13 +25,6 @@ const buttonVariants = cva(
                 true: 'w-full',
             },
         },
-        compoundVariants: [
-            {
-                shape: 'rounded',
-                iconOnly: true,
-                class: 'rounded-[var(--radius-lg)]',
-            },
-        ],
         defaultVariants: {
             variant: 'primary',
             shape: 'rounded',
