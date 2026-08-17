@@ -13,26 +13,35 @@ import Search from '../src/search/search.jsx';
 import Loading from '../src/loading/loading.jsx';
 import Progress from '../src/loading/progress.jsx';
 import Dropdown from '../src/dropdown/dropdown.jsx';
-import CustomModal from '../src/customModal/customModal.js';
+import CustomModal from '../src/customModal/customModal.jsx';
 
-function Section({ title, children }) {
+function Section({ title, wide, children }) {
   return (
-    <section style={{ marginBottom: '2.5rem' }}>
-      <h2
+    <section
+      style={{
+        columnSpan: wide ? 'all' : undefined,
+        breakInside: 'avoid',
+        backgroundColor: 'var(--off-white-background)',
+        borderRadius: 'var(--radius-lg)',
+        padding: 'var(--pad-card)',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '0.75rem',
+        marginBottom: '1rem',
+      }}
+    >
+      <p
         style={{
-          fontSize: 'var(--text-lg)',
-          fontWeight: 700,
-          color: 'var(--dark-navy-text)',
-          marginBottom: '1rem',
-          paddingBottom: '0.5rem',
-          borderBottom: '1px solid var(--pale-gray-border)',
+          fontSize: 'var(--text-xs)',
+          fontWeight: 600,
+          color: 'var(--muted-gray-text)',
+          textTransform: 'uppercase',
+          letterSpacing: 'var(--tracking-caps)',
         }}
       >
         {title}
-      </h2>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        {children}
-      </div>
+      </p>
+      {children}
     </section>
   );
 }
@@ -57,147 +66,133 @@ export default function App() {
   const customModalTriggerRef = useRef(null);
 
   return (
-    <div style={{ padding: '2rem', maxWidth: 960, margin: '0 auto' }}>
+    <div style={{ padding: '2rem', maxWidth: 1400, margin: '0 auto' }}>
       <h1
         style={{
           fontSize: 'var(--text-3xl)',
           fontWeight: 700,
           color: 'var(--dark-navy-text)',
-          marginBottom: '2rem',
+          marginBottom: '1.5rem',
         }}
       >
         Mott Design Components — Playground
       </h1>
 
-      <Section title="Button — variantes de color">
-        <Row>
-          <Button variant="primary">Iniciar sesión</Button>
-          <Button variant="secondary">Continuar</Button>
-          <Button variant="outline">Cancelar</Button>
-          <Button variant="ghost">Omitir</Button>
-          <Button variant="danger">Eliminar</Button>
-          <Button variant="primary" disabled>Deshabilitado</Button>
-        </Row>
-      </Section>
+      <div
+        style={{
+          columnWidth: 320,
+          columnGap: '1rem',
+        }}
+      >
+        <Section title="Button — colores">
+          <Row>
+            <Button variant="primary">Iniciar sesión</Button>
+            <Button variant="secondary">Continuar</Button>
+            <Button variant="outline">Cancelar</Button>
+            <Button variant="ghost">Omitir</Button>
+            <Button variant="danger">Eliminar</Button>
+            <Button variant="primary" disabled>Deshabilitado</Button>
+          </Row>
+        </Section>
 
-      <Section title="Button — con ícono, ancho completo y shape">
-        <Row>
-          <Button variant="outline">
-            <Icon name="favorite" size="sm" />
-            Con ícono
-          </Button>
-          <Button variant="outline">
-            <Icon name="add" size="sm" />
-            New task
-          </Button>
-          <Button variant="primary" shape="pill">Shape pill</Button>
-        </Row>
-        <div style={{ maxWidth: 320 }}>
+        <Section title="Button — ícono, ancho completo, shape">
+          <Row>
+            <Button variant="outline">
+              <Icon name="favorite" size="sm" />
+              Con ícono
+            </Button>
+            <Button variant="primary" shape="pill">Shape pill</Button>
+          </Row>
           <Button variant="secondary" fullWidth>Ancho completo</Button>
-        </div>
-      </Section>
+        </Section>
 
-      <Section title="Button — iconOnly (sm / md / lg)">
-        <Row>
-          <Button variant="ghost" iconOnly aria-label="Editar">
-            <Icon name="edit" size="sm" />
-          </Button>
-          <Button variant="outline" iconOnly aria-label="Editar">
-            <Icon name="edit" size="md" />
-          </Button>
-          <Button variant="primary" iconOnly aria-label="Editar">
-            <Icon name="edit" size="lg" />
-          </Button>
-        </Row>
-      </Section>
+        <Section title="Button — iconOnly (sm / md / lg)">
+          <Row>
+            <Button variant="ghost" iconOnly aria-label="Editar">
+              <Icon name="edit" size="sm" />
+            </Button>
+            <Button variant="outline" iconOnly aria-label="Editar">
+              <Icon name="edit" size="md" />
+            </Button>
+            <Button variant="primary" iconOnly aria-label="Editar">
+              <Icon name="edit" size="lg" />
+            </Button>
+          </Row>
+        </Section>
 
-      <Section title="FabButton (sm / md / lg / color custom)">
-        <Row>
-          <FabButton color="primary" icon="add" size="sm" aria-label="Nuevo (sm)" />
-          <FabButton color="secondary" icon="edit" size="md" aria-label="Editar (md)" />
-          <FabButton color="danger" icon="delete" size="lg" aria-label="Eliminar (lg)" />
-          <FabButton color="#7c3aed" icon="star" size="md" aria-label="Color custom" />
-        </Row>
-      </Section>
+        <Section title="FabButton">
+          <Row>
+            <FabButton color="primary" icon="add" size="sm" aria-label="Nuevo (sm)" />
+            <FabButton color="secondary" icon="edit" size="md" aria-label="Editar (md)" />
+            <FabButton color="danger" icon="delete" size="lg" aria-label="Eliminar (lg)" />
+            <FabButton color="#7c3aed" icon="star" size="md" aria-label="Color custom" />
+          </Row>
+        </Section>
 
-      <Section title="ButtonFullRounded (circular, solo ícono)">
-        <Row>
-          <ButtonFullRounded color="primary" icon="add" size="sm" aria-label="Nuevo" />
-          <ButtonFullRounded color="secondary" icon="edit" size="md" aria-label="Editar" />
-          <ButtonFullRounded color="danger" icon="delete" size="lg" aria-label="Eliminar" />
-          <ButtonFullRounded color="#7c3aed" icon="star" size="md" aria-label="Color custom" />
-        </Row>
-      </Section>
+        <Section title="ButtonFullRounded">
+          <Row>
+            <ButtonFullRounded color="primary" icon="add" size="sm" aria-label="Nuevo" />
+            <ButtonFullRounded color="secondary" icon="edit" size="md" aria-label="Editar" />
+            <ButtonFullRounded color="danger" icon="delete" size="lg" aria-label="Eliminar" />
+            <ButtonFullRounded color="#7c3aed" icon="star" size="md" aria-label="Color custom" />
+          </Row>
+        </Section>
 
-      <Section title="ButtonGroup (selección única, morph animado)">
-        <ButtonGroup
-          color="secondary"
-          buttons={[
-            { icon: 'bluetooth' },
-            { icon: 'alarm' },
-            { icon: 'radio_button_unchecked' },
-            { icon: 'flashlight_on' },
-            { icon: 'wifi' },
-          ]}
-        />
-      </Section>
+        <Section title="ButtonGroup">
+          <ButtonGroup
+            color="secondary"
+            buttons={[
+              { icon: 'bluetooth' },
+              { icon: 'alarm' },
+              { icon: 'radio_button_unchecked' },
+              { icon: 'flashlight_on' },
+              { icon: 'wifi' },
+            ]}
+          />
+        </Section>
 
-      <Section title="Badge — soft / solid / extras / sizes">
-        <Row>
-          <Badge color="neutral">Neutral</Badge>
-          <Badge color="info">Info</Badge>
-          <Badge color="success">Success</Badge>
-          <Badge color="warning">Warning</Badge>
-          <Badge color="danger">Danger</Badge>
-        </Row>
-        <Row>
-          <Badge color="neutral" solid>Neutral</Badge>
-          <Badge color="info" solid>Info</Badge>
-          <Badge color="success" solid>Success</Badge>
-          <Badge color="warning" solid>Warning</Badge>
-          <Badge color="danger" solid>Danger</Badge>
-        </Row>
-        <Row>
-          <Badge color="success" dot>Activo</Badge>
-          <Badge color="warning" icon="warning">Atención</Badge>
-          <Badge color="#7c3aed">Color custom</Badge>
-        </Row>
-        <Row>
-          <Badge color="info" size="sm">Small</Badge>
-          <Badge color="info" size="md">Medium</Badge>
-          <Badge color="info" size="lg">Large</Badge>
-        </Row>
-      </Section>
+        <Section title="Badge" wide>
+          <Row>
+            <Badge color="neutral">Neutral</Badge>
+            <Badge color="info">Info</Badge>
+            <Badge color="success">Success</Badge>
+            <Badge color="warning">Warning</Badge>
+            <Badge color="danger">Danger</Badge>
+            <Badge color="neutral" solid>Neutral</Badge>
+            <Badge color="info" solid>Info</Badge>
+            <Badge color="success" solid>Success</Badge>
+            <Badge color="warning" solid>Warning</Badge>
+            <Badge color="danger" solid>Danger</Badge>
+            <Badge color="success" dot>Activo</Badge>
+            <Badge color="warning" icon="warning">Atención</Badge>
+            <Badge color="#7c3aed">Color custom</Badge>
+            <Badge color="info" size="sm">Small</Badge>
+            <Badge color="info" size="md">Medium</Badge>
+            <Badge color="info" size="lg">Large</Badge>
+          </Row>
+        </Section>
 
-      <Section title="Input">
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', maxWidth: 320 }}>
+        <Section title="Input">
           <Input label="Correo" type="email" placeholder="Escribe tu correo" />
           <Input label="Contraseña" type="password" placeholder="Escribe tu contraseña" />
-          <Input placeholder="Sin label" />
           <Input label="Deshabilitado" placeholder="No editable" disabled />
-        </div>
-      </Section>
+        </Section>
 
-      <Section title="Textarea">
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', maxWidth: 320 }}>
+        <Section title="Textarea">
           <Textarea label="Mensaje" placeholder="Escribí tu mensaje" />
-        </div>
-      </Section>
+        </Section>
 
-      <Section title="Search — debounce incorporado, listo para una API">
-        <div style={{ maxWidth: 320 }}>
+        <Section title="Search — debounce, listo para una API">
           <Search
             label="Buscar"
             placeholder="Escribí para buscar..."
             delay={400}
             onSearch={(query) => setSearchLog(query ? `Llamando a la API con: "${query}"` : '(nada buscado todavía)')}
           />
-          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--slate-gray-text)', marginTop: '0.5rem' }}>{searchLog}</p>
-        </div>
-      </Section>
+          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--slate-gray-text)' }}>{searchLog}</p>
+        </Section>
 
-      <Section title="Select">
-        <div style={{ maxWidth: 320 }}>
+        <Section title="Select">
           <Select
             label="País"
             placeholder="Elegí un país"
@@ -211,19 +206,17 @@ export default function App() {
               { value: 'pe', label: 'Perú' },
             ]}
           />
-        </div>
-      </Section>
+        </Section>
 
-      <Section title="Loading — figuras cambiando de forma">
-        <Row>
-          <Loading size="sm" color="primary" />
-          <Loading size="md" color="danger" />
-          <Loading size="lg" color="#7c3aed" />
-        </Row>
-      </Section>
+        <Section title="Loading">
+          <Row>
+            <Loading size="sm" color="primary" />
+            <Loading size="md" color="danger" />
+            <Loading size="lg" color="#7c3aed" />
+          </Row>
+        </Section>
 
-      <Section title="Progress — determinado e indeterminado (estela)">
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', maxWidth: 400 }}>
+        <Section title="Progress">
           <div>
             <p style={{ fontSize: 'var(--text-sm)', color: 'var(--slate-gray-text)', marginBottom: '0.5rem' }}>Indeterminado</p>
             <Progress color="primary" />
@@ -236,72 +229,72 @@ export default function App() {
               <Button variant="outline" onClick={() => setProgressValue((v) => Math.min(100, v + 10))}>+10</Button>
             </Row>
           </div>
-        </div>
-      </Section>
+        </Section>
 
-      <Section title="Dropdown — sin backdrop, cierra con Escape/click afuera">
-        <div style={{ position: 'relative', display: 'inline-block' }}>
-          <Button ref={dropdownTriggerRef} variant="outline" onClick={() => setDropdownOpen((o) => !o)}>
-            Abrir dropdown
+        <Section title="Dropdown — sin backdrop">
+          <div style={{ position: 'relative', display: 'inline-block' }}>
+            <Button ref={dropdownTriggerRef} variant="outline" onClick={() => setDropdownOpen((o) => !o)}>
+              Abrir dropdown
+            </Button>
+            <Dropdown
+              open={dropdownOpen}
+              onClose={() => setDropdownOpen(false)}
+              triggerRef={dropdownTriggerRef}
+              width="220px"
+              className="absolute top-full left-0 mt-1"
+            >
+              <div style={{ padding: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                <span style={{ fontSize: 'var(--text-sm)', color: 'var(--dark-navy-text)', padding: '0.5rem' }}>Opción 1</span>
+                <span style={{ fontSize: 'var(--text-sm)', color: 'var(--dark-navy-text)', padding: '0.5rem' }}>Opción 2</span>
+                <span style={{ fontSize: 'var(--text-sm)', color: 'var(--dark-navy-text)', padding: '0.5rem' }}>Opción 3</span>
+              </div>
+            </Dropdown>
+          </div>
+        </Section>
+
+        <Section title="CustomModal — genio desde el botón">
+          <Button ref={customModalTriggerRef} variant="primary" onClick={() => setCustomModalOpen(true)}>
+            Abrir CustomModal
           </Button>
-          <Dropdown
-            open={dropdownOpen}
-            onClose={() => setDropdownOpen(false)}
-            triggerRef={dropdownTriggerRef}
-            width="220px"
-            className="absolute top-full left-0 mt-1"
+          <CustomModal
+            open={customModalOpen}
+            onClose={() => setCustomModalOpen(false)}
+            triggerRef={customModalTriggerRef}
+            width="26rem"
           >
-            <div style={{ padding: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-              <span style={{ fontSize: 'var(--text-sm)', color: 'var(--dark-navy-text)', padding: '0.5rem' }}>Opción 1</span>
-              <span style={{ fontSize: 'var(--text-sm)', color: 'var(--dark-navy-text)', padding: '0.5rem' }}>Opción 2</span>
-              <span style={{ fontSize: 'var(--text-sm)', color: 'var(--dark-navy-text)', padding: '0.5rem' }}>Opción 3</span>
-            </div>
-          </Dropdown>
-        </div>
-      </Section>
+            <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--dark-navy-text)', marginBottom: '0.5rem' }}>
+              Modal personalizado
+            </h3>
+            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--slate-gray-text)', marginBottom: '1rem' }}>
+              Backdrop más claro, ancho fijo vía prop, animación desde el botón.
+            </p>
+            <Button variant="outline" onClick={() => setCustomModalOpen(false)}>Cerrar</Button>
+          </CustomModal>
+        </Section>
 
-      <Section title="CustomModal — width/height configurables, backdrop claro">
-        <Row>
-          <Button ref={customModalTriggerRef} variant="primary" onClick={() => setCustomModalOpen(true)}>Abrir CustomModal</Button>
-        </Row>
-        <CustomModal
-          open={customModalOpen}
-          onClose={() => setCustomModalOpen(false)}
-          triggerRef={customModalTriggerRef}
-          width="26rem"
-        >
-          <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--dark-navy-text)', marginBottom: '0.5rem' }}>
-            Modal personalizado
-          </h3>
-          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--slate-gray-text)', marginBottom: '1rem' }}>
-            Backdrop más claro que el de DefaultModal, ancho fijo vía prop.
-          </p>
-          <Button variant="outline" onClick={() => setCustomModalOpen(false)}>Cerrar</Button>
-        </CustomModal>
-      </Section>
-
-      <Section title="Toast — semántico, animado, arrastrable">
-        <Row>
-          <Button variant="outline" onClick={() => toggleToast('info')}>Toggle info</Button>
-          <Button variant="outline" onClick={() => toggleToast('success')}>Toggle success</Button>
-          <Button variant="outline" onClick={() => toggleToast('warning')}>Toggle warning</Button>
-          <Button variant="outline" onClick={() => toggleToast('danger')}>Toggle danger</Button>
-        </Row>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxWidth: 360 }}>
-          <Toast variant="info" title="Info" open={toasts.info} onClose={() => toggleToast('info')}>
-            Arrastrame o cerrame para probar la animación de salida.
-          </Toast>
-          <Toast variant="success" title="Listo" open={toasts.success} onClose={() => toggleToast('success')}>
-            La operación se completó con éxito.
-          </Toast>
-          <Toast variant="warning" title="Atención" open={toasts.warning} onClose={() => toggleToast('warning')}>
-            Revisá este dato antes de continuar.
-          </Toast>
-          <Toast variant="danger" title="Error" open={toasts.danger} onClose={() => toggleToast('danger')}>
-            Algo salió mal, intentá de nuevo.
-          </Toast>
-        </div>
-      </Section>
+        <Section title="Toast — semántico, arrastrable" wide>
+          <Row>
+            <Button variant="outline" onClick={() => toggleToast('info')}>Toggle info</Button>
+            <Button variant="outline" onClick={() => toggleToast('success')}>Toggle success</Button>
+            <Button variant="outline" onClick={() => toggleToast('warning')}>Toggle warning</Button>
+            <Button variant="outline" onClick={() => toggleToast('danger')}>Toggle danger</Button>
+          </Row>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxWidth: 360 }}>
+            <Toast variant="info" title="Info" open={toasts.info} onClose={() => toggleToast('info')}>
+              Arrastrame o cerrame para probar la animación de salida.
+            </Toast>
+            <Toast variant="success" title="Listo" open={toasts.success} onClose={() => toggleToast('success')}>
+              La operación se completó con éxito.
+            </Toast>
+            <Toast variant="warning" title="Atención" open={toasts.warning} onClose={() => toggleToast('warning')}>
+              Revisá este dato antes de continuar.
+            </Toast>
+            <Toast variant="danger" title="Error" open={toasts.danger} onClose={() => toggleToast('danger')}>
+              Algo salió mal, intentá de nuevo.
+            </Toast>
+          </div>
+        </Section>
+      </div>
     </div>
   );
 }

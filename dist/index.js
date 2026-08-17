@@ -673,7 +673,7 @@ function Search({
   ] });
 }
 
-// src/modals/dropdown.jsx
+// src/dropdown/dropdown.jsx
 import { useEffect as useEffect4, useRef as useRef5, useState as useState5 } from "react";
 import { useGSAP as useGSAP4 } from "@gsap/react";
 import gsap4 from "gsap";
@@ -738,7 +738,7 @@ function Dropdown({ open, onClose, children, width = "auto", height = "auto", tr
   );
 }
 
-// src/modals/customModal.jsx
+// src/customModal/customModal.jsx
 import { useEffect as useEffect5, useRef as useRef6 } from "react";
 import gsap5 from "gsap";
 import { twMerge as twMerge8 } from "tailwind-merge";
