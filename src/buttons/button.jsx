@@ -1,4 +1,5 @@
 'use client';
+import { forwardRef } from 'react';
 import { cva } from 'class-variance-authority';
 import { twMerge } from 'tailwind-merge';
 
@@ -35,7 +36,7 @@ const buttonVariants = cva(
 );
 
 //component for button in mott-design
-export default function Button({
+const Button = forwardRef(function Button({
     children,
     variant,
     shape,
@@ -45,9 +46,10 @@ export default function Button({
     type = 'button',
     onClick,
     ...props
-}) {
+}, ref) {
     return (
         <button
+            ref={ref}
             type={type}
             onClick={onClick}
             className={twMerge(buttonVariants({ variant, shape, iconOnly, fullWidth }), className)}
@@ -56,4 +58,6 @@ export default function Button({
             {children}
         </button>
     )
-}
+});
+
+export default Button;

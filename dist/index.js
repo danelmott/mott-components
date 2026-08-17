@@ -1,4 +1,5 @@
 // src/buttons/button.jsx
+import { forwardRef } from "react";
 import { cva } from "class-variance-authority";
 import { twMerge } from "tailwind-merge";
 import { jsx } from "react/jsx-runtime";
@@ -33,7 +34,7 @@ var buttonVariants = cva(
     }
   }
 );
-function Button({
+var Button = forwardRef(function Button2({
   children,
   variant,
   shape,
@@ -43,10 +44,11 @@ function Button({
   type = "button",
   onClick,
   ...props
-}) {
+}, ref) {
   return /* @__PURE__ */ jsx(
     "button",
     {
+      ref,
       type,
       onClick,
       className: twMerge(buttonVariants({ variant, shape, iconOnly, fullWidth }), className),
@@ -54,7 +56,8 @@ function Button({
       children
     }
   );
-}
+});
+var button_default = Button;
 
 // src/icon/icon.jsx
 import { twMerge as twMerge2 } from "tailwind-merge";
@@ -420,40 +423,366 @@ function Input({
 }
 
 // src/textarea/textarea.jsx
-import { cva as cva2 } from "class-variance-authority";
+import { useId as useId2 } from "react";
 import { twMerge as twMerge5 } from "tailwind-merge";
-function Textarea() {
+import { jsx as jsx9, jsxs as jsxs5 } from "react/jsx-runtime";
+function Textarea({
+  label,
+  id,
+  width = "100%",
+  height = "6rem",
+  className,
+  style,
+  ...props
+}) {
+  const generatedId = useId2();
+  const textareaId = id ?? generatedId;
+  return /* @__PURE__ */ jsxs5("div", { className: "flex flex-col gap-1", style: { width }, children: [
+    label && /* @__PURE__ */ jsx9(
+      "label",
+      {
+        htmlFor: textareaId,
+        className: "text-[length:var(--text-sm)] leading-[var(--leading-tight)] tracking-[var(--tracking-body)] font-[number:var(--font-medium)] font-[family-name:var(--font-family)] text-[var(--slate-gray-text)]",
+        children: label
+      }
+    ),
+    /* @__PURE__ */ jsx9(
+      "textarea",
+      {
+        id: textareaId,
+        className: twMerge5(
+          "w-full rounded-[var(--radius-lg)] bg-[var(--light-gray-background)] text-[length:var(--text-base)] tracking-[var(--tracking-body)] font-[family-name:var(--font-family)] text-[var(--dark-navy-text)] placeholder:text-[var(--muted-gray-text)] outline-none transition-colors duration-150 focus:bg-[var(--pale-gray-hover)] disabled:opacity-50 disabled:cursor-not-allowed",
+          className
+        ),
+        style: {
+          padding: "var(--pad-input)",
+          height,
+          resize: "none",
+          overflow: "hidden",
+          ...style
+        },
+        ...props
+      }
+    )
+  ] });
 }
 
 // src/select/select.jsx
-import { cva as cva3 } from "class-variance-authority";
-import { twMerge as twMerge6 } from "tailwind-merge";
-function Select() {
-}
-
-// src/modals/defaultModal.jsx
-import { useEffect as useEffect2, useRef as useRef3 } from "react";
+import { useEffect as useEffect2, useId as useId3, useRef as useRef3, useState as useState3 } from "react";
 import { useGSAP as useGSAP3 } from "@gsap/react";
 import gsap3 from "gsap";
-import { jsx as jsx9 } from "react/jsx-runtime";
-function DefaultModal({ open, onClose, children }) {
-  const modalRef = useRef3(null);
-  const overlayRef = useRef3(null);
+import { jsx as jsx10, jsxs as jsxs6 } from "react/jsx-runtime";
+function Select({ options = [], value, onChange, label, placeholder = "Seleccionar", disabled, id }) {
+  const [open, setOpen] = useState3(false);
+  const [rendered, setRendered] = useState3(false);
+  const wrapperRef = useRef3(null);
   const panelRef = useRef3(null);
-  const tlRef = useRef3(null);
-  useGSAP3(() => {
-    tlRef.current = gsap3.timeline({ paused: true }).set(panelRef.current, { opacity: 0, y: 8 }).set(overlayRef.current, { opacity: 0 }).to(overlayRef.current, { opacity: 1, duration: 0.18, ease: "power1.out" }, 0).to(panelRef.current, { opacity: 1, y: 0, duration: 0.22, ease: "power3.out" }, 0);
-  });
+  const generatedId = useId3();
+  const selectId = id ?? generatedId;
+  const selected = options.find((o) => o.value === value);
   useEffect2(() => {
+    if (open) setRendered(true);
+  }, [open]);
+  useGSAP3(() => {
+    if (open && panelRef.current) {
+      const el = panelRef.current;
+      const targetHeight = el.scrollHeight;
+      gsap3.fromTo(
+        el,
+        { height: 0, opacity: 0 },
+        {
+          height: targetHeight,
+          opacity: 1,
+          duration: 0.35,
+          ease: "power3.out",
+          onComplete: () => gsap3.set(el, { height: "auto" })
+        }
+      );
+    }
+  }, { dependencies: [open, rendered] });
+  useEffect2(() => {
+    if (!open && rendered && panelRef.current) {
+      gsap3.to(panelRef.current, {
+        height: 0,
+        opacity: 0,
+        duration: 0.25,
+        ease: "power2.in",
+        onComplete: () => setRendered(false)
+      });
+    }
+  }, [open, rendered]);
+  useEffect2(() => {
+    if (!open) return;
+    const handleClick = (e) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target)) setOpen(false);
+    };
+    const handleKey = (e) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", handleClick);
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+      document.removeEventListener("keydown", handleKey);
+    };
+  }, [open]);
+  const handleSelect = (option) => {
+    onChange == null ? void 0 : onChange(option.value, option);
+    setOpen(false);
+  };
+  return /* @__PURE__ */ jsxs6("div", { ref: wrapperRef, className: "relative flex w-full flex-col gap-1", children: [
+    label && /* @__PURE__ */ jsx10(
+      "label",
+      {
+        htmlFor: selectId,
+        className: "text-[length:var(--text-sm)] leading-[var(--leading-tight)] tracking-[var(--tracking-body)] font-[number:var(--font-medium)] font-[family-name:var(--font-family)] text-[var(--slate-gray-text)]",
+        children: label
+      }
+    ),
+    /* @__PURE__ */ jsxs6(
+      "button",
+      {
+        id: selectId,
+        type: "button",
+        disabled,
+        onClick: () => setOpen((o) => !o),
+        className: "flex w-full items-center justify-between rounded-[var(--radius-lg)] bg-[var(--light-gray-background)] text-[length:var(--text-base)] tracking-[var(--tracking-body)] font-[family-name:var(--font-family)] text-[var(--dark-navy-text)] outline-none transition-colors duration-150 focus:bg-[var(--pale-gray-hover)] disabled:opacity-50 disabled:cursor-not-allowed",
+        style: { padding: "var(--pad-input)" },
+        children: [
+          /* @__PURE__ */ jsx10("span", { className: selected ? "" : "text-[var(--muted-gray-text)]", children: selected ? selected.label : placeholder }),
+          /* @__PURE__ */ jsx10(Icon, { name: "expand_more", size: "sm", className: `transition-transform duration-200 ${open ? "rotate-180" : ""}` })
+        ]
+      }
+    ),
+    rendered && /* @__PURE__ */ jsx10(
+      "div",
+      {
+        ref: panelRef,
+        className: "absolute top-full left-0 right-0 z-10 mt-1 flex flex-col gap-[var(--gap-tight)] overflow-hidden rounded-[var(--radius-lg)] bg-[var(--white)] p-1 shadow-lg",
+        children: options.map((option) => {
+          const isSelected = option.value === value;
+          return /* @__PURE__ */ jsx10(
+            "button",
+            {
+              type: "button",
+              onClick: () => handleSelect(option),
+              className: "rounded-[var(--radius-sm)] px-3 py-2 text-left text-[length:var(--text-base)] font-[family-name:var(--font-family)] transition-colors duration-150",
+              style: {
+                backgroundColor: isSelected ? "var(--color-action-bg)" : "transparent",
+                color: isSelected ? "var(--color-action)" : "var(--dark-navy-text)"
+              },
+              onMouseEnter: (e) => {
+                if (!isSelected) e.currentTarget.style.backgroundColor = "var(--pale-gray-hover)";
+              },
+              onMouseLeave: (e) => {
+                if (!isSelected) e.currentTarget.style.backgroundColor = "transparent";
+              },
+              children: option.label
+            },
+            option.value
+          );
+        })
+      }
+    )
+  ] });
+}
+
+// src/search/search.jsx
+import { useEffect as useEffect3, useId as useId4, useRef as useRef4, useState as useState4 } from "react";
+import { twMerge as twMerge6 } from "tailwind-merge";
+import { jsx as jsx11, jsxs as jsxs7 } from "react/jsx-runtime";
+function Search({
+  label,
+  id,
+  placeholder = "Buscar...",
+  defaultValue = "",
+  value: controlledValue,
+  onChange,
+  onSearch,
+  delay = 400,
+  className,
+  style,
+  ...props
+}) {
+  const [internalValue, setInternalValue] = useState4(defaultValue);
+  const isControlled = controlledValue !== void 0;
+  const value = isControlled ? controlledValue : internalValue;
+  const generatedId = useId4();
+  const searchId = id ?? generatedId;
+  const timeoutRef = useRef4(null);
+  useEffect3(() => {
+    if (!onSearch) return;
+    clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => onSearch(value), delay);
+    return () => clearTimeout(timeoutRef.current);
+  }, [value, delay, onSearch]);
+  const handleChange = (event) => {
+    const next = event.target.value;
+    if (!isControlled) setInternalValue(next);
+    onChange == null ? void 0 : onChange(next, event);
+  };
+  const handleClear = () => {
+    if (!isControlled) setInternalValue("");
+    onChange == null ? void 0 : onChange("");
+    onSearch == null ? void 0 : onSearch("");
+  };
+  return /* @__PURE__ */ jsxs7("div", { className: "flex w-full flex-col gap-1", children: [
+    label && /* @__PURE__ */ jsx11(
+      "label",
+      {
+        htmlFor: searchId,
+        className: "text-[length:var(--text-sm)] leading-[var(--leading-tight)] tracking-[var(--tracking-body)] font-[number:var(--font-medium)] font-[family-name:var(--font-family)] text-[var(--slate-gray-text)]",
+        children: label
+      }
+    ),
+    /* @__PURE__ */ jsxs7(
+      "div",
+      {
+        className: twMerge6(
+          "flex w-full items-center gap-2 rounded-[var(--radius-lg)] bg-[var(--light-gray-background)] transition-colors duration-150 focus-within:bg-[var(--pale-gray-hover)]",
+          className
+        ),
+        style: { padding: "var(--pad-input)", ...style },
+        children: [
+          /* @__PURE__ */ jsx11(Icon, { name: "search", size: "sm", className: "shrink-0 text-[var(--muted-gray-text)]" }),
+          /* @__PURE__ */ jsx11(
+            "input",
+            {
+              id: searchId,
+              type: "search",
+              value,
+              onChange: handleChange,
+              placeholder,
+              className: "w-full bg-transparent text-[length:var(--text-base)] tracking-[var(--tracking-body)] font-[family-name:var(--font-family)] text-[var(--dark-navy-text)] outline-none placeholder:text-[var(--muted-gray-text)] [&::-webkit-search-cancel-button]:appearance-none",
+              ...props
+            }
+          ),
+          value && /* @__PURE__ */ jsx11(
+            "button",
+            {
+              type: "button",
+              onClick: handleClear,
+              "aria-label": "Limpiar b\xFAsqueda",
+              className: "flex shrink-0 items-center justify-center border-0 bg-transparent cursor-pointer",
+              children: /* @__PURE__ */ jsx11(Icon, { name: "close", size: "sm", className: "text-[var(--muted-gray-text)]" })
+            }
+          )
+        ]
+      }
+    )
+  ] });
+}
+
+// src/modals/dropdown.jsx
+import { useEffect as useEffect4, useRef as useRef5, useState as useState5 } from "react";
+import { useGSAP as useGSAP4 } from "@gsap/react";
+import gsap4 from "gsap";
+import { twMerge as twMerge7 } from "tailwind-merge";
+import { jsx as jsx12 } from "react/jsx-runtime";
+function Dropdown({ open, onClose, children, width = "auto", height = "auto", triggerRef, className, style, ...props }) {
+  const [rendered, setRendered] = useState5(open);
+  const panelRef = useRef5(null);
+  useEffect4(() => {
+    if (open) setRendered(true);
+  }, [open]);
+  useGSAP4(() => {
+    if (open && panelRef.current) {
+      gsap4.fromTo(
+        panelRef.current,
+        { opacity: 0, y: -8, scale: 0.96 },
+        { opacity: 1, y: 0, scale: 1, duration: 0.25, ease: "back.out(1.7)", transformOrigin: "top" }
+      );
+    }
+  }, { dependencies: [open, rendered] });
+  useEffect4(() => {
+    if (!open && rendered && panelRef.current) {
+      gsap4.to(panelRef.current, {
+        opacity: 0,
+        y: -8,
+        scale: 0.96,
+        duration: 0.18,
+        ease: "power2.in",
+        onComplete: () => setRendered(false)
+      });
+    }
+  }, [open, rendered]);
+  useEffect4(() => {
+    if (!open) return;
+    const handleClick = (e) => {
+      var _a, _b;
+      if ((_a = panelRef.current) == null ? void 0 : _a.contains(e.target)) return;
+      if ((_b = triggerRef == null ? void 0 : triggerRef.current) == null ? void 0 : _b.contains(e.target)) return;
+      onClose == null ? void 0 : onClose();
+    };
+    const handleKey = (e) => {
+      if (e.key === "Escape") onClose == null ? void 0 : onClose();
+    };
+    document.addEventListener("mousedown", handleClick);
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+      document.removeEventListener("keydown", handleKey);
+    };
+  }, [open, onClose, triggerRef]);
+  if (!rendered) return null;
+  return /* @__PURE__ */ jsx12(
+    "div",
+    {
+      ref: panelRef,
+      role: "menu",
+      className: twMerge7("rounded-[var(--radius-lg)] bg-[var(--white)] p-1 shadow-lg", className),
+      style: { width, height, ...style },
+      ...props,
+      children
+    }
+  );
+}
+
+// src/modals/customModal.jsx
+import { useEffect as useEffect5, useRef as useRef6 } from "react";
+import gsap5 from "gsap";
+import { twMerge as twMerge8 } from "tailwind-merge";
+import { jsx as jsx13, jsxs as jsxs8 } from "react/jsx-runtime";
+function CustomModal({ open, onClose, children, width = "32rem", height = "auto", backdropOpacity = 0.35, triggerRef, className, style }) {
+  const modalRef = useRef6(null);
+  const overlayRef = useRef6(null);
+  const panelRef = useRef6(null);
+  useEffect5(() => {
     const modal = modalRef.current;
-    const tl = tlRef.current;
-    if (!modal || !tl) return;
+    const panel = panelRef.current;
+    const overlay = overlayRef.current;
+    if (!modal || !panel || !overlay) return;
+    const getOrigin = () => {
+      if (!(triggerRef == null ? void 0 : triggerRef.current)) return null;
+      const t = triggerRef.current.getBoundingClientRect();
+      const p = panel.getBoundingClientRect();
+      return {
+        x: t.left + t.width / 2 - (p.left + p.width / 2),
+        y: t.top + t.height / 2 - (p.top + p.height / 2)
+      };
+    };
     if (open && !modal.open) {
       modal.showModal();
-      tl.play(0);
+      const origin = getOrigin();
+      gsap5.fromTo(overlay, { opacity: 0 }, { opacity: 1, duration: 0.22, ease: "power1.out" });
+      gsap5.fromTo(
+        panel,
+        origin ? { x: origin.x, y: origin.y, scale: 0.15, opacity: 0 } : { opacity: 0, y: 12, scale: 0.94 },
+        { x: 0, y: 0, scale: 1, opacity: 1, duration: origin ? 0.5 : 0.35, ease: "power3.out" }
+      );
     } else if (!open && modal.open) {
-      tl.eventCallback("onReverseComplete", () => modal.close());
-      tl.reverse();
+      const origin = getOrigin();
+      gsap5.to(overlay, { opacity: 0, duration: 0.2, ease: "power1.in" });
+      gsap5.to(panel, {
+        ...origin ? { x: origin.x, y: origin.y, scale: 0.15 } : { y: 12, scale: 0.94 },
+        opacity: 0,
+        duration: origin ? 0.35 : 0.25,
+        ease: "power2.in",
+        onComplete: () => {
+          modal.close();
+          gsap5.set(panel, { x: 0, y: 0, scale: 1 });
+        }
+      });
     }
   }, [open]);
   const handleCancel = (event) => {
@@ -461,25 +790,156 @@ function DefaultModal({ open, onClose, children }) {
     onClose == null ? void 0 : onClose();
   };
   const handleOverlayClick = () => onClose == null ? void 0 : onClose();
-  return /* @__PURE__ */ jsx9(
+  return /* @__PURE__ */ jsxs8(
     "dialog",
     {
       ref: modalRef,
       onCancel: handleCancel,
       className: "default-modal",
-      children
+      children: [
+        /* @__PURE__ */ jsx13(
+          "div",
+          {
+            ref: overlayRef,
+            onClick: handleOverlayClick,
+            className: "absolute inset-0",
+            style: { backgroundColor: `rgb(15 23 42 / ${backdropOpacity})` }
+          }
+        ),
+        /* @__PURE__ */ jsx13(
+          "div",
+          {
+            ref: panelRef,
+            className: twMerge8("relative m-auto max-h-[85vh] max-w-[92vw] overflow-y-auto rounded-[var(--radius-lg)] bg-[var(--modal-surface)] p-[var(--pad-card)]", className),
+            style: { width, height, ...style },
+            children
+          }
+        )
+      ]
+    }
+  );
+}
+
+// src/loading/loading.jsx
+import { useRef as useRef7 } from "react";
+import { useGSAP as useGSAP5 } from "@gsap/react";
+import gsap6 from "gsap";
+import { jsx as jsx14 } from "react/jsx-runtime";
+var COLOR_PRESETS5 = {
+  primary: "var(--color-action)",
+  secondary: "var(--dark-navy-text)",
+  success: "var(--color-success)",
+  warning: "var(--color-warning)",
+  danger: "var(--color-danger)"
+};
+var SHAPES = [
+  "50% 50% 50% 50% / 50% 50% 50% 50%",
+  // círculo
+  "30% 30% 30% 30% / 30% 30% 30% 30%",
+  // squircle
+  "22% 22% 22% 22% / 22% 22% 22% 22%",
+  // rounded square
+  "30% 30% 30% 30% / 30% 30% 30% 30%"
+  // squircle (cierra el loop)
+];
+var PENTAGON = "polygon(50% 0%, 97.55% 34.55%, 79.4% 90.45%, 20.6% 90.45%, 2.45% 34.55%)";
+function Loading({ size = "sm", color = "primary", className, style, ...props }) {
+  const shapeRef = useRef7(null);
+  const box = `var(--control-size-${size})`;
+  const background = COLOR_PRESETS5[color] ?? color;
+  useGSAP5(() => {
+    const el = shapeRef.current;
+    const tl = gsap6.timeline({ repeat: -1 });
+    const morph = (shape) => {
+      tl.to(el, { borderRadius: shape, scale: 1.12, duration: 0.5, ease: "power2.out" }, "+=0.05").to(el, { scale: 1, duration: 0.45, ease: "power2.in" });
+    };
+    morph(SHAPES[1]);
+    morph(SHAPES[2]);
+    morph(SHAPES[3]);
+    tl.to(el, { opacity: 0, scale: 0.85, duration: 0.2, ease: "power2.in" }, "+=0.05").set(el, { clipPath: PENTAGON }).to(el, { opacity: 1, scale: 1.12, duration: 0.3, ease: "power2.out" }).to(el, { scale: 1, duration: 0.45, ease: "power2.in" });
+    tl.to(el, { opacity: 0, scale: 0.85, duration: 0.2, ease: "power2.in" }, "+=0.3").set(el, { clipPath: "none", borderRadius: SHAPES[0] }).to(el, { opacity: 1, scale: 1.12, duration: 0.3, ease: "power2.out" }).to(el, { scale: 1, duration: 0.45, ease: "power2.in" });
+    gsap6.to(el, { rotate: 360, duration: 5, repeat: -1, ease: "none" });
+  }, []);
+  return /* @__PURE__ */ jsx14(
+    "div",
+    {
+      ref: shapeRef,
+      role: "status",
+      "aria-label": "Cargando",
+      className,
+      style: {
+        width: box,
+        height: box,
+        backgroundColor: background,
+        borderRadius: SHAPES[0],
+        boxShadow: "0 4px 14px rgb(0 0 0 / 0.2)",
+        ...style
+      },
+      ...props
+    }
+  );
+}
+
+// src/loading/progress.jsx
+import { useRef as useRef8 } from "react";
+import { useGSAP as useGSAP6 } from "@gsap/react";
+import gsap7 from "gsap";
+import { jsx as jsx15 } from "react/jsx-runtime";
+var COLOR_PRESETS6 = {
+  primary: "var(--color-action)",
+  secondary: "var(--dark-navy-text)",
+  success: "var(--color-success)",
+  warning: "var(--color-warning)",
+  danger: "var(--color-danger)"
+};
+function Progress({ value, color = "primary", className, style, ...props }) {
+  const fillRef = useRef8(null);
+  const trackRef = useRef8(null);
+  const resolved = COLOR_PRESETS6[color] ?? color;
+  const indeterminate = value === void 0 || value === null;
+  useGSAP6(() => {
+    if (indeterminate) {
+      gsap7.set(fillRef.current, { xPercent: -100 });
+      gsap7.to(fillRef.current, { xPercent: 200, duration: 1.2, repeat: -1, ease: "none" });
+    } else {
+      gsap7.killTweensOf(fillRef.current);
+      gsap7.to(fillRef.current, { width: `${Math.min(100, Math.max(0, value))}%`, duration: 0.4, ease: "power3.out" });
+    }
+  }, { dependencies: [indeterminate, value] });
+  return /* @__PURE__ */ jsx15(
+    "div",
+    {
+      ref: trackRef,
+      role: "progressbar",
+      "aria-valuenow": indeterminate ? void 0 : value,
+      "aria-valuemin": 0,
+      "aria-valuemax": 100,
+      className,
+      style: { width: "100%", height: 8, borderRadius: "var(--radius-full)", backgroundColor: "var(--light-gray-background)", overflow: "hidden", position: "relative", ...style },
+      ...props,
+      children: /* @__PURE__ */ jsx15(
+        "div",
+        {
+          ref: fillRef,
+          style: indeterminate ? { position: "absolute", inset: 0, width: "40%", background: `linear-gradient(90deg, transparent, ${resolved}, transparent)` } : { height: "100%", width: 0, borderRadius: "var(--radius-full)", backgroundColor: resolved }
+        }
+      )
     }
   );
 }
 export {
   Badge,
-  Button,
+  button_default as Button,
   ButtonFullRounded,
   ButtonGroup,
-  DefaultModal,
+  CustomModal,
+  Dropdown,
   FabButton,
   Icon,
   Input,
+  Loading,
+  Progress,
+  Search,
   Select,
   Textarea,
   Toast

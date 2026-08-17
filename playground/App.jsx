@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import DefaultModal from '../src/modals/defaultModal.jsx';
+import { useRef, useState } from 'react';
 import Icon from '../src/icon/icon.jsx';
 import Button from '../src/buttons/button.jsx';
 import FabButton from '../src/buttons/fabButton.jsx';
@@ -7,7 +6,14 @@ import ButtonFullRounded from '../src/buttons/buttonFullRounded.jsx';
 import ButtonGroup from '../src/buttons/buttonGroup.jsx';
 import Badge from '../src/badge/badge.jsx';
 import Input from '../src/input/input.jsx';
+import Textarea from '../src/textarea/textarea.jsx';
 import Toast from '../src/toast/toast.jsx';
+import Select from '../src/select/select.jsx';
+import Search from '../src/search/search.jsx';
+import Loading from '../src/loading/loading.jsx';
+import Progress from '../src/loading/progress.jsx';
+import Dropdown from '../src/dropdown/dropdown.jsx';
+import CustomModal from '../src/customModal/customModal.js';
 
 function Section({ title, children }) {
   return (
@@ -42,6 +48,13 @@ function Row({ children }) {
 export default function App() {
   const [toasts, setToasts] = useState({ info: false, success: false, warning: false, danger: false });
   const toggleToast = (variant) => setToasts((t) => ({ ...t, [variant]: !t[variant] }));
+  const [country, setCountry] = useState(null);
+  const [progressValue, setProgressValue] = useState(30);
+  const [searchLog, setSearchLog] = useState('(nada buscado todavía)');
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [customModalOpen, setCustomModalOpen] = useState(false);
+  const dropdownTriggerRef = useRef(null);
+  const customModalTriggerRef = useRef(null);
 
   return (
     <div style={{ padding: '2rem', maxWidth: 960, margin: '0 auto' }}>
@@ -163,6 +176,108 @@ export default function App() {
           <Input placeholder="Sin label" />
           <Input label="Deshabilitado" placeholder="No editable" disabled />
         </div>
+      </Section>
+
+      <Section title="Textarea">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', maxWidth: 320 }}>
+          <Textarea label="Mensaje" placeholder="Escribí tu mensaje" />
+        </div>
+      </Section>
+
+      <Section title="Search — debounce incorporado, listo para una API">
+        <div style={{ maxWidth: 320 }}>
+          <Search
+            label="Buscar"
+            placeholder="Escribí para buscar..."
+            delay={400}
+            onSearch={(query) => setSearchLog(query ? `Llamando a la API con: "${query}"` : '(nada buscado todavía)')}
+          />
+          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--slate-gray-text)', marginTop: '0.5rem' }}>{searchLog}</p>
+        </div>
+      </Section>
+
+      <Section title="Select">
+        <div style={{ maxWidth: 320 }}>
+          <Select
+            label="País"
+            placeholder="Elegí un país"
+            value={country}
+            onChange={setCountry}
+            options={[
+              { value: 'ar', label: 'Argentina' },
+              { value: 'mx', label: 'México' },
+              { value: 'co', label: 'Colombia' },
+              { value: 'cl', label: 'Chile' },
+              { value: 'pe', label: 'Perú' },
+            ]}
+          />
+        </div>
+      </Section>
+
+      <Section title="Loading — figuras cambiando de forma">
+        <Row>
+          <Loading size="sm" color="primary" />
+          <Loading size="md" color="danger" />
+          <Loading size="lg" color="#7c3aed" />
+        </Row>
+      </Section>
+
+      <Section title="Progress — determinado e indeterminado (estela)">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', maxWidth: 400 }}>
+          <div>
+            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--slate-gray-text)', marginBottom: '0.5rem' }}>Indeterminado</p>
+            <Progress color="primary" />
+          </div>
+          <div>
+            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--slate-gray-text)', marginBottom: '0.5rem' }}>Determinado ({progressValue}%)</p>
+            <Progress color="success" value={progressValue} />
+            <Row>
+              <Button variant="outline" onClick={() => setProgressValue((v) => Math.max(0, v - 10))}>-10</Button>
+              <Button variant="outline" onClick={() => setProgressValue((v) => Math.min(100, v + 10))}>+10</Button>
+            </Row>
+          </div>
+        </div>
+      </Section>
+
+      <Section title="Dropdown — sin backdrop, cierra con Escape/click afuera">
+        <div style={{ position: 'relative', display: 'inline-block' }}>
+          <Button ref={dropdownTriggerRef} variant="outline" onClick={() => setDropdownOpen((o) => !o)}>
+            Abrir dropdown
+          </Button>
+          <Dropdown
+            open={dropdownOpen}
+            onClose={() => setDropdownOpen(false)}
+            triggerRef={dropdownTriggerRef}
+            width="220px"
+            className="absolute top-full left-0 mt-1"
+          >
+            <div style={{ padding: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+              <span style={{ fontSize: 'var(--text-sm)', color: 'var(--dark-navy-text)', padding: '0.5rem' }}>Opción 1</span>
+              <span style={{ fontSize: 'var(--text-sm)', color: 'var(--dark-navy-text)', padding: '0.5rem' }}>Opción 2</span>
+              <span style={{ fontSize: 'var(--text-sm)', color: 'var(--dark-navy-text)', padding: '0.5rem' }}>Opción 3</span>
+            </div>
+          </Dropdown>
+        </div>
+      </Section>
+
+      <Section title="CustomModal — width/height configurables, backdrop claro">
+        <Row>
+          <Button ref={customModalTriggerRef} variant="primary" onClick={() => setCustomModalOpen(true)}>Abrir CustomModal</Button>
+        </Row>
+        <CustomModal
+          open={customModalOpen}
+          onClose={() => setCustomModalOpen(false)}
+          triggerRef={customModalTriggerRef}
+          width="26rem"
+        >
+          <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--dark-navy-text)', marginBottom: '0.5rem' }}>
+            Modal personalizado
+          </h3>
+          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--slate-gray-text)', marginBottom: '1rem' }}>
+            Backdrop más claro que el de DefaultModal, ancho fijo vía prop.
+          </p>
+          <Button variant="outline" onClick={() => setCustomModalOpen(false)}>Cerrar</Button>
+        </CustomModal>
       </Section>
 
       <Section title="Toast — semántico, animado, arrastrable">
