@@ -1,0 +1,12 @@
+{
+  "name": "mott-design-components",
+  "version": "1.0.0",
+  "description": "mott system design components",
+  "license": "ISC",
+  "author": "danel_mott",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  }
+}
