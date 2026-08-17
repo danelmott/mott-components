@@ -1,0 +1,184 @@
+/*tokens for mott design*/
+@import 'material-symbols/rounded.css';
+@import "tailwindcss";
+@source "../src";
+
+
+:root {
+    --font-family: 'DM Sans', sans-serif;
+    --font-regular: 400;
+    --font-medium: 500;
+    --leading-tight: 1.1;   /* headings grandes */
+    --leading-snug: 1.25;  /* headings medianos */
+    --leading-normal: 1.5;   /* body */
+    --leading-relaxed: 1.6;   /* body largo / párrafos */
+    --tracking-display: -0.02em;  /* 48px+ */
+    --tracking-h1: -0.015em; /* 30-36px */
+    --tracking-h3: -0.01em;  /* 24px */
+    --tracking-h4: -0.005em; /* 18-20px */
+    --tracking-body: 0em;     /* 14-16px */
+    --tracking-label: 0.02em;  /* 12px */
+    --tracking-caps: 0.06em;  /* mayúsculas, cualquier tamaño chico */
+    --text-xs: 0.75rem;   /* 12px */
+    --text-sm: 0.875rem;  /* 14px */
+    --text-base: 1rem;      /* 16px — body */
+    --text-md: 1.125rem;  /* 18px */
+    --text-lg: 1.25rem;   /* 20px */
+    --text-xl: 1.5rem;    /* 24px */
+    --text-2xl: 1.875rem;  /* 30px */
+    --text-3xl: 2.25rem;   /* 36px */
+    --text-4xl: 3rem;      /* 48px */
+    
+    /*neutral colors*/
+    
+    /*ligth*/
+    --white: #ffffff;
+    --off-white-background: #f8fafc;
+    --light-gray-background: #f1f5f9;
+    --pale-gray-hover: #e2e8f0;
+    --pale-gray-border: #e2e8f0;
+    --gray-border-strong: #cbd5e1;
+    --dark-navy-text: #0f172a;
+    --slate-gray-text: #475569;
+    --muted-gray-text: #94a3b8;
+    
+    /*dark*/
+    --black-background: #020617;
+    --dark-navy-background: #0f172a;
+    --dark-slate-surface: #1e293b;
+    --slate-hover: #334155;
+    --slate-border: #334155;
+    --gray-border-strong-dark: #475569;
+    --white-text: #f8fafc;
+    --light-gray-text: #cbd5e1;
+    --muted-gray-text-dark: #94a3b8;
+    
+    /*semantic colors*/
+    --color-action:         #0066ff;
+    --color-action-hover:   #0045b2;
+    --color-action-bg:      #eff6ff;
+    --text-on-action:       #ffffff;
+    
+    --color-success:        #16a34a;
+    --color-success-hover:  #15803d;
+    --color-success-bg:     #f0fdf4;
+    --text-on-success:      #ffffff;
+    
+    --color-warning:        #d97706;
+    --color-warning-hover:  #b45309;
+    --color-warning-bg:     #fffbeb;
+    --text-on-warning:      #451a03;
+    
+    --color-danger:         #dc2626;
+    --color-danger-hover:   #b91c1c;
+    --color-danger-bg:      #fef2f2;
+    --text-on-danger:       #ffffff;
+
+    /*overlay/surface colors*/
+    --modal-surface:        var(--white);
+    --overlay-backdrop:     rgb(15 23 42 / 0.6);
+
+    [data-theme="dark"] {
+        --color-action:         #5e8bff;
+        --color-action-hover:   #8aa8ff;
+        --color-action-bg:      #172554;
+        --text-on-action:       #ffffff;
+
+        --color-success:        #4ade80;
+        --color-success-hover:  #86efac;
+        --color-success-bg:     #052e16;
+        --text-on-success:      #052e16;
+
+        --color-warning:        #fbbf24;
+        --color-warning-hover:  #fcd34d;
+        --color-warning-bg:     #451a03;
+        --text-on-warning:      #451a03;
+
+        --color-danger:         #f87171;
+        --color-danger-hover:   #fca5a5;
+        --color-danger-bg:      #450a0a;
+        --text-on-danger:       #450a0a;
+
+        --modal-surface:        var(--dark-navy-background);
+        --overlay-backdrop:     rgb(2 6 23 / 0.7);
+    }
+    @media (prefers-color-scheme: dark) {
+        :root:not([data-theme="light"]) {
+            --color-action:         #5e8bff;
+            --color-action-hover:   #8aa8ff;
+            --color-action-bg:      #172554;
+            --text-on-action:       #ffffff;
+            --color-success:        #4ade80;
+            --color-success-hover:  #86efac;
+            --color-success-bg:     #052e16;
+            --text-on-success:      #052e16;
+            --color-warning:        #fbbf24;
+            --color-warning-hover:  #fcd34d;
+            --color-warning-bg:     #451a03;
+            --text-on-warning:      #451a03;
+            --color-danger:         #f87171;
+            --color-danger-hover:   #fca5a5;
+            --color-danger-bg:      #450a0a;
+            --text-on-danger:       #450a0a;
+            --modal-surface:        var(--dark-navy-background);
+            --overlay-backdrop:     rgb(2 6 23 / 0.7);
+        }
+    }
+    
+    /*padding and border tokens*/
+    --radius-sm: 10px; 
+    --radius-lg: 16px; 
+    --radius-full: 9999px; 
+    --pad-button: 14px 24px; 
+    --pad-input: 9px 14px; 
+    --pad-card: 24px; 
+    --pad-stat: 18px; 
+    --pad-badge: 4px 10px;
+    
+    /*margin tokens*/
+    --gap-tight: 0.25rem; 
+    --gap-related: 0.25rem; 
+    --gap-group: 0.5rem;
+    --gap-section: 0.75rem; 
+    --gap-block: 1rem; 
+    --gap-page: 2rem; 
+    
+    /*icons*/
+    --sm-icon: 16px;
+    --md-icon: 20px;
+    --lg-icon: 24px;
+}
+
+
+@utility default-modal {
+    position: fixed;
+    inset: 0;
+    margin: 0;
+    padding: 0;
+    pointer-events: auto;
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    max-height: none;
+    overflow: hidden;
+    border: none;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    outline: none;
+    &[open] {
+        display: flex;
+        flex-direction: column;
+    }
+}
+
+
+/*breakpoints responvise*/
+@media (min-width: 640px)  { }
+@media (min-width: 768px)  { }
+@media (min-width: 1024px) { }
+@media (min-width: 1280px) { }
+@media (min-width: 1536px) { }
+
+
+
