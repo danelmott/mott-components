@@ -1,55 +1,40 @@
 'use client';
 import { useEffect, useRef } from 'react';
-import gsap from 'gsap';
 import { twMerge } from 'tailwind-merge';
+import { morphAnimation, fadeAnimation } from '../animations/modalAnimation.js';
 
 //component for customModal in mott-design — width/height configurables, backdrop claro,
-//animación "genio" (nace desde triggerRef y crece hasta el centro) cuando se pasa el ref del botón
-export default function CustomModal({ open, onClose, children, width = '32rem', height = 'auto', backdropOpacity = 0.35, triggerRef, className, style }) {
+//la animación de apertura/cierre del panel se delega a una `ModalAnimation` (ver src/animations/modalAnimation.js):
+//por defecto usa MorphAnimation (nace desde la forma/posición de `triggerRef`) si hay trigger, o FadeScaleAnimation si no
+export default function CustomModal({ open, onClose, onCloseComplete, children, width = '32rem', height = 'auto', backdropOpacity = 0.35, triggerRef, animation, className, style }) {
     const modalRef = useRef(null);
     const overlayRef = useRef(null);
     const panelRef = useRef(null);
+    const contentRef = useRef(null);
+    const activeAnimation = animation ?? (triggerRef ? morphAnimation : fadeAnimation);
 
     useEffect(() => {
         const modal = modalRef.current;
         const panel = panelRef.current;
         const overlay = overlayRef.current;
+        const content = contentRef.current;
         if (!modal || !panel || !overlay) return;
 
-        const getOrigin = () => {
-            if (!triggerRef?.current) return null;
-            const t = triggerRef.current.getBoundingClientRect();
-            const p = panel.getBoundingClientRect();
-            return {
-                x: t.left + t.width / 2 - (p.left + p.width / 2),
-                y: t.top + t.height / 2 - (p.top + p.height / 2),
-            };
-        };
+        // el backdrop viaja en el `ctx`: cada animación lo funde dentro de su propia timeline, así el
+        // oscurecimiento y el movimiento del panel se leen como un mismo gesto y no como dos eventos
+        // el `dialog` va en el ctx porque el "ghost" del ícono se cuelga de ahí (y no del panel): así
+        // se queda clavado sobre el botón en vez de viajar con la modal
+        const ctx = { dialog: modal, panel, content, overlay, trigger: triggerRef?.current };
 
         if (open && !modal.open) {
             modal.showModal();
-            const origin = getOrigin();
-
-            gsap.fromTo(overlay, { opacity: 0 }, { opacity: 1, duration: 0.22, ease: 'power1.out' });
-            gsap.fromTo(panel,
-                origin ? { x: origin.x, y: origin.y, scale: 0.15, opacity: 0 } : { opacity: 0, y: 12, scale: 0.94 },
-                { x: 0, y: 0, scale: 1, opacity: 1, duration: origin ? 0.5 : 0.35, ease: 'power3.out' }
-            );
+            activeAnimation.open(ctx);
         } else if (!open && modal.open) {
-            const origin = getOrigin();
-
-            gsap.to(overlay, { opacity: 0, duration: 0.2, ease: 'power1.in' });
-            gsap.to(panel, {
-                ...(origin ? { x: origin.x, y: origin.y, scale: 0.15 } : { y: 12, scale: 0.94 }),
-                opacity: 0,
-                duration: origin ? 0.35 : 0.25,
-                ease: 'power2.in',
-                onComplete: () => {
-                    modal.close();
-                    // sin esto, la próxima apertura mide getBoundingClientRect() con este transform
-                    // todavía pegado encima, y el cálculo del origen sale mal (se ve como fade)
-                    gsap.set(panel, { x: 0, y: 0, scale: 1 });
-                },
+            // `onCloseComplete` corre recién con la modal ya cerrada — es el momento en que quien la
+            // usa puede devolver su trigger al estado default sin romper la ilusión del morph
+            activeAnimation.close(ctx, () => {
+                modal.close();
+                onCloseComplete?.();
             });
         }
     }, [open]);
@@ -78,7 +63,9 @@ export default function CustomModal({ open, onClose, children, width = '32rem', 
                 className={twMerge('relative m-auto max-h-[85vh] max-w-[92vw] overflow-y-auto rounded-[var(--radius-lg)] bg-[var(--modal-surface)] p-[var(--pad-card)]', className)}
                 style={{ width, height, ...style }}
             >
-                {children}
+                <div ref={contentRef}>
+                    {children}
+                </div>
             </div>
         </dialog>
     )

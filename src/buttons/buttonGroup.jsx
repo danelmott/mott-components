@@ -14,8 +14,10 @@ const COLOR_PRESETS = {
 };
 
 //component for buttonGroup in mott-design — selección única, morph animado con GSAP
-export default function ButtonGroup({ buttons, vertical = true, color = 'primary', defaultSelected = null, onChange }) {
-    const [selectedButton, setSelectedButton] = useState(defaultSelected);
+export default function ButtonGroup({ buttons, vertical = true, color = 'primary', defaultSelected = null, value, allowDeselect = true, onChange }) {
+    const [internalSelected, setInternalSelected] = useState(defaultSelected);
+    const isControlled = value !== undefined;
+    const selectedButton = isControlled ? value : internalSelected;
     const itemRefs = useRef([]);
     const containerRef = useRef(null);
     const preset = COLOR_PRESETS[color] ?? COLOR_PRESETS.primary;
@@ -45,8 +47,8 @@ export default function ButtonGroup({ buttons, vertical = true, color = 'primary
     }, { dependencies: [selectedButton, color], scope: containerRef });
 
     const handleSelect = (i) => {
-        const next = selectedButton === i ? null : i;
-        setSelectedButton(next);
+        const next = (allowDeselect && selectedButton === i) ? null : i;
+        if (!isControlled) setInternalSelected(next);
         onChange?.(next, next === null ? null : buttons[i]);
     };
 
@@ -72,7 +74,7 @@ export default function ButtonGroup({ buttons, vertical = true, color = 'primary
                                 : { padding: '0 20px' }),
                         }}
                     >
-                        {btn.icon && <Icon name={btn.icon} />}
+                        {btn.icon && (typeof btn.icon === 'string' ? <Icon name={btn.icon} /> : btn.icon)}
                         {btn.label && <span>{btn.label}</span>}
                     </button>
                 );

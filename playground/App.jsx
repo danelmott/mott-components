@@ -14,6 +14,8 @@ import Loading from '../src/loading/loading.jsx';
 import Progress from '../src/loading/progress.jsx';
 import Dropdown from '../src/dropdown/dropdown.jsx';
 import CustomModal from '../src/customModal/customModal.jsx';
+import { anchoredAnimation } from '../src/animations/modalAnimation.js';
+import Navbar from '../src/navbar/navbar.jsx';
 
 function Section({ title, wide, children }) {
   return (
@@ -64,6 +66,10 @@ export default function App() {
   const [customModalOpen, setCustomModalOpen] = useState(false);
   const dropdownTriggerRef = useRef(null);
   const customModalTriggerRef = useRef(null);
+  const [activeRoute, setActiveRoute] = useState(0);
+  const [logoActive, setLogoActive] = useState(false);
+  const [logoModalOpen, setLogoModalOpen] = useState(false);
+  const logoButtonRef = useRef(null);
 
   return (
     <div style={{ padding: '2rem', maxWidth: 1400, margin: '0 auto' }}>
@@ -252,7 +258,7 @@ export default function App() {
           </div>
         </Section>
 
-        <Section title="CustomModal — genio desde el botón">
+        <Section title="CustomModal — anclada al botón">
           <Button ref={customModalTriggerRef} variant="primary" onClick={() => setCustomModalOpen(true)}>
             Abrir CustomModal
           </Button>
@@ -260,15 +266,71 @@ export default function App() {
             open={customModalOpen}
             onClose={() => setCustomModalOpen(false)}
             triggerRef={customModalTriggerRef}
+            animation={anchoredAnimation}
             width="26rem"
           >
             <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--dark-navy-text)', marginBottom: '0.5rem' }}>
               Modal personalizado
             </h3>
             <p style={{ fontSize: 'var(--text-sm)', color: 'var(--slate-gray-text)', marginBottom: '1rem' }}>
-              Backdrop más claro, ancho fijo vía prop, animación desde el botón.
+              Backdrop más claro, ancho fijo vía prop, animación anclada junto al botón (AnchoredAnimation).
             </p>
             <Button variant="outline" onClick={() => setCustomModalOpen(false)}>Cerrar</Button>
+          </CustomModal>
+        </Section>
+
+        <Section title="Navbar — rail en desktop, barra inferior en mobile" wide>
+          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--slate-gray-text)' }}>
+            Achicá la ventana por debajo de ~768px para ver el cambio de rail a barra inferior. El activo está controlado
+            (simula la ruta actual) — reclickear el mismo ítem no lo deselecciona. El logo tiene su propio estado
+            `active`: togglea al clickearlo, y se apaga solo cuando elegís una ruta.
+          </p>
+          <Navbar
+            color="primary"
+            selected={activeRoute}
+            onChange={(index) => {
+              setActiveRoute(index);
+              setLogoActive(false);
+            }}
+            logo={{
+              active: logoActive,
+              buttonRef: logoButtonRef,
+              icon: (
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 2L2 7l10 5 10-5-10-5z" fill="currentColor" />
+                  <path d="M2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" strokeWidth="2" fill="none" />
+                </svg>
+              ),
+              onClick: () => {
+                setLogoActive((a) => !a);
+                setLogoModalOpen(true);
+              },
+            }}
+            items={[
+              { icon: 'home' },
+              { icon: 'search' },
+              { icon: 'favorite' },
+              { icon: 'person' },
+            ]}
+          />
+          <CustomModal
+            open={logoModalOpen}
+            onClose={() => setLogoModalOpen(false)}
+            // el logo se mantiene activo durante todo el achique — así la modal aterriza sobre el
+            // botón en el mismo estado del que salió, y recién ahí vuelve al default
+            onCloseComplete={() => setLogoActive(false)}
+            triggerRef={logoButtonRef}
+            width="22rem"
+          >
+            <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--dark-navy-text)', marginBottom: '0.5rem' }}>
+              Modal abierto desde el logo
+            </h3>
+            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--slate-gray-text)', marginBottom: '1rem' }}>
+              El `onClick` del logo puede hacer lo que quieras — acá togglea `active` y abre este modal, anclado a la posición real del botón.
+            </p>
+            <Button variant="outline" onClick={() => setLogoModalOpen(false)}>
+              Cerrar
+            </Button>
           </CustomModal>
         </Section>
 

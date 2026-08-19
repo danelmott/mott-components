@@ -203,17 +203,19 @@ var COLOR_PRESETS3 = {
   ghost: { bg: "transparent", fg: "var(--dark-navy-text)" },
   danger: { bg: "var(--color-danger)", fg: "var(--text-on-danger)" }
 };
-function ButtonGroup({ buttons, vertical = true, color = "primary", defaultSelected = null, onChange }) {
-  const [selectedButton, setSelectedButton] = useState(defaultSelected);
+function ButtonGroup({ buttons, vertical = true, color = "primary", defaultSelected = null, value, allowDeselect = true, onChange }) {
+  const [internalSelected, setInternalSelected] = useState(defaultSelected);
+  const isControlled = value !== void 0;
+  const selectedButton = isControlled ? value : internalSelected;
   const itemRefs = useRef([]);
   const containerRef = useRef(null);
   const preset = COLOR_PRESETS3[color] ?? COLOR_PRESETS3.primary;
-  const resolveColor = (value) => {
-    if (typeof value === "string" && value.startsWith("var(")) {
-      const token = value.slice(4, -1).trim();
+  const resolveColor = (value2) => {
+    if (typeof value2 === "string" && value2.startsWith("var(")) {
+      const token = value2.slice(4, -1).trim();
       return getComputedStyle(document.documentElement).getPropertyValue(token).trim();
     }
-    return value;
+    return value2;
   };
   useGSAP(() => {
     itemRefs.current.forEach((el, i) => {
@@ -230,8 +232,8 @@ function ButtonGroup({ buttons, vertical = true, color = "primary", defaultSelec
     });
   }, { dependencies: [selectedButton, color], scope: containerRef });
   const handleSelect = (i) => {
-    const next = selectedButton === i ? null : i;
-    setSelectedButton(next);
+    const next = allowDeselect && selectedButton === i ? null : i;
+    if (!isControlled) setInternalSelected(next);
     onChange == null ? void 0 : onChange(next, next === null ? null : buttons[i]);
   };
   return /* @__PURE__ */ jsx5("div", { ref: containerRef, className: twMerge3("inline-flex gap-[var(--gap-group)]", vertical && "flex-col"), children: buttons.map((btn, i) => {
@@ -252,7 +254,7 @@ function ButtonGroup({ buttons, vertical = true, color = "primary", defaultSelec
           ...iconOnly ? { width: "var(--control-size-md)", padding: 0 } : { padding: "0 20px" }
         },
         children: [
-          btn.icon && /* @__PURE__ */ jsx5(Icon, { name: btn.icon }),
+          btn.icon && (typeof btn.icon === "string" ? /* @__PURE__ */ jsx5(Icon, { name: btn.icon }) : btn.icon),
           btn.label && /* @__PURE__ */ jsx5("span", { children: btn.label })
         ]
       },
@@ -740,48 +742,293 @@ function Dropdown({ open, onClose, children, width = "auto", height = "auto", tr
 
 // src/customModal/customModal.jsx
 import { useEffect as useEffect5, useRef as useRef6 } from "react";
-import gsap5 from "gsap";
 import { twMerge as twMerge8 } from "tailwind-merge";
+
+// src/animations/modalAnimation.js
+import gsap5 from "gsap";
+import CustomEase from "gsap/CustomEase";
+gsap5.registerPlugin(CustomEase);
+var LIQUID_EASE = CustomEase.create("mottLiquid", "0.32, 0.72, 0, 1");
+var LIQUID_EASE_IN = CustomEase.create("mottLiquidIn", "1, 0, 0.68, 0.28");
+var MORPH_OPEN_DURATION = 0.8;
+var MORPH_CLOSE_DURATION = 0.7;
+var GHOST_ATTR = "data-mott-morph-ghost";
+var RUNNING_MORPH = /* @__PURE__ */ Symbol.for("mott.runningMorph");
+function killRunningMorph(panel) {
+  var _a;
+  (_a = panel[RUNNING_MORPH]) == null ? void 0 : _a.kill();
+  panel[RUNNING_MORPH] = null;
+}
+function resolveRadius(el, rect) {
+  const raw = getComputedStyle(el).borderTopLeftRadius;
+  const value = parseFloat(raw) || 0;
+  return raw.trim().endsWith("%") ? value / 100 * Math.min(rect.width, rect.height) : value;
+}
+function createTriggerGhost(dialog, trigger, originRect) {
+  removeTriggerGhost(dialog);
+  const cs = getComputedStyle(trigger);
+  const ghost = document.createElement("div");
+  ghost.setAttribute(GHOST_ATTR, "");
+  Object.assign(ghost.style, {
+    position: "fixed",
+    left: `${originRect.left}px`,
+    top: `${originRect.top}px`,
+    width: `${originRect.width}px`,
+    height: `${originRect.height}px`,
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    pointerEvents: "none",
+    color: cs.color,
+    fontFamily: cs.fontFamily,
+    fontSize: cs.fontSize,
+    fontWeight: cs.fontWeight,
+    lineHeight: cs.lineHeight,
+    letterSpacing: cs.letterSpacing
+  });
+  const inner = document.createElement("div");
+  const scale = trigger.offsetWidth ? originRect.width / trigger.offsetWidth : 1;
+  Object.assign(inner.style, {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    transform: `scale(${scale})`
+  });
+  trigger.childNodes.forEach((node) => inner.appendChild(node.cloneNode(true)));
+  ghost.appendChild(inner);
+  dialog.appendChild(ghost);
+  return ghost;
+}
+function removeTriggerGhost(dialog) {
+  var _a;
+  (_a = dialog == null ? void 0 : dialog.querySelector(`[${GHOST_ATTR}]`)) == null ? void 0 : _a.remove();
+}
+var ModalAnimation = class {
+  open(ctx) {
+  }
+  close(ctx, onDone) {
+    onDone == null ? void 0 : onDone();
+  }
+  // el backdrop siempre va en la misma timeline que el panel, para que oscurecer la pantalla y
+  // mover el panel se lean como un mismo gesto y no como dos eventos separados
+  fadeOverlay(tl, overlay, to, duration, position = 0) {
+    if (!overlay) return tl;
+    return to === 1 ? tl.fromTo(overlay, { opacity: 0 }, { opacity: 1, duration, ease: "power1.out" }, position) : tl.to(overlay, { opacity: 0, duration, ease: "power1.in" }, position);
+  }
+};
+var FadeScaleAnimation = class extends ModalAnimation {
+  open({ panel, overlay }) {
+    const tl = gsap5.timeline();
+    this.fadeOverlay(tl, overlay, 1, 0.22);
+    tl.fromTo(
+      panel,
+      { opacity: 0, y: 12, scale: 0.94 },
+      { opacity: 1, y: 0, scale: 1, duration: 0.35, ease: "power3.out" },
+      0
+    );
+  }
+  close({ panel, overlay }, onDone) {
+    const tl = gsap5.timeline({ onComplete: () => onDone == null ? void 0 : onDone() });
+    this.fadeOverlay(tl, overlay, 0, 0.2);
+    tl.to(panel, { opacity: 0, y: 12, scale: 0.94, duration: 0.25, ease: "power2.in" }, 0);
+  }
+};
+var MorphAnimation = class extends ModalAnimation {
+  // geometría de la ventana del clip y del translate que la deja encima del botón
+  measure(panel, trigger) {
+    const cs = getComputedStyle(panel);
+    const pad = { top: parseFloat(cs.paddingTop) || 0, left: parseFloat(cs.paddingLeft) || 0 };
+    const rect = panel.getBoundingClientRect();
+    const tx = Number(gsap5.getProperty(panel, "x")) || 0;
+    const ty = Number(gsap5.getProperty(panel, "y")) || 0;
+    const panelRect = { left: rect.left - tx, top: rect.top - ty, width: rect.width, height: rect.height };
+    const originRect = trigger.getBoundingClientRect();
+    return {
+      pad,
+      panelRect,
+      originRect,
+      // el panel entero a la vista, con el radio de la modal
+      openClip: { top: 0, right: 0, bottom: 0, left: 0, radius: resolveRadius(panel, panelRect) },
+      // solo la ventana del tamaño del botón, con el radio del botón
+      buttonClip: {
+        top: pad.top,
+        right: panelRect.width - pad.left - originRect.width,
+        bottom: panelRect.height - pad.top - originRect.height,
+        left: pad.left,
+        radius: resolveRadius(trigger, originRect)
+      },
+      // deja la esquina de la ventana exactamente sobre la esquina del botón
+      buttonOffset: {
+        x: originRect.left - panelRect.left - pad.left,
+        y: originRect.top - panelRect.top - pad.top
+      }
+    };
+  }
+  applyClip(panel, clip) {
+    panel.style.clipPath = `inset(${clip.top}px ${clip.right}px ${clip.bottom}px ${clip.left}px round ${clip.radius}px)`;
+  }
+  // lee el estado actual del clip para poder arrancar desde ahí si se interrumpe una animación
+  readClip(panel, fallback) {
+    const match = /inset\(([^)]+)\)/.exec(panel.style.clipPath || "");
+    if (!match) return fallback;
+    const parts = match[1].trim().split(/\s+/);
+    const at = (i) => parseFloat(parts[i]);
+    return { top: at(0), right: at(1), bottom: at(2), left: at(3), radius: at(5) };
+  }
+  // GSAP no interpola strings `inset(... round ...)` de forma confiable, así que animamos un proxy
+  // y componemos el string a mano. Al ir en la misma timeline y con el mismo ease que el translate,
+  // los dos quedan sincronizados frame a frame.
+  addClipTween(tl, panel, from, to, duration, ease, position = 0) {
+    const state = { p: 0 };
+    const lerp = (a, b) => a + (b - a) * state.p;
+    this.applyClip(panel, from);
+    tl.to(state, {
+      p: 1,
+      duration,
+      ease,
+      onUpdate: () => this.applyClip(panel, {
+        top: lerp(from.top, to.top),
+        right: lerp(from.right, to.right),
+        bottom: lerp(from.bottom, to.bottom),
+        left: lerp(from.left, to.left),
+        radius: lerp(from.radius, to.radius)
+      })
+    }, position);
+  }
+  settle(dialog, panel, content) {
+    removeTriggerGhost(dialog);
+    panel.style.clipPath = "";
+    panel[RUNNING_MORPH] = null;
+    gsap5.set(panel, { clearProps: "transform,backgroundColor,willChange" });
+    gsap5.set(content, { clearProps: "opacity,visibility" });
+  }
+  open({ dialog, panel, content, overlay, trigger }) {
+    if (!trigger) return new FadeScaleAnimation().open({ panel, overlay });
+    killRunningMorph(panel);
+    const { originRect, openClip, buttonClip, buttonOffset } = this.measure(panel, trigger);
+    const originColor = getComputedStyle(trigger).backgroundColor;
+    const finalColor = getComputedStyle(panel).backgroundColor;
+    const ghost = createTriggerGhost(dialog, trigger, originRect);
+    gsap5.set(panel, {
+      x: buttonOffset.x,
+      y: buttonOffset.y,
+      backgroundColor: originColor,
+      willChange: "transform, clip-path"
+    });
+    gsap5.set(content, { autoAlpha: 0 });
+    const d = MORPH_OPEN_DURATION;
+    const tl = gsap5.timeline({ onComplete: () => this.settle(dialog, panel, content) });
+    panel[RUNNING_MORPH] = tl;
+    tl.to(panel, {
+      x: 0,
+      y: 0,
+      backgroundColor: finalColor,
+      duration: d,
+      ease: LIQUID_EASE,
+      force3D: true
+    }, 0);
+    this.addClipTween(tl, panel, buttonClip, openClip, d, LIQUID_EASE, 0);
+    tl.to(ghost, { opacity: 0, duration: d * 0.15, ease: "power1.in" }, 0);
+    tl.to(content, { autoAlpha: 1, duration: d * 0.45, ease: "power1.out" }, d * 0.55);
+    this.fadeOverlay(tl, overlay, 1, d * 0.6, 0);
+  }
+  // al cerrar NO hay ghost: el cuadro viaja sin ícono, aterriza sobre el botón y desaparece — recién
+  // ahí se ve el ícono del botón real. Lo que hace que eso funcione es el ease-in: el panel acelera
+  // hacia el botón y llega justo al final, en vez de plantarse encima tapándolo media animación.
+  close({ dialog, panel, content, overlay, trigger }, onDone) {
+    if (!trigger) return new FadeScaleAnimation().close({ panel, overlay }, onDone);
+    killRunningMorph(panel);
+    removeTriggerGhost(dialog);
+    const { openClip, buttonClip, buttonOffset } = this.measure(panel, trigger);
+    const originColor = getComputedStyle(trigger).backgroundColor;
+    gsap5.set(panel, { willChange: "transform, clip-path" });
+    const d = MORPH_CLOSE_DURATION;
+    const tl = gsap5.timeline({
+      onComplete: () => {
+        onDone == null ? void 0 : onDone();
+        this.settle(dialog, panel, content);
+      }
+    });
+    panel[RUNNING_MORPH] = tl;
+    tl.to(panel, {
+      x: buttonOffset.x,
+      y: buttonOffset.y,
+      backgroundColor: originColor,
+      duration: d,
+      ease: LIQUID_EASE_IN,
+      force3D: true
+    }, 0);
+    this.addClipTween(tl, panel, this.readClip(panel, openClip), buttonClip, d, LIQUID_EASE_IN, 0);
+    tl.to(content, { autoAlpha: 0, duration: d * 0.25, ease: "power1.in" }, 0);
+    this.fadeOverlay(tl, overlay, 0, d * 0.8, 0);
+  }
+};
+var AnchoredAnimation = class extends ModalAnimation {
+  computeAnchoredPosition(triggerRect, panelRect) {
+    const gap = 8;
+    const margin = 8;
+    const fitsBelow = window.innerHeight - triggerRect.bottom - gap >= panelRect.height;
+    const top = fitsBelow ? triggerRect.bottom + gap : Math.max(margin, triggerRect.top - gap - panelRect.height);
+    const origin = fitsBelow ? "top left" : "bottom left";
+    let left = triggerRect.left;
+    const maxLeft = window.innerWidth - panelRect.width - margin;
+    left = Math.min(left, Math.max(margin, maxLeft));
+    left = Math.max(left, margin);
+    return { left, top, origin };
+  }
+  open({ panel, overlay, trigger }) {
+    if (!trigger) return new FadeScaleAnimation().open({ panel, overlay });
+    const panelRect = panel.getBoundingClientRect();
+    const triggerRect = trigger.getBoundingClientRect();
+    const { left, top, origin } = this.computeAnchoredPosition(triggerRect, panelRect);
+    gsap5.set(panel, { position: "fixed", margin: 0, left, top, transformOrigin: origin });
+    const tl = gsap5.timeline();
+    this.fadeOverlay(tl, overlay, 1, 0.22);
+    tl.fromTo(
+      panel,
+      { opacity: 0, scale: 0.85 },
+      { opacity: 1, scale: 1, duration: 0.3, ease: "back.out(1.5)" },
+      0
+    );
+  }
+  close({ panel, overlay, trigger }, onDone) {
+    if (!trigger) return new FadeScaleAnimation().close({ panel, overlay }, onDone);
+    const tl = gsap5.timeline({
+      onComplete: () => {
+        onDone == null ? void 0 : onDone();
+        gsap5.set(panel, { clearProps: "position,left,top,margin,transformOrigin" });
+      }
+    });
+    this.fadeOverlay(tl, overlay, 0, 0.2);
+    tl.to(panel, { opacity: 0, scale: 0.85, duration: 0.2, ease: "power2.in" }, 0);
+  }
+};
+var morphAnimation = new MorphAnimation();
+var fadeAnimation = new FadeScaleAnimation();
+var anchoredAnimation = new AnchoredAnimation();
+
+// src/customModal/customModal.jsx
 import { jsx as jsx13, jsxs as jsxs8 } from "react/jsx-runtime";
-function CustomModal({ open, onClose, children, width = "32rem", height = "auto", backdropOpacity = 0.35, triggerRef, className, style }) {
+function CustomModal({ open, onClose, onCloseComplete, children, width = "32rem", height = "auto", backdropOpacity = 0.35, triggerRef, animation, className, style }) {
   const modalRef = useRef6(null);
   const overlayRef = useRef6(null);
   const panelRef = useRef6(null);
+  const contentRef = useRef6(null);
+  const activeAnimation = animation ?? (triggerRef ? morphAnimation : fadeAnimation);
   useEffect5(() => {
     const modal = modalRef.current;
     const panel = panelRef.current;
     const overlay = overlayRef.current;
+    const content = contentRef.current;
     if (!modal || !panel || !overlay) return;
-    const getOrigin = () => {
-      if (!(triggerRef == null ? void 0 : triggerRef.current)) return null;
-      const t = triggerRef.current.getBoundingClientRect();
-      const p = panel.getBoundingClientRect();
-      return {
-        x: t.left + t.width / 2 - (p.left + p.width / 2),
-        y: t.top + t.height / 2 - (p.top + p.height / 2)
-      };
-    };
+    const ctx = { dialog: modal, panel, content, overlay, trigger: triggerRef == null ? void 0 : triggerRef.current };
     if (open && !modal.open) {
       modal.showModal();
-      const origin = getOrigin();
-      gsap5.fromTo(overlay, { opacity: 0 }, { opacity: 1, duration: 0.22, ease: "power1.out" });
-      gsap5.fromTo(
-        panel,
-        origin ? { x: origin.x, y: origin.y, scale: 0.15, opacity: 0 } : { opacity: 0, y: 12, scale: 0.94 },
-        { x: 0, y: 0, scale: 1, opacity: 1, duration: origin ? 0.5 : 0.35, ease: "power3.out" }
-      );
+      activeAnimation.open(ctx);
     } else if (!open && modal.open) {
-      const origin = getOrigin();
-      gsap5.to(overlay, { opacity: 0, duration: 0.2, ease: "power1.in" });
-      gsap5.to(panel, {
-        ...origin ? { x: origin.x, y: origin.y, scale: 0.15 } : { y: 12, scale: 0.94 },
-        opacity: 0,
-        duration: origin ? 0.35 : 0.25,
-        ease: "power2.in",
-        onComplete: () => {
-          modal.close();
-          gsap5.set(panel, { x: 0, y: 0, scale: 1 });
-        }
+      activeAnimation.close(ctx, () => {
+        modal.close();
+        onCloseComplete == null ? void 0 : onCloseComplete();
       });
     }
   }, [open]);
@@ -812,7 +1059,7 @@ function CustomModal({ open, onClose, children, width = "32rem", height = "auto"
             ref: panelRef,
             className: twMerge8("relative m-auto max-h-[85vh] max-w-[92vw] overflow-y-auto rounded-[var(--radius-lg)] bg-[var(--modal-surface)] p-[var(--pad-card)]", className),
             style: { width, height, ...style },
-            children
+            children: /* @__PURE__ */ jsx13("div", { ref: contentRef, children })
           }
         )
       ]
@@ -927,7 +1174,133 @@ function Progress({ value, color = "primary", className, style, ...props }) {
     }
   );
 }
+
+// src/navbar/navbar.jsx
+import { useEffect as useEffect6, useRef as useRef9 } from "react";
+import { twMerge as twMerge9 } from "tailwind-merge";
+import gsap8 from "gsap";
+import { Fragment, jsx as jsx16, jsxs as jsxs9 } from "react/jsx-runtime";
+var COLOR_PRESETS7 = {
+  primary: { bg: "var(--color-action)", fg: "var(--text-on-action)" },
+  secondary: { bg: "var(--dark-navy-text)", fg: "var(--white)" },
+  outline: { bg: "var(--light-gray-background)", fg: "var(--dark-navy-text)" },
+  ghost: { bg: "transparent", fg: "var(--dark-navy-text)" },
+  danger: { bg: "var(--color-danger)", fg: "var(--text-on-danger)" }
+};
+var DESKTOP_ALIGN = {
+  center: "top-1/2 -translate-y-1/2",
+  top: "top-8"
+};
+function LogoButton({ logo, color }) {
+  const ref = useRef9(null);
+  const preset = COLOR_PRESETS7[logo.color ?? color] ?? COLOR_PRESETS7.primary;
+  const setRefs = (node) => {
+    ref.current = node;
+    if (typeof logo.buttonRef === "function") logo.buttonRef(node);
+    else if (logo.buttonRef) logo.buttonRef.current = node;
+  };
+  const resolveColor = (value) => {
+    if (typeof value === "string" && value.startsWith("var(")) {
+      const token = value.slice(4, -1).trim();
+      return getComputedStyle(document.documentElement).getPropertyValue(token).trim();
+    }
+    return value;
+  };
+  useEffect6(() => {
+    if (!ref.current) return;
+    gsap8.to(ref.current, {
+      borderRadius: logo.active ? "28%" : "50%",
+      scale: logo.active ? 1.1 : 1,
+      backgroundColor: resolveColor(logo.active ? preset.bg : "var(--light-gray-background)"),
+      color: resolveColor(logo.active ? preset.fg : "var(--dark-navy-text)"),
+      duration: 0.4,
+      ease: "power3.out"
+    });
+  }, [logo.active, preset]);
+  return /* @__PURE__ */ jsx16(
+    "button",
+    {
+      ref: setRefs,
+      type: "button",
+      onClick: logo.onClick,
+      "aria-pressed": !!logo.active,
+      "aria-label": logo.label ?? "Inicio",
+      className: "inline-flex items-center justify-center border-0 cursor-pointer p-0",
+      style: {
+        width: "var(--control-size-md)",
+        height: "var(--control-size-md)",
+        borderRadius: "50%",
+        backgroundColor: "var(--light-gray-background)",
+        color: "var(--dark-navy-text)"
+      },
+      children: typeof logo.icon === "string" ? /* @__PURE__ */ jsx16(Icon, { name: logo.icon }) : logo.icon
+    }
+  );
+}
+function Navbar({
+  items = [],
+  selected,
+  defaultSelected = null,
+  onChange,
+  color = "primary",
+  logo,
+  align = "top",
+  className,
+  style
+}) {
+  return /* @__PURE__ */ jsxs9(Fragment, { children: [
+    /* @__PURE__ */ jsxs9(
+      "nav",
+      {
+        className: twMerge9(
+          "hidden md:flex fixed left-4 z-20 flex-col items-center gap-[var(--gap-group)]",
+          DESKTOP_ALIGN[align] ?? DESKTOP_ALIGN.center,
+          className
+        ),
+        style,
+        children: [
+          logo && /* @__PURE__ */ jsx16(LogoButton, { logo, color }),
+          /* @__PURE__ */ jsx16(
+            ButtonGroup,
+            {
+              vertical: true,
+              buttons: items,
+              value: selected,
+              defaultSelected,
+              allowDeselect: false,
+              onChange,
+              color
+            }
+          )
+        ]
+      }
+    ),
+    /* @__PURE__ */ jsx16(
+      "nav",
+      {
+        className: twMerge9(
+          "flex md:hidden fixed bottom-4 left-1/2 z-20 -translate-x-1/2 items-center gap-3",
+          className
+        ),
+        style,
+        children: /* @__PURE__ */ jsx16("div", { className: "flex items-center gap-1 rounded-[var(--radius-full)] bg-[var(--white)] p-1 shadow-md", children: /* @__PURE__ */ jsx16(
+          ButtonGroup,
+          {
+            vertical: false,
+            buttons: items,
+            value: selected,
+            defaultSelected,
+            allowDeselect: false,
+            onChange,
+            color
+          }
+        ) })
+      }
+    )
+  ] });
+}
 export {
+  AnchoredAnimation,
   Badge,
   button_default as Button,
   ButtonFullRounded,
@@ -935,12 +1308,19 @@ export {
   CustomModal,
   Dropdown,
   FabButton,
+  FadeScaleAnimation,
   Icon,
   Input,
   Loading,
+  ModalAnimation,
+  MorphAnimation,
+  Navbar,
   Progress,
   Search,
   Select,
   Textarea,
-  Toast
+  Toast,
+  anchoredAnimation,
+  fadeAnimation,
+  morphAnimation
 };
