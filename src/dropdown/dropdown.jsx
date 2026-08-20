@@ -8,11 +8,11 @@ import { twMerge } from 'tailwind-merge';
 export default function Dropdown({ open, onClose, children, width = 'auto', height = 'auto', triggerRef, className, style, ...props }) {
     const [rendered, setRendered] = useState(open);
     const panelRef = useRef(null);
-
+    
     useEffect(() => {
         if (open) setRendered(true);
     }, [open]);
-
+    
     useGSAP(() => {
         if (open && panelRef.current) {
             gsap.fromTo(panelRef.current,
@@ -21,7 +21,7 @@ export default function Dropdown({ open, onClose, children, width = 'auto', heig
             );
         }
     }, { dependencies: [open, rendered] });
-
+    
     useEffect(() => {
         if (!open && rendered && panelRef.current) {
             gsap.to(panelRef.current, {
@@ -34,7 +34,7 @@ export default function Dropdown({ open, onClose, children, width = 'auto', heig
             });
         }
     }, [open, rendered]);
-
+    
     useEffect(() => {
         if (!open) return;
         const handleClick = (e) => {
@@ -50,14 +50,14 @@ export default function Dropdown({ open, onClose, children, width = 'auto', heig
             document.removeEventListener('keydown', handleKey);
         };
     }, [open, onClose, triggerRef]);
-
+    
     if (!rendered) return null;
-
+    
     return (
         <div
             ref={panelRef}
             role="menu"
-            className={twMerge('rounded-[var(--radius-lg)] bg-[var(--white)] p-1 shadow-lg', className)}
+            className={twMerge('z-[var(--z-floating)] rounded-[var(--radius-lg)] bg-[var(--white)] p-1 shadow-lg', className)}
             style={{ width, height, ...style }}
             {...props}
         >

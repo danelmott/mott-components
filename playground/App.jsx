@@ -67,9 +67,23 @@ export default function App() {
   const dropdownTriggerRef = useRef(null);
   const customModalTriggerRef = useRef(null);
   const [activeRoute, setActiveRoute] = useState(0);
-  const [logoActive, setLogoActive] = useState(false);
-  const [logoModalOpen, setLogoModalOpen] = useState(false);
+  // el logo abre el pop up anclado. No lleva estado activo a propósito: el panel se apoya encima y lo
+  // tapa, así que el botón solo recibe el click — cambiarle el estilo no se vería, y encima el `scale`
+  // del estado activo lo haría asomar por detrás del panel
+  const [logoPopoverOpen, setLogoPopoverOpen] = useState(false);
   const logoButtonRef = useRef(null);
+  // el engranaje abre la modal centrada. Ese botón sí queda a la vista mientras la modal viaja, así
+  // que sí lleva el efecto de click. Va en un estado aparte de `gearModalOpen` para apagarse recién en
+  // `onCloseComplete`: así la modal aterriza sobre un botón todavía activo y el color no salta
+  const [gearModalOpen, setGearModalOpen] = useState(false);
+  const [gearActive, setGearActive] = useState(false);
+  const gearButtonRef = useRef(null);
+  // el Navbar renderiza los mismos items dos veces (rail de desktop + barra de mobile) y solo uno
+  // está visible: nos quedamos con el que realmente tiene caja, porque el oculto mide 0 y el morph
+  // arrancaría desde un rect vacío
+  const setGearTrigger = (node) => {
+    if (node && node.offsetWidth > 0) gearButtonRef.current = node;
+  };
 
   return (
     <div style={{ padding: '2rem', maxWidth: 1400, margin: '0 auto' }}>
@@ -114,7 +128,7 @@ export default function App() {
 
         <Section title="Button — iconOnly (sm / md / lg)">
           <Row>
-            <Button variant="ghost" iconOnly aria-label="Editar">
+            <Button variant="ghost" iconOnly aria-label="Editar" >
               <Icon name="edit" size="sm" />
             </Button>
             <Button variant="outline" iconOnly aria-label="Editar">
@@ -268,6 +282,7 @@ export default function App() {
             triggerRef={customModalTriggerRef}
             animation={anchoredAnimation}
             width="26rem"
+            backdropOpacity={0.15}
           >
             <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--dark-navy-text)', marginBottom: '0.5rem' }}>
               Modal personalizado
@@ -281,19 +296,25 @@ export default function App() {
 
         <Section title="Navbar — rail en desktop, barra inferior en mobile" wide>
           <p style={{ fontSize: 'var(--text-sm)', color: 'var(--slate-gray-text)' }}>
-            Achicá la ventana por debajo de ~768px para ver el cambio de rail a barra inferior. El activo está controlado
-            (simula la ruta actual) — reclickear el mismo ítem no lo deselecciona. El logo tiene su propio estado
-            `active`: togglea al clickearlo, y se apaga solo cuando elegís una ruta.
+            Achicá la ventana por debajo de ~768px para ver el cambio de rail a barra inferior. El activo está
+            controlado (simula la ruta actual) — reclickear el mismo ítem no lo deselecciona. Los dos triggers
+            muestran las dos variantes del morph: el <strong>logo</strong> abre un pop up que se apoya encima y lo
+            tapa (por eso no cambia de estilo: no se vería), y el <strong>engranaje</strong> abre una modal centrada
+            que viaja hasta el medio de la pantalla (por eso sí se ilumina: ese botón queda a la vista).
           </p>
           <Navbar
             color="primary"
-            selected={activeRoute}
+            selected={gearActive ? 4 : activeRoute}
             onChange={(index) => {
-              setActiveRoute(index);
-              setLogoActive(false);
+              if (index === 4) {
+                setGearActive(true);
+                setGearModalOpen(true);
+              } else {
+                setActiveRoute(index);
+                setGearModalOpen(false);
+              }
             }}
             logo={{
-              active: logoActive,
               buttonRef: logoButtonRef,
               icon: (
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -301,60 +322,84 @@ export default function App() {
                   <path d="M2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" strokeWidth="2" fill="none" />
                 </svg>
               ),
-              onClick: () => {
-                setLogoActive((a) => !a);
-                setLogoModalOpen(true);
-              },
+              onClick: () => setLogoPopoverOpen(true),
             }}
             items={[
               { icon: 'home' },
               { icon: 'search' },
               { icon: 'favorite' },
               { icon: 'person' },
+              { icon: 'settings', buttonRef: setGearTrigger },
             ]}
           />
+          {/* modal centrada desde el engranaje: viaja hasta el centro, así que el botón queda a la
+              vista y sí lleva el efecto de click */}
           <CustomModal
-            open={logoModalOpen}
-            onClose={() => setLogoModalOpen(false)}
-            // el logo se mantiene activo durante todo el achique — así la modal aterriza sobre el
+            open={gearModalOpen}
+            onClose={() => setGearModalOpen(false)}
+            // el engranaje se mantiene activo durante todo el achique — así la modal aterriza sobre el
             // botón en el mismo estado del que salió, y recién ahí vuelve al default
-            onCloseComplete={() => setLogoActive(false)}
-            triggerRef={logoButtonRef}
+            onCloseComplete={() => setGearActive(false)}
+            triggerRef={gearButtonRef}
             width="22rem"
           >
             <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--dark-navy-text)', marginBottom: '0.5rem' }}>
-              Modal abierto desde el logo
+              Modal centrada desde el nav
             </h3>
             <p style={{ fontSize: 'var(--text-sm)', color: 'var(--slate-gray-text)', marginBottom: '1rem' }}>
-              El `onClick` del logo puede hacer lo que quieras — acá togglea `active` y abre este modal, anclado a la posición real del botón.
+              El botón se transforma en la modal y viaja hasta el centro. Como queda a la vista, se ilumina
+              al clickearlo y vuelve al default recién cuando la modal termina de plegarse encima.
             </p>
-            <Button variant="outline" onClick={() => setLogoModalOpen(false)}>
+            <Button variant="outline" onClick={() => setGearModalOpen(false)}>
               Cerrar
             </Button>
           </CustomModal>
+
+          {/* pop up anclado al logo: el mismo morph, pero apoyándose encima del propio botón en vez
+              de viajar al centro de la pantalla */}
+          <CustomModal
+            open={logoPopoverOpen}
+            onClose={() => setLogoPopoverOpen(false)}
+            triggerRef={logoButtonRef}
+            animation={anchoredAnimation}
+            width="18rem"
+            backdropOpacity={0.15}
+          >
+            <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--dark-navy-text)', marginBottom: '0.5rem' }}>
+              Pop up desde el logo
+            </h3>
+            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--slate-gray-text)', marginBottom: '1rem' }}>
+              Se apoya encima del logo y lo tapa: el círculo se estira desde su propia esquina hasta
+              convertirse en este panel. Por eso el logo no cambia de estilo al clickearlo — no se vería.
+            </p>
+            <Button variant="outline" onClick={() => setLogoPopoverOpen(false)}>Cerrar</Button>
+          </CustomModal>
         </Section>
 
-        <Section title="Toast — semántico, arrastrable" wide>
+        <Section title="Toast — se apila solo arriba a la derecha" wide>
+          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--slate-gray-text)' }}>
+            Los toasts se renderizan en un stack fijo arriba a la derecha, no donde se los declara. Se
+            cierran solos a los 5s —el contador se pausa si les pasás el mouse por encima o los
+            arrastrás— o arrastrándolos hacia la derecha más de la mitad de su ancho.
+          </p>
           <Row>
             <Button variant="outline" onClick={() => toggleToast('info')}>Toggle info</Button>
             <Button variant="outline" onClick={() => toggleToast('success')}>Toggle success</Button>
             <Button variant="outline" onClick={() => toggleToast('warning')}>Toggle warning</Button>
             <Button variant="outline" onClick={() => toggleToast('danger')}>Toggle danger</Button>
           </Row>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', maxWidth: 360 }}>
-            <Toast variant="info" title="Info" open={toasts.info} onClose={() => toggleToast('info')}>
-              Arrastrame o cerrame para probar la animación de salida.
-            </Toast>
-            <Toast variant="success" title="Listo" open={toasts.success} onClose={() => toggleToast('success')}>
-              La operación se completó con éxito.
-            </Toast>
-            <Toast variant="warning" title="Atención" open={toasts.warning} onClose={() => toggleToast('warning')}>
-              Revisá este dato antes de continuar.
-            </Toast>
-            <Toast variant="danger" title="Error" open={toasts.danger} onClose={() => toggleToast('danger')}>
-              Algo salió mal, intentá de nuevo.
-            </Toast>
-          </div>
+          <Toast variant="info" title="Info" open={toasts.info} onClose={() => toggleToast('info')}>
+            Arrastrame hacia la derecha para descartarme.
+          </Toast>
+          <Toast variant="success" title="Listo" open={toasts.success} onClose={() => toggleToast('success')}>
+            La operación se completó con éxito.
+          </Toast>
+          <Toast variant="warning" title="Atención" open={toasts.warning} onClose={() => toggleToast('warning')}>
+            Revisá este dato antes de continuar.
+          </Toast>
+          <Toast variant="danger" title="Error" open={toasts.danger} onClose={() => toggleToast('danger')}>
+            Algo salió mal, intentá de nuevo.
+          </Toast>
         </Section>
       </div>
     </div>

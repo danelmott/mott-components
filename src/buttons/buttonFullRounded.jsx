@@ -28,11 +28,11 @@ export default function ButtonFullRounded({
 }) {
     const scale = SIZE[size] ?? SIZE.md;
     const preset = COLOR_PRESETS[color];
-
+    
     // si `color` no es una variante predefinida, se usa tal cual como color CSS custom
     const background = preset ? preset.bg : color;
     const foreground = iconColor ?? (preset ? preset.fg : 'var(--white)');
-
+    
     return (
         <button
             type={type}

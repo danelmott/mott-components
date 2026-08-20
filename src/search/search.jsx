@@ -2,6 +2,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { twMerge } from 'tailwind-merge';
 import Icon from '../icon/icon.jsx';
+import { verifyTypesInput } from '../utils/verifyTypes.js';
 
 //component for search in mott-design — mismo estilo que Input, con debounce incorporado (onSearch)
 export default function Search({
@@ -23,7 +24,10 @@ export default function Search({
     const generatedId = useId();
     const searchId = id ?? generatedId;
     const timeoutRef = useRef(null);
-
+    
+    
+    verifyTypesInput(label, placeholder);
+    
     // dispara onSearch recién cuando el usuario deja de tipear por `delay` ms — listo para pegarle a una API sin lógica extra del lado del consumidor
     useEffect(() => {
         if (!onSearch) return;
@@ -31,19 +35,19 @@ export default function Search({
         timeoutRef.current = setTimeout(() => onSearch(value), delay);
         return () => clearTimeout(timeoutRef.current);
     }, [value, delay, onSearch]);
-
+    
     const handleChange = (event) => {
         const next = event.target.value;
         if (!isControlled) setInternalValue(next);
         onChange?.(next, event);
     };
-
+    
     const handleClear = () => {
         if (!isControlled) setInternalValue('');
         onChange?.('');
         onSearch?.('');
     };
-
+    
     return (
         <div className="flex w-full flex-col gap-1">
             {label && (

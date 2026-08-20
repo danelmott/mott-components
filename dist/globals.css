@@ -72,7 +72,7 @@
     /*overlay/surface colors*/
     --modal-surface: var(--white);
     --overlay-backdrop:rgb(15 23 42 / 0.6);
-    
+
     [data-theme="dark"] {
         --color-action:#5e8bff;
         --color-action-hover:#8aa8ff;
@@ -148,6 +148,23 @@
     --control-size-md: 56px;
     --control-size-lg: 80px;
     --control-radius: 28%; /* % en vez de px: mantiene la misma proporción de redondeo en cualquier tamaño de caja cuadrada */
+
+    /*sombra para superficies flotantes (toast, dropdown, popover).
+      Va en tres capas en vez de una: una tight que hace de "contacto" con el fondo, una media y una
+      amplia y muy suave. Una sola capa con blur chico y opacidad alta se lee como un recorte pegado.
+      El tinte es el navy neutro y no negro puro, que ensucia y agrisa lo que hay debajo.*/
+    --shadow-floating:
+        0 1px 2px rgb(15 23 42 / 0.05),
+        0 6px 16px -4px rgb(15 23 42 / 0.08),
+        0 20px 40px -12px rgb(15 23 42 / 0.12);
+
+    /*capas de apilado — en tokens y no en números sueltos, para que la relación entre capas quede
+      escrita en un solo lugar. Los paneles flotantes (select, dropdown, popover) SIEMPRE tienen que
+      quedar por encima de la nav, si no la barra los tapa.
+      Las modales no están acá: usan <dialog> + showModal(), que las pone en el top layer del
+      navegador, por encima de cualquier z-index.*/
+    --z-nav: 20;
+    --z-floating: 50;
 }
 
 body {

@@ -59,7 +59,13 @@ export default function ButtonGroup({ buttons, vertical = true, color = 'primary
                 return (
                     <button
                         key={btn.id ?? i}
-                        ref={(el) => (itemRefs.current[i] = el)}
+                        ref={(el) => {
+                            itemRefs.current[i] = el;
+                            // además de la animación propia, permite exponer el nodo hacia afuera
+                            // (ej. para anclarle un CustomModal), igual que `logo.buttonRef` en Navbar
+                            if (typeof btn.buttonRef === 'function') btn.buttonRef(el);
+                            else if (btn.buttonRef) btn.buttonRef.current = el;
+                        }}
                         type="button"
                         onClick={() => handleSelect(i)}
                         aria-pressed={selectedButton === i}

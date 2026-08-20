@@ -3,6 +3,7 @@ import { forwardRef } from 'react';
 import { cva } from 'class-variance-authority';
 import { twMerge } from 'tailwind-merge';
 
+//styles for variants buttons
 const buttonVariants = cva(
     'inline-flex items-center justify-center gap-2.5 text-[length:var(--text-md)] tracking-[var(--tracking-h4)] font-[number:var(--font-medium)] transition-all duration-150 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-action)] focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none disabled:active:scale-100',
     {
@@ -45,7 +46,7 @@ const Button = forwardRef(function Button({
     className,
     type = 'button',
     onClick,
-    ...props
+    ...props,
 }, ref) {
     return (
         <button

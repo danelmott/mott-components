@@ -92,7 +92,7 @@ export default function Navbar({
             {/* Desktop: íconos flotando sobre la página, sin tarjeta ni sombra */}
             <nav
                 className={twMerge(
-                    'hidden md:flex fixed left-4 z-20 flex-col items-center gap-[var(--gap-group)]',
+                    'hidden md:flex fixed left-4 z-[var(--z-nav)] flex-col items-center gap-[var(--gap-group)]',
                     DESKTOP_ALIGN[align] ?? DESKTOP_ALIGN.center,
                     className
                 )}
@@ -113,7 +113,7 @@ export default function Navbar({
             {/* Mobile: pill flotante con los íconos + FAB aparte, con margen (no pegado a los bordes) — sin logo, no entra en un bottom bar chico */}
             <nav
                 className={twMerge(
-                    'flex md:hidden fixed bottom-4 left-1/2 z-20 -translate-x-1/2 items-center gap-3',
+                    'flex md:hidden fixed bottom-4 left-1/2 z-[var(--z-nav)] -translate-x-1/2 items-center gap-3',
                     className
                 )}
                 style={style}

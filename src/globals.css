@@ -72,7 +72,7 @@
     /*overlay/surface colors*/
     --modal-surface: var(--white);
     --overlay-backdrop:rgb(15 23 42 / 0.6);
-    
+
     [data-theme="dark"] {
         --color-action:#5e8bff;
         --color-action-hover:#8aa8ff;
@@ -147,7 +147,13 @@
     --control-size-sm: 40px;
     --control-size-md: 56px;
     --control-size-lg: 80px;
-    --control-radius: 28%; /* % en vez de px: mantiene la misma proporción de redondeo en cualquier tamaño de caja cuadrada */
+    --control-radius: 28%; 
+    --shadow-floating:
+        0 1px 2px rgb(15 23 42 / 0.05),
+        0 6px 16px -4px rgb(15 23 42 / 0.08),
+        0 20px 40px -12px rgb(15 23 42 / 0.12);
+    --z-nav: 20;
+    --z-floating: 50;
 }
 
 body {

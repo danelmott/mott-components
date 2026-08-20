@@ -241,7 +241,11 @@ function ButtonGroup({ buttons, vertical = true, color = "primary", defaultSelec
     return /* @__PURE__ */ jsxs(
       "button",
       {
-        ref: (el) => itemRefs.current[i] = el,
+        ref: (el) => {
+          itemRefs.current[i] = el;
+          if (typeof btn.buttonRef === "function") btn.buttonRef(el);
+          else if (btn.buttonRef) btn.buttonRef.current = el;
+        },
         type: "button",
         onClick: () => handleSelect(i),
         "aria-pressed": selectedButton === i,
@@ -305,83 +309,214 @@ function Badge({ children, color = "neutral", solid = false, size = "sm", icon, 
 
 // src/toast/toast.jsx
 import { useEffect, useRef as useRef2, useState as useState2 } from "react";
+import { createPortal } from "react-dom";
 import { useGSAP as useGSAP2 } from "@gsap/react";
 import gsap2 from "gsap";
 import { Draggable } from "gsap/Draggable";
-import { jsx as jsx7, jsxs as jsxs3 } from "react/jsx-runtime";
-gsap2.registerPlugin(Draggable);
-var VARIANTS = {
-  info: { bg: "var(--color-action-bg)", iconClass: "text-[var(--color-action)]", icon: "info" },
-  success: { bg: "var(--color-success-bg)", iconClass: "text-[var(--color-success)]", icon: "check_circle" },
-  warning: { bg: "var(--color-warning-bg)", iconClass: "text-[var(--color-warning)]", icon: "warning" },
-  danger: { bg: "var(--color-danger-bg)", iconClass: "text-[var(--color-danger)]", icon: "error" }
+import { Flip } from "gsap/Flip";
+
+// src/toast/toastStack.js
+var STACK_ATTR = "data-mott-toast-stack";
+var STACK_STYLE = {
+  // `fixed` cumple dos funciones: saca al stack del área scrolleable (de ahí que el arrastre no
+  // pueda generar scrollX) y lo vuelve containing block de sus hijos absolutos, que es lo que
+  // necesita el despegue del toast saliente (ver `flyOut` en toast.jsx)
+  position: "fixed",
+  top: "1rem",
+  right: "1rem",
+  // ancho FIJO, y cumple dos roles: es el tope de ancho de los toasts (que se miden por su texto
+  // contra este `max-width: 100%`) y mantiene la geometría estable. Si el stack fuera shrink-to-fit
+  // se mediría según su hijo más ancho, y al despegar un toast para la salida se re-mediría al
+  // siguiente: el saliente se apretaría contra un padre más angosto y el texto se rompería a mitad
+  // de la animación.
+  width: "min(24rem, calc(100vw - 2rem))",
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "flex-end",
+  gap: "var(--gap-section)",
+  zIndex: "var(--z-floating)",
+  // la franja vacía alrededor de los toasts no tiene que bloquear clicks en la página; cada toast
+  // se re-habilita a sí mismo
+  pointerEvents: "none"
 };
-function Toast({ variant = "info", title, children, open, onClose }) {
+var stack = null;
+function getToastStack() {
+  if (typeof document === "undefined") return null;
+  if (!(stack == null ? void 0 : stack.isConnected)) {
+    stack = document.querySelector(`[${STACK_ATTR}]`) ?? document.createElement("div");
+    stack.setAttribute(STACK_ATTR, "");
+    if (!stack.isConnected) document.body.appendChild(stack);
+  }
+  Object.assign(stack.style, STACK_STYLE);
+  return stack;
+}
+
+// src/toast/toast.jsx
+import { jsx as jsx7, jsxs as jsxs3 } from "react/jsx-runtime";
+gsap2.registerPlugin(Draggable, Flip);
+var VARIANTS = {
+  info: { iconClass: "text-[var(--color-action)]", icon: "info" },
+  success: { iconClass: "text-[var(--color-success)]", icon: "check_circle" },
+  warning: { iconClass: "text-[var(--color-warning)]", icon: "warning" },
+  danger: { iconClass: "text-[var(--color-danger)]", icon: "error" }
+};
+var COUNTER_DRAG = 0.12;
+function Toast({
+  variant = "info",
+  title,
+  children,
+  open,
+  onClose,
+  duration = 5e3,
+  dismissThreshold = 0.5
+}) {
   const [rendered, setRendered] = useState2(open);
   const toastRef = useRef2(null);
+  const onCloseRef = useRef2(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  }, [onClose]);
+  const dismissedRef = useRef2(false);
   const preset = VARIANTS[variant] ?? VARIANTS.info;
   useEffect(() => {
-    if (open) setRendered(true);
+    if (open) {
+      dismissedRef.current = false;
+      setRendered(true);
+    }
   }, [open]);
+  const exitDistance = (el) => {
+    const currentX = Number(gsap2.getProperty(el, "x")) || 0;
+    return currentX + (window.innerWidth - el.getBoundingClientRect().left) + 16;
+  };
+  const flyOut = (el, { ease, duration: duration2, onDone }) => {
+    const stack3 = el.parentElement;
+    const siblings = stack3 ? Array.from(stack3.children).filter((c) => c !== el) : [];
+    const state = siblings.length ? Flip.getState(siblings) : null;
+    const rect = el.getBoundingClientRect();
+    const scaleX = Number(gsap2.getProperty(el, "scaleX")) || 1;
+    const top = stack3 ? rect.top - stack3.getBoundingClientRect().top : 0;
+    Object.assign(el.style, {
+      position: "absolute",
+      top: `${top}px`,
+      right: "0",
+      width: `${rect.width / scaleX}px`
+    });
+    if (state) Flip.from(state, { duration: duration2, ease: "power3.out" });
+    gsap2.to(el, { x: exitDistance(el), duration: duration2, ease, onComplete: onDone });
+  };
+  const timerRef = useRef2(null);
+  const remainingRef = useRef2(duration);
+  const startedAtRef = useRef2(0);
+  const pauseTimer = () => {
+    if (!timerRef.current) return;
+    clearTimeout(timerRef.current);
+    timerRef.current = null;
+    remainingRef.current -= Date.now() - startedAtRef.current;
+  };
+  const resumeTimer = () => {
+    if (!duration || timerRef.current || remainingRef.current <= 0) return;
+    startedAtRef.current = Date.now();
+    timerRef.current = setTimeout(() => {
+      var _a;
+      return (_a = onCloseRef.current) == null ? void 0 : _a.call(onCloseRef);
+    }, remainingRef.current);
+  };
+  useEffect(() => {
+    if (!open || !duration) return;
+    remainingRef.current = duration;
+    resumeTimer();
+    return pauseTimer;
+  }, [open, duration]);
   useGSAP2(() => {
     if (open && toastRef.current) {
       gsap2.fromTo(
         toastRef.current,
-        { opacity: 0, y: 24, scale: 0.95 },
-        { opacity: 1, y: 0, scale: 1, duration: 0.4, ease: "back.out(1.7)" }
+        { opacity: 0, x: 24, scale: 0.95 },
+        { opacity: 1, x: 0, scale: 1, duration: 0.4, ease: "back.out(1.7)" }
       );
     }
   }, { dependencies: [open, rendered] });
   useEffect(() => {
-    if (!open && rendered && toastRef.current) {
-      gsap2.to(toastRef.current, {
-        opacity: 0,
-        y: 16,
-        scale: 0.95,
-        duration: 0.3,
-        ease: "power2.in",
-        onComplete: () => setRendered(false)
-      });
+    if (open || !rendered || !toastRef.current) return;
+    if (dismissedRef.current) {
+      setRendered(false);
+      return;
     }
+    flyOut(toastRef.current, {
+      ease: "back.in(1.7)",
+      duration: 0.45,
+      onDone: () => setRendered(false)
+    });
   }, [open, rendered]);
   useEffect(() => {
     if (!rendered || !toastRef.current) return;
-    const [draggable] = Draggable.create(toastRef.current, {
+    const el = toastRef.current;
+    const width = el.offsetWidth;
+    const threshold = width * dismissThreshold;
+    const [draggable] = Draggable.create(el, {
       type: "x",
+      // el stack está arriba a la derecha, así que el descarte va hacia el borde más cercano.
+      // Hacia el contenido solo se permite un tironcito.
+      bounds: { minX: -width * COUNTER_DRAG, maxX: width, minY: 0, maxY: 0 },
+      onPressInit: pauseTimer,
       onDrag: function() {
-        gsap2.set(toastRef.current, { opacity: 1 - Math.min(Math.abs(this.x) / 200, 0.8) });
+        gsap2.set(el, { opacity: 1 - Math.min(Math.abs(this.x) / threshold, 1) * 0.6 });
       },
       onDragEnd: function() {
-        if (Math.abs(this.x) > 120) {
-          gsap2.to(toastRef.current, {
-            x: this.x > 0 ? 400 : -400,
-            opacity: 0,
+        if (this.x >= threshold) {
+          dismissedRef.current = true;
+          flyOut(el, {
+            ease: "power2.in",
             duration: 0.3,
-            onComplete: () => onClose == null ? void 0 : onClose()
+            onDone: () => {
+              var _a;
+              return (_a = onCloseRef.current) == null ? void 0 : _a.call(onCloseRef);
+            }
           });
         } else {
-          gsap2.to(toastRef.current, { x: 0, opacity: 1, duration: 0.3, ease: "power3.out" });
+          gsap2.to(el, { x: 0, opacity: 1, duration: 0.3, ease: "power3.out" });
+          resumeTimer();
         }
       }
     });
     return () => draggable.kill();
-  }, [rendered, onClose]);
+  }, [rendered, dismissThreshold]);
   if (!rendered) return null;
-  return /* @__PURE__ */ jsxs3(
-    "div",
-    {
-      ref: toastRef,
-      role: "status",
-      className: "inline-flex items-start gap-3 rounded-[var(--radius-lg)] shadow-lg cursor-grab active:cursor-grabbing",
-      style: { padding: "var(--pad-stat)", backgroundColor: preset.bg },
-      children: [
-        /* @__PURE__ */ jsx7(Icon, { name: preset.icon, className: preset.iconClass }),
-        /* @__PURE__ */ jsxs3("div", { className: "flex flex-col gap-0.5", children: [
-          title && /* @__PURE__ */ jsx7("span", { className: "text-[length:var(--text-sm)] font-[number:var(--font-medium)] text-[var(--dark-navy-text)]", children: title }),
-          /* @__PURE__ */ jsx7("span", { className: "text-[length:var(--text-sm)] text-[var(--slate-gray-text)]", children })
-        ] })
-      ]
-    }
+  const stack2 = getToastStack();
+  if (!stack2) return null;
+  return createPortal(
+    /* @__PURE__ */ jsxs3(
+      "div",
+      {
+        ref: toastRef,
+        role: "status",
+        onMouseEnter: pauseTimer,
+        onMouseLeave: resumeTimer,
+        className: "inline-flex items-center gap-3 rounded-[var(--radius-lg)] cursor-grab active:cursor-grabbing",
+        style: {
+          padding: "var(--pad-stat)",
+          // misma superficie neutra para las cuatro variantes. `--white` y no `--modal-surface`
+          // porque es lo que ya usan Dropdown y el panel de Select para superficies flotantes
+          backgroundColor: "var(--white)",
+          boxShadow: "var(--shadow-floating)",
+          // se mide por su texto, sin ancho mínimo: un toast corto no tiene por qué arrastrar
+          // espacio en blanco. El tope lo pone el stack, que tiene ancho fijo — ahí es donde el
+          // texto empieza a wrapear.
+          maxWidth: "100%",
+          // el stack tiene `pointer-events: none` para no bloquear la página; cada toast se
+          // re-habilita a sí mismo
+          pointerEvents: "auto"
+        },
+        children: [
+          /* @__PURE__ */ jsx7(Icon, { name: preset.icon, size: "xl", className: `${preset.iconClass} shrink-0` }),
+          /* @__PURE__ */ jsxs3("div", { className: "flex min-w-0 flex-col gap-0.5", children: [
+            title && /* @__PURE__ */ jsx7("span", { className: "text-[length:var(--text-sm)] font-[number:var(--font-medium)] text-[var(--dark-navy-text)]", children: title }),
+            /* @__PURE__ */ jsx7("span", { className: "text-[length:var(--text-sm)] text-[var(--slate-gray-text)]", children })
+          ] })
+        ]
+      }
+    ),
+    stack2
   );
 }
 
@@ -471,19 +606,35 @@ function Textarea({
 
 // src/select/select.jsx
 import { useEffect as useEffect2, useId as useId3, useRef as useRef3, useState as useState3 } from "react";
+import { createPortal as createPortal2 } from "react-dom";
 import { useGSAP as useGSAP3 } from "@gsap/react";
 import gsap3 from "gsap";
 import { jsx as jsx10, jsxs as jsxs6 } from "react/jsx-runtime";
 function Select({ options = [], value, onChange, label, placeholder = "Seleccionar", disabled, id }) {
   const [open, setOpen] = useState3(false);
   const [rendered, setRendered] = useState3(false);
+  const [anchor, setAnchor] = useState3(null);
   const wrapperRef = useRef3(null);
+  const triggerRef = useRef3(null);
   const panelRef = useRef3(null);
   const generatedId = useId3();
   const selectId = id ?? generatedId;
   const selected = options.find((o) => o.value === value);
   useEffect2(() => {
-    if (open) setRendered(true);
+    if (!open) return;
+    const syncAnchor = () => {
+      var _a;
+      const rect = (_a = triggerRef.current) == null ? void 0 : _a.getBoundingClientRect();
+      if (rect) setAnchor({ top: rect.bottom + 4, left: rect.left, width: rect.width });
+    };
+    syncAnchor();
+    setRendered(true);
+    window.addEventListener("scroll", syncAnchor, true);
+    window.addEventListener("resize", syncAnchor);
+    return () => {
+      window.removeEventListener("scroll", syncAnchor, true);
+      window.removeEventListener("resize", syncAnchor);
+    };
   }, [open]);
   useGSAP3(() => {
     if (open && panelRef.current) {
@@ -516,7 +667,10 @@ function Select({ options = [], value, onChange, label, placeholder = "Seleccion
   useEffect2(() => {
     if (!open) return;
     const handleClick = (e) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(e.target)) setOpen(false);
+      var _a, _b;
+      if ((_a = wrapperRef.current) == null ? void 0 : _a.contains(e.target)) return;
+      if ((_b = panelRef.current) == null ? void 0 : _b.contains(e.target)) return;
+      setOpen(false);
     };
     const handleKey = (e) => {
       if (e.key === "Escape") setOpen(false);
@@ -532,7 +686,7 @@ function Select({ options = [], value, onChange, label, placeholder = "Seleccion
     onChange == null ? void 0 : onChange(option.value, option);
     setOpen(false);
   };
-  return /* @__PURE__ */ jsxs6("div", { ref: wrapperRef, className: "relative flex w-full flex-col gap-1", children: [
+  return /* @__PURE__ */ jsxs6("div", { ref: wrapperRef, className: "flex w-full flex-col gap-1", children: [
     label && /* @__PURE__ */ jsx10(
       "label",
       {
@@ -544,6 +698,7 @@ function Select({ options = [], value, onChange, label, placeholder = "Seleccion
     /* @__PURE__ */ jsxs6(
       "button",
       {
+        ref: triggerRef,
         id: selectId,
         type: "button",
         disabled,
@@ -556,35 +711,39 @@ function Select({ options = [], value, onChange, label, placeholder = "Seleccion
         ]
       }
     ),
-    rendered && /* @__PURE__ */ jsx10(
-      "div",
-      {
-        ref: panelRef,
-        className: "absolute top-full left-0 right-0 z-10 mt-1 flex flex-col gap-[var(--gap-tight)] overflow-hidden rounded-[var(--radius-lg)] bg-[var(--white)] p-1 shadow-lg",
-        children: options.map((option) => {
-          const isSelected = option.value === value;
-          return /* @__PURE__ */ jsx10(
-            "button",
-            {
-              type: "button",
-              onClick: () => handleSelect(option),
-              className: "rounded-[var(--radius-sm)] px-3 py-2 text-left text-[length:var(--text-base)] font-[family-name:var(--font-family)] transition-colors duration-150",
-              style: {
-                backgroundColor: isSelected ? "var(--color-action-bg)" : "transparent",
-                color: isSelected ? "var(--color-action)" : "var(--dark-navy-text)"
+    rendered && anchor && createPortal2(
+      /* @__PURE__ */ jsx10(
+        "div",
+        {
+          ref: panelRef,
+          className: "fixed z-[var(--z-floating)] flex flex-col gap-[var(--gap-tight)] overflow-hidden rounded-[var(--radius-lg)] bg-[var(--white)] p-1 shadow-lg",
+          style: { top: anchor.top, left: anchor.left, width: anchor.width },
+          children: options.map((option) => {
+            const isSelected = option.value === value;
+            return /* @__PURE__ */ jsx10(
+              "button",
+              {
+                type: "button",
+                onClick: () => handleSelect(option),
+                className: "rounded-[var(--radius-sm)] px-3 py-2 text-left text-[length:var(--text-base)] font-[family-name:var(--font-family)] transition-colors duration-150",
+                style: {
+                  backgroundColor: isSelected ? "var(--color-action-bg)" : "transparent",
+                  color: isSelected ? "var(--color-action)" : "var(--dark-navy-text)"
+                },
+                onMouseEnter: (e) => {
+                  if (!isSelected) e.currentTarget.style.backgroundColor = "var(--pale-gray-hover)";
+                },
+                onMouseLeave: (e) => {
+                  if (!isSelected) e.currentTarget.style.backgroundColor = "transparent";
+                },
+                children: option.label
               },
-              onMouseEnter: (e) => {
-                if (!isSelected) e.currentTarget.style.backgroundColor = "var(--pale-gray-hover)";
-              },
-              onMouseLeave: (e) => {
-                if (!isSelected) e.currentTarget.style.backgroundColor = "transparent";
-              },
-              children: option.label
-            },
-            option.value
-          );
-        })
-      }
+              option.value
+            );
+          })
+        }
+      ),
+      document.body
     )
   ] });
 }
@@ -732,7 +891,7 @@ function Dropdown({ open, onClose, children, width = "auto", height = "auto", tr
     {
       ref: panelRef,
       role: "menu",
-      className: twMerge7("rounded-[var(--radius-lg)] bg-[var(--white)] p-1 shadow-lg", className),
+      className: twMerge7("z-[var(--z-floating)] rounded-[var(--radius-lg)] bg-[var(--white)] p-1 shadow-lg", className),
       style: { width, height, ...style },
       ...props,
       children
@@ -752,6 +911,18 @@ var LIQUID_EASE = CustomEase.create("mottLiquid", "0.32, 0.72, 0, 1");
 var LIQUID_EASE_IN = CustomEase.create("mottLiquidIn", "1, 0, 0.68, 0.28");
 var MORPH_OPEN_DURATION = 0.8;
 var MORPH_CLOSE_DURATION = 0.7;
+var OPEN_BEATS = {
+  morph: { at: 0, span: 1 },
+  color: { at: 0, span: 1 },
+  overlay: { at: 0, span: 0.6 },
+  content: { at: 0.55, span: 0.45 }
+};
+var CLOSE_BEATS = {
+  morph: { at: 0, span: 1 },
+  color: { at: 0, span: 1 },
+  overlay: { at: 0, span: 0.8 },
+  content: { at: 0, span: 0.25 }
+};
 var GHOST_ATTR = "data-mott-morph-ghost";
 var RUNNING_MORPH = /* @__PURE__ */ Symbol.for("mott.runningMorph");
 function killRunningMorph(panel) {
@@ -764,6 +935,27 @@ function resolveRadius(el, rect) {
   const value = parseFloat(raw) || 0;
   return raw.trim().endsWith("%") ? value / 100 * Math.min(rect.width, rect.height) : value;
 }
+function separationProgress(from, to, target) {
+  const edge = (fromV, toV, limit, sign) => {
+    const delta = toV - fromV;
+    if (sign * delta <= 0) return Infinity;
+    const p2 = (limit - fromV) / delta;
+    return p2 > 0 && p2 <= 1 ? p2 : Infinity;
+  };
+  const p = Math.min(
+    edge(from.top, to.top, target.bottom, 1),
+    // la ventana se va por abajo del botón
+    edge(from.bottom, to.bottom, target.top, -1),
+    // ...por arriba
+    edge(from.left, to.left, target.right, 1),
+    // ...por la derecha
+    edge(from.right, to.right, target.left, -1)
+    // ...por la izquierda
+  );
+  return Number.isFinite(p) ? p : 1;
+}
+var clamp01 = (v) => Math.min(1, Math.max(0, v));
+var GHOST_FADE_SPAN = 0.2;
 function createTriggerGhost(dialog, trigger, originRect) {
   removeTriggerGhost(dialog);
   const cs = getComputedStyle(trigger);
@@ -834,6 +1026,41 @@ var FadeScaleAnimation = class extends ModalAnimation {
   }
 };
 var MorphAnimation = class extends ModalAnimation {
+  // los defaults reproducen el morph centrado tal cual está aprobado. `AnchoredAnimation` los pisa
+  // con valores de pop up (ver más abajo por qué el color necesita retrasarse en ese caso).
+  constructor({
+    openDuration = MORPH_OPEN_DURATION,
+    closeDuration = MORPH_CLOSE_DURATION,
+    // `at`/`span` como fracciones de la duración: permiten retener el color del botón mientras el
+    // panel todavía lo está tapando, en vez de virar de entrada
+    openBeats = {},
+    closeBeats = {},
+    openEase = LIQUID_EASE,
+    closeEase = LIQUID_EASE_IN,
+    closeGhost = false,
+    // fracción de la duración que tarda el ícono en disolverse. Solo se usa cuando el panel tapa
+    // al botón todo el tiempo: ahí no hay relevo que cronometrar y el fade es puramente estético.
+    ghostFade = 0.2
+  } = {}) {
+    super();
+    this.openDuration = openDuration;
+    this.closeDuration = closeDuration;
+    this.openBeats = { ...OPEN_BEATS, ...openBeats };
+    this.closeBeats = { ...CLOSE_BEATS, ...closeBeats };
+    this.openEase = openEase;
+    this.closeEase = closeEase;
+    this.closeGhost = closeGhost;
+    this.ghostFade = ghostFade;
+  }
+  // hook: ubica el panel en su lugar de reposo ANTES de medir. El panel centrado ya se ubica solo
+  // con su `m-auto`, así que acá no hay nada que hacer — `AnchoredAnimation` sí lo implementa.
+  place() {
+  }
+  // props inline que deja `place()` y que hay que limpiar recién cuando la modal cierra del todo
+  // (mientras está abierta el panel tiene que quedarse donde lo pusieron)
+  placedProps() {
+    return "";
+  }
   // geometría de la ventana del clip y del translate que la deja encima del botón
   measure(panel, trigger) {
     const cs = getComputedStyle(panel);
@@ -843,17 +1070,22 @@ var MorphAnimation = class extends ModalAnimation {
     const ty = Number(gsap5.getProperty(panel, "y")) || 0;
     const panelRect = { left: rect.left - tx, top: rect.top - ty, width: rect.width, height: rect.height };
     const originRect = trigger.getBoundingClientRect();
+    const panelBox = { ...panelRect, right: panelRect.left + panelRect.width, bottom: panelRect.top + panelRect.height };
     return {
       pad,
       panelRect,
       originRect,
+      // progreso geométrico en el que el panel deja de tapar al botón: con esto se cronometra el
+      // ghost sin números mágicos. 1 = el panel en reposo lo sigue tapando (el ghost se queda).
+      clearP: separationProgress(originRect, panelBox, originRect),
       // el panel entero a la vista, con el radio de la modal
       openClip: { top: 0, right: 0, bottom: 0, left: 0, radius: resolveRadius(panel, panelRect) },
-      // solo la ventana del tamaño del botón, con el radio del botón
+      // solo la ventana del tamaño del botón, con el radio del botón. El clamp cubre el caso
+      // degenerado de un botón más grande que el panel: la ventana se queda en el borde.
       buttonClip: {
         top: pad.top,
-        right: panelRect.width - pad.left - originRect.width,
-        bottom: panelRect.height - pad.top - originRect.height,
+        right: Math.max(0, panelRect.width - pad.left - originRect.width),
+        bottom: Math.max(0, panelRect.height - pad.top - originRect.height),
         left: pad.left,
         radius: resolveRadius(trigger, originRect)
       },
@@ -878,34 +1110,72 @@ var MorphAnimation = class extends ModalAnimation {
   // GSAP no interpola strings `inset(... round ...)` de forma confiable, así que animamos un proxy
   // y componemos el string a mano. Al ir en la misma timeline y con el mismo ease que el translate,
   // los dos quedan sincronizados frame a frame.
-  addClipTween(tl, panel, from, to, duration, ease, position = 0) {
+  // `onProgress` recibe el progreso geométrico (no el temporal): es lo que permite atar la opacidad
+  // del ghost a dónde está realmente la ventana respecto del botón.
+  addClipTween(tl, panel, from, to, duration, ease, position = 0, onProgress) {
     const state = { p: 0 };
     const lerp = (a, b) => a + (b - a) * state.p;
     this.applyClip(panel, from);
+    onProgress == null ? void 0 : onProgress(0);
     tl.to(state, {
       p: 1,
       duration,
       ease,
-      onUpdate: () => this.applyClip(panel, {
-        top: lerp(from.top, to.top),
-        right: lerp(from.right, to.right),
-        bottom: lerp(from.bottom, to.bottom),
-        left: lerp(from.left, to.left),
-        radius: lerp(from.radius, to.radius)
-      })
+      onUpdate: () => {
+        this.applyClip(panel, {
+          top: lerp(from.top, to.top),
+          right: lerp(from.right, to.right),
+          bottom: lerp(from.bottom, to.bottom),
+          left: lerp(from.left, to.left),
+          radius: lerp(from.radius, to.radius)
+        });
+        onProgress == null ? void 0 : onProgress(state.p);
+      }
     }, position);
   }
-  settle(dialog, panel, content) {
+  // el ghost tiene que estar entero mientras el panel tapa al botón y desvanecerse apenas lo
+  // destapa. `clearP` viene de la geometría real, así que esto se acomoda solo a cualquier tamaño
+  // de botón, gap, y a que la modal abra para arriba o para abajo.
+  // el ícono del botón tiene dos regímenes según si el panel llega a destaparlo o no.
+  // Devuelve el `onProgress` para el clip, o `null` si el fade se resolvió con un tween por tiempo.
+  // `morphAt`/`morphSpan` son la ventana del morph en segundos, no la del timeline entero: el ícono
+  // tiene que resolverse mientras la forma se está transformando, no durante el tramo del backdrop.
+  addGhostFade(tl, ghost, clearP, morphAt, morphSpan, reverse = false) {
+    if (clearP < 1) return this.ghostFader(ghost, clearP, reverse);
+    const span = morphSpan * this.ghostFade;
+    if (reverse) tl.to(ghost, { opacity: 1, duration: span, ease: "power1.out" }, morphAt + morphSpan - span);
+    else tl.to(ghost, { opacity: 0, duration: span, ease: "power1.in" }, morphAt);
+    return null;
+  }
+  // el ghost aguanta hasta el punto exacto en que el panel destapa al botón y ahí se funde contra el
+  // ícono de verdad que queda abajo — al ser una copia idéntica, el cambio no se ve
+  ghostFader(ghost, clearP, reverse = false) {
+    let from, span;
+    if (reverse) {
+      const to = 1 - clearP;
+      from = Math.max(0, to - GHOST_FADE_SPAN);
+      span = to - from;
+    } else {
+      from = Math.min(clearP, 1 - GHOST_FADE_SPAN);
+      span = GHOST_FADE_SPAN;
+    }
+    return (p) => {
+      const t = span > 0 ? clamp01((p - from) / span) : p >= from ? 1 : 0;
+      ghost.style.opacity = String(reverse ? t : 1 - t);
+    };
+  }
+  settle(dialog, panel, content, alsoClear = "") {
     removeTriggerGhost(dialog);
     panel.style.clipPath = "";
     panel[RUNNING_MORPH] = null;
-    gsap5.set(panel, { clearProps: "transform,backgroundColor,willChange" });
+    gsap5.set(panel, { clearProps: `transform,backgroundColor,willChange${alsoClear ? `,${alsoClear}` : ""}` });
     gsap5.set(content, { clearProps: "opacity,visibility" });
   }
   open({ dialog, panel, content, overlay, trigger }) {
     if (!trigger) return new FadeScaleAnimation().open({ panel, overlay });
     killRunningMorph(panel);
-    const { originRect, openClip, buttonClip, buttonOffset } = this.measure(panel, trigger);
+    this.place(panel, trigger);
+    const { originRect, clearP, openClip, buttonClip, buttonOffset } = this.measure(panel, trigger);
     const originColor = getComputedStyle(trigger).backgroundColor;
     const finalColor = getComputedStyle(panel).backgroundColor;
     const ghost = createTriggerGhost(dialog, trigger, originRect);
@@ -916,21 +1186,30 @@ var MorphAnimation = class extends ModalAnimation {
       willChange: "transform, clip-path"
     });
     gsap5.set(content, { autoAlpha: 0 });
-    const d = MORPH_OPEN_DURATION;
+    const d = this.openDuration;
+    const { morph, color, overlay: ov, content: cont } = this.openBeats;
+    const morphAt = d * morph.at;
+    const morphSpan = d * morph.span;
     const tl = gsap5.timeline({ onComplete: () => this.settle(dialog, panel, content) });
     panel[RUNNING_MORPH] = tl;
+    tl.to(panel, { x: 0, y: 0, duration: morphSpan, ease: this.openEase, force3D: true }, morphAt);
     tl.to(panel, {
-      x: 0,
-      y: 0,
       backgroundColor: finalColor,
-      duration: d,
-      ease: LIQUID_EASE,
-      force3D: true
-    }, 0);
-    this.addClipTween(tl, panel, buttonClip, openClip, d, LIQUID_EASE, 0);
-    tl.to(ghost, { opacity: 0, duration: d * 0.15, ease: "power1.in" }, 0);
-    tl.to(content, { autoAlpha: 1, duration: d * 0.45, ease: "power1.out" }, d * 0.55);
-    this.fadeOverlay(tl, overlay, 1, d * 0.6, 0);
+      duration: d * color.span,
+      ease: this.openEase
+    }, d * color.at);
+    this.addClipTween(
+      tl,
+      panel,
+      buttonClip,
+      openClip,
+      morphSpan,
+      this.openEase,
+      morphAt,
+      this.addGhostFade(tl, ghost, clearP, morphAt, morphSpan)
+    );
+    tl.to(content, { autoAlpha: 1, duration: d * cont.span, ease: "power1.out" }, d * cont.at);
+    this.fadeOverlay(tl, overlay, 1, d * ov.span, d * ov.at);
   }
   // al cerrar NO hay ghost: el cuadro viaja sin ícono, aterriza sobre el botón y desaparece — recién
   // ahí se ve el ícono del botón real. Lo que hace que eso funcione es el ease-in: el panel acelera
@@ -939,73 +1218,137 @@ var MorphAnimation = class extends ModalAnimation {
     if (!trigger) return new FadeScaleAnimation().close({ panel, overlay }, onDone);
     killRunningMorph(panel);
     removeTriggerGhost(dialog);
-    const { openClip, buttonClip, buttonOffset } = this.measure(panel, trigger);
+    const { originRect, clearP, openClip, buttonClip, buttonOffset } = this.measure(panel, trigger);
     const originColor = getComputedStyle(trigger).backgroundColor;
+    const ghost = this.closeGhost ? createTriggerGhost(dialog, trigger, originRect) : null;
+    if (ghost) ghost.style.opacity = "0";
     gsap5.set(panel, { willChange: "transform, clip-path" });
-    const d = MORPH_CLOSE_DURATION;
+    const d = this.closeDuration;
+    const { morph, color, overlay: ov, content: cont } = this.closeBeats;
+    const morphAt = d * morph.at;
+    const morphSpan = d * morph.span;
     const tl = gsap5.timeline({
       onComplete: () => {
         onDone == null ? void 0 : onDone();
-        this.settle(dialog, panel, content);
+        this.settle(dialog, panel, content, this.placedProps());
       }
     });
     panel[RUNNING_MORPH] = tl;
     tl.to(panel, {
       x: buttonOffset.x,
       y: buttonOffset.y,
-      backgroundColor: originColor,
-      duration: d,
-      ease: LIQUID_EASE_IN,
+      duration: morphSpan,
+      ease: this.closeEase,
       force3D: true
-    }, 0);
-    this.addClipTween(tl, panel, this.readClip(panel, openClip), buttonClip, d, LIQUID_EASE_IN, 0);
-    tl.to(content, { autoAlpha: 0, duration: d * 0.25, ease: "power1.in" }, 0);
-    this.fadeOverlay(tl, overlay, 0, d * 0.8, 0);
+    }, morphAt);
+    tl.to(panel, {
+      backgroundColor: originColor,
+      duration: d * color.span,
+      ease: this.closeEase
+    }, d * color.at);
+    this.addClipTween(
+      tl,
+      panel,
+      this.readClip(panel, openClip),
+      buttonClip,
+      morphSpan,
+      this.closeEase,
+      morphAt,
+      ghost ? this.addGhostFade(tl, ghost, clearP, morphAt, morphSpan, true) : void 0
+    );
+    tl.to(content, { autoAlpha: 0, duration: d * cont.span, ease: "power1.in" }, d * cont.at);
+    this.fadeOverlay(tl, overlay, 0, d * ov.span, d * ov.at);
   }
 };
-var AnchoredAnimation = class extends ModalAnimation {
-  computeAnchoredPosition(triggerRect, panelRect) {
-    const gap = 8;
-    const margin = 8;
-    const fitsBelow = window.innerHeight - triggerRect.bottom - gap >= panelRect.height;
-    const top = fitsBelow ? triggerRect.bottom + gap : Math.max(margin, triggerRect.top - gap - panelRect.height);
-    const origin = fitsBelow ? "top left" : "bottom left";
-    let left = triggerRect.left;
-    const maxLeft = window.innerWidth - panelRect.width - margin;
-    left = Math.min(left, Math.max(margin, maxLeft));
-    left = Math.max(left, margin);
-    return { left, top, origin };
-  }
-  open({ panel, overlay, trigger }) {
-    if (!trigger) return new FadeScaleAnimation().open({ panel, overlay });
-    const panelRect = panel.getBoundingClientRect();
-    const triggerRect = trigger.getBoundingClientRect();
-    const { left, top, origin } = this.computeAnchoredPosition(triggerRect, panelRect);
-    gsap5.set(panel, { position: "fixed", margin: 0, left, top, transformOrigin: origin });
-    const tl = gsap5.timeline();
-    this.fadeOverlay(tl, overlay, 1, 0.22);
-    tl.fromTo(
-      panel,
-      { opacity: 0, scale: 0.85 },
-      { opacity: 1, scale: 1, duration: 0.3, ease: "back.out(1.5)" },
-      0
-    );
-  }
-  close({ panel, overlay, trigger }, onDone) {
-    if (!trigger) return new FadeScaleAnimation().close({ panel, overlay }, onDone);
-    const tl = gsap5.timeline({
-      onComplete: () => {
-        onDone == null ? void 0 : onDone();
-        gsap5.set(panel, { clearProps: "position,left,top,margin,transformOrigin" });
-      }
+var AnchoredAnimation = class extends MorphAnimation {
+  constructor({ cover = 6, ...options } = {}) {
+    super({
+      // mucho menos recorrido que la modal centrada: tiene que sentirse ágil
+      openDuration: 0.45,
+      closeDuration: 0.38,
+      closeEase: "power1.in",
+      // el morph arranca un toque tarde al abrir y termina antes al cerrar: en los dos casos
+      // deja un tramo en el que se ve la forma exacta del botón, que es lo que hace legible que
+      // la modal sale de él y vuelve a él
+      openBeats: {
+        morph: { at: 0.15, span: 0.85 },
+        color: { at: 0.3, span: 0.7 },
+        overlay: { at: 0, span: 0.22 },
+        content: { at: 0.62, span: 0.38 }
+      },
+      closeBeats: {
+        morph: { at: 0, span: 0.75 },
+        color: { at: 0.12, span: 0.63 },
+        overlay: { at: 0.75, span: 0.25 },
+        content: { at: 0, span: 0.2 }
+      },
+      // con una curva pareja el panel pasa más tiempo cerca del tamaño del botón, así que sin
+      // ghost se vería un círculo azul vacío antes de desaparecer
+      closeGhost: true,
+      ghostFade: 0.3,
+      ...options
     });
-    this.fadeOverlay(tl, overlay, 0, 0.2);
-    tl.to(panel, { opacity: 0, scale: 0.85, duration: 0.2, ease: "power2.in" }, 0);
+    this.cover = cover;
+  }
+  // el panel se apoya SOBRE el botón: arranca en su misma esquina y crece hacia abajo y a la
+  // derecha, así que mientras está abierto lo tapa. Solo se corre lo mínimo para no salirse de la
+  // pantalla. Como nunca lo destapa, el translate del morph es apenas el padding del panel: el
+  // efecto es casi puro `clip-path` abriéndose desde el botón.
+  //
+  // el `cover` existe porque el trigger se mide al hacer click, cuando su animación de estado activo
+  // recién arranca: un control de 56px que pasa a `scale: 1.1` termina desbordando 2.8px hacia
+  // arriba y hacia la izquierda de la caja que medimos, y asomaría por detrás del panel.
+  computeAnchoredPosition(triggerRect, panelRect) {
+    const margin = 8;
+    const fit = (value, size, viewport) => Math.max(margin, Math.min(value, viewport - size - margin));
+    return {
+      left: fit(triggerRect.left - this.cover, panelRect.width, window.innerWidth),
+      top: fit(triggerRect.top - this.cover, panelRect.height, window.innerHeight)
+    };
+  }
+  place(panel, trigger) {
+    const { left, top } = this.computeAnchoredPosition(
+      trigger.getBoundingClientRect(),
+      panel.getBoundingClientRect()
+    );
+    gsap5.set(panel, { position: "fixed", margin: 0, left, top });
+  }
+  placedProps() {
+    return "position,left,top,margin";
   }
 };
 var morphAnimation = new MorphAnimation();
 var fadeAnimation = new FadeScaleAnimation();
 var anchoredAnimation = new AnchoredAnimation();
+
+// src/utils/scrollLock.js
+var locks = 0;
+var previous = null;
+function scrollbarGap() {
+  return window.innerWidth - document.documentElement.clientWidth;
+}
+function lockScroll() {
+  if (typeof document === "undefined") return;
+  if (++locks > 1) return;
+  const { style } = document.body;
+  const gap = scrollbarGap();
+  previous = { overflow: style.overflow, paddingRight: style.paddingRight };
+  style.overflow = "hidden";
+  if (gap > 0) {
+    const current = parseFloat(getComputedStyle(document.body).paddingRight) || 0;
+    style.paddingRight = `${current + gap}px`;
+  }
+}
+function unlockScroll() {
+  if (typeof document === "undefined") return;
+  if (locks === 0) return;
+  if (--locks > 0) return;
+  if (previous) {
+    document.body.style.overflow = previous.overflow;
+    document.body.style.paddingRight = previous.paddingRight;
+    previous = null;
+  }
+}
 
 // src/customModal/customModal.jsx
 import { jsx as jsx13, jsxs as jsxs8 } from "react/jsx-runtime";
@@ -1015,6 +1358,20 @@ function CustomModal({ open, onClose, onCloseComplete, children, width = "32rem"
   const panelRef = useRef6(null);
   const contentRef = useRef6(null);
   const activeAnimation = animation ?? (triggerRef ? morphAnimation : fadeAnimation);
+  const lockedRef = useRef6(false);
+  const lock = () => {
+    if (!lockedRef.current) {
+      lockedRef.current = true;
+      lockScroll();
+    }
+  };
+  const unlock = () => {
+    if (lockedRef.current) {
+      lockedRef.current = false;
+      unlockScroll();
+    }
+  };
+  useEffect5(() => unlock, []);
   useEffect5(() => {
     const modal = modalRef.current;
     const panel = panelRef.current;
@@ -1023,11 +1380,13 @@ function CustomModal({ open, onClose, onCloseComplete, children, width = "32rem"
     if (!modal || !panel || !overlay) return;
     const ctx = { dialog: modal, panel, content, overlay, trigger: triggerRef == null ? void 0 : triggerRef.current };
     if (open && !modal.open) {
+      lock();
       modal.showModal();
       activeAnimation.open(ctx);
     } else if (!open && modal.open) {
       activeAnimation.close(ctx, () => {
         modal.close();
+        unlock();
         onCloseComplete == null ? void 0 : onCloseComplete();
       });
     }
@@ -1253,7 +1612,7 @@ function Navbar({
       "nav",
       {
         className: twMerge9(
-          "hidden md:flex fixed left-4 z-20 flex-col items-center gap-[var(--gap-group)]",
+          "hidden md:flex fixed left-4 z-[var(--z-nav)] flex-col items-center gap-[var(--gap-group)]",
           DESKTOP_ALIGN[align] ?? DESKTOP_ALIGN.center,
           className
         ),
@@ -1279,7 +1638,7 @@ function Navbar({
       "nav",
       {
         className: twMerge9(
-          "flex md:hidden fixed bottom-4 left-1/2 z-20 -translate-x-1/2 items-center gap-3",
+          "flex md:hidden fixed bottom-4 left-1/2 z-[var(--z-nav)] -translate-x-1/2 items-center gap-3",
           className
         ),
         style,

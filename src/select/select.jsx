@@ -1,14 +1,21 @@
 'use client';
 import { useEffect, useId, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
 import Icon from '../icon/icon.jsx';
 
-//component for select in mott-design — dropdown custom animado con GSAP
+//component for select in mott-design — dropdown custom animado con GSAP.
+//el panel se renderiza en un portal a `document.body` y se posiciona `fixed` contra el rect del
+//trigger, NO `absolute` dentro del componente: así no depende del layout de sus ancestros. Un
+//`overflow: hidden`, un `transform`, un contenedor multi-columna o cualquier stacking context de por
+//medio lo recortaban o lo dejaban empujando el contenido en vez de superponerse.
 export default function Select({ options = [], value, onChange, label, placeholder = 'Seleccionar', disabled, id }) {
     const [open, setOpen] = useState(false);
     const [rendered, setRendered] = useState(false);
+    const [anchor, setAnchor] = useState(null);
     const wrapperRef = useRef(null);
+    const triggerRef = useRef(null);
     const panelRef = useRef(null);
     const generatedId = useId();
     const selectId = id ?? generatedId;
@@ -16,7 +23,24 @@ export default function Select({ options = [], value, onChange, label, placehold
     const selected = options.find((o) => o.value === value);
 
     useEffect(() => {
-        if (open) setRendered(true);
+        if (!open) return;
+
+        const syncAnchor = () => {
+            const rect = triggerRef.current?.getBoundingClientRect();
+            if (rect) setAnchor({ top: rect.bottom + 4, left: rect.left, width: rect.width });
+        };
+
+        syncAnchor();
+        setRendered(true);
+
+        // al ser `fixed`, el panel no acompaña al scroll: hay que reanclarlo. El `true` es capture,
+        // para enterarse también del scroll de cualquier contenedor intermedio
+        window.addEventListener('scroll', syncAnchor, true);
+        window.addEventListener('resize', syncAnchor);
+        return () => {
+            window.removeEventListener('scroll', syncAnchor, true);
+            window.removeEventListener('resize', syncAnchor);
+        };
     }, [open]);
 
     useGSAP(() => {
@@ -51,7 +75,10 @@ export default function Select({ options = [], value, onChange, label, placehold
     useEffect(() => {
         if (!open) return;
         const handleClick = (e) => {
-            if (wrapperRef.current && !wrapperRef.current.contains(e.target)) setOpen(false);
+            // el panel ya no vive adentro del wrapper, así que hay que chequear los dos
+            if (wrapperRef.current?.contains(e.target)) return;
+            if (panelRef.current?.contains(e.target)) return;
+            setOpen(false);
         };
         const handleKey = (e) => { if (e.key === 'Escape') setOpen(false); };
         document.addEventListener('mousedown', handleClick);
@@ -68,7 +95,7 @@ export default function Select({ options = [], value, onChange, label, placehold
     };
 
     return (
-        <div ref={wrapperRef} className="relative flex w-full flex-col gap-1">
+        <div ref={wrapperRef} className="flex w-full flex-col gap-1">
             {label && (
                 <label
                     htmlFor={selectId}
@@ -78,6 +105,7 @@ export default function Select({ options = [], value, onChange, label, placehold
                 </label>
             )}
             <button
+                ref={triggerRef}
                 id={selectId}
                 type="button"
                 disabled={disabled}
@@ -91,10 +119,11 @@ export default function Select({ options = [], value, onChange, label, placehold
                 <Icon name="expand_more" size="sm" className={`transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
             </button>
 
-            {rendered && (
+            {rendered && anchor && createPortal(
                 <div
                     ref={panelRef}
-                    className="absolute top-full left-0 right-0 z-10 mt-1 flex flex-col gap-[var(--gap-tight)] overflow-hidden rounded-[var(--radius-lg)] bg-[var(--white)] p-1 shadow-lg"
+                    className="fixed z-[var(--z-floating)] flex flex-col gap-[var(--gap-tight)] overflow-hidden rounded-[var(--radius-lg)] bg-[var(--white)] p-1 shadow-lg"
+                    style={{ top: anchor.top, left: anchor.left, width: anchor.width }}
                 >
                     {options.map((option) => {
                         const isSelected = option.value === value;
@@ -115,7 +144,8 @@ export default function Select({ options = [], value, onChange, label, placehold
                             </button>
                         );
                     })}
-                </div>
+                </div>,
+                document.body,
             )}
         </div>
     )
