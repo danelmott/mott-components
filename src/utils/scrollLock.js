@@ -1,26 +1,26 @@
-// bloqueo del scroll de la página para overlays modales.
+// Page scroll lock for modal overlays.
 //
-// Va con CONTADOR de referencias y no con un booleano porque puede haber dos overlays solapados (uno
-// cerrándose mientras otro abre): si el primero en terminar liberara el lock, la página volvería a
-// scrollear con el otro todavía abierto. Por eso el estado es de módulo y no de componente.
+// It is REFERENCE COUNTED rather than a boolean because two overlays can overlap (one closing while
+// another opens): if the first to finish released the lock, the page would scroll again with the
+// other still open. That is why the state lives on the module, not on a component.
 let locks = 0;
 let previous = null;
 
-// `overflow: hidden` en el body hace desaparecer la scrollbar y la página salta ~15px. Acá eso no es
-// solo feo: `MorphAnimation` mide el rect del trigger al abrir, así que un layout que se corre después
-// hace que la modal nazca de un lugar equivocado. Compensamos el hueco con padding.
+// `overflow: hidden` on the body removes the scrollbar and the page jumps by ~15px. Here that is not
+// merely ugly: `MorphAnimation` measures the trigger's rect on open, so a layout that shifts afterwards
+// makes the modal grow out of the wrong place. The gap is compensated with padding.
 function scrollbarGap() {
     return window.innerWidth - document.documentElement.clientWidth;
 }
 
 export function lockScroll() {
     if (typeof document === 'undefined') return;
-    if (++locks > 1) return; // ya había otro overlay abierto
+    if (++locks > 1) return; // another overlay was already open
 
     const { style } = document.body;
     const gap = scrollbarGap();
-    // se guardan los valores INLINE (no los computados) para restaurar exactamente lo que había y no
-    // pisar lo que el consumidor tenga definido en su CSS
+    // the INLINE values are saved (not the computed ones) so the exact previous state is restored and
+    // whatever the consumer defines in their own CSS is left alone
     previous = { overflow: style.overflow, paddingRight: style.paddingRight };
 
     style.overflow = 'hidden';
@@ -33,7 +33,7 @@ export function lockScroll() {
 export function unlockScroll() {
     if (typeof document === 'undefined') return;
     if (locks === 0) return;
-    if (--locks > 0) return; // todavía queda algún overlay abierto
+    if (--locks > 0) return; // some overlay is still open
 
     if (previous) {
         document.body.style.overflow = previous.overflow;

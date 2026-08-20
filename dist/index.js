@@ -5,7 +5,6 @@ import { twMerge } from "tailwind-merge";
 
 // src/utils/verifyTypes.js
 var prefixLog = "[MOTT-COMPONENTS]";
-var isDev = typeof process === "undefined" || process.env.NODE_ENV !== "production";
 var show = (value) => typeof value === "string" ? `"${value}"` : String(value);
 var fail = (component, message) => {
   throw new TypeError(`${prefixLog} <${component}>: ${message}`);
@@ -16,19 +15,19 @@ var warn = (component, message) => {
 function assertType(component, prop, value, expected) {
   if (value === void 0 || value === null) return;
   if (typeof value !== expected) {
-    fail(component, `\`${prop}\` debe ser ${expected}, se recibi\xF3 ${typeof value} (${show(value)}).`);
+    fail(component, `\`${prop}\` must be a ${expected}, received ${typeof value} (${show(value)}).`);
   }
 }
 function assertRequired(component, prop, value) {
   if (value === void 0 || value === null) {
-    fail(component, `falta la prop requerida \`${prop}\`.`);
+    fail(component, `missing required prop \`${prop}\`.`);
   }
 }
 function assertRange(component, prop, value, min, max) {
   if (value === void 0 || value === null) return;
   assertType(component, prop, value, "number");
   if (Number.isNaN(value) || value < min || value > max) {
-    fail(component, `\`${prop}\` debe ser un n\xFAmero entre ${min} y ${max}, se recibi\xF3 ${show(value)}.`);
+    fail(component, `\`${prop}\` must be a number between ${min} and ${max}, received ${show(value)}.`);
   }
 }
 function assertOneOf(component, prop, value, allowed, fallback) {
@@ -36,14 +35,14 @@ function assertOneOf(component, prop, value, allowed, fallback) {
   if (!allowed.includes(value)) {
     warn(
       component,
-      `\`${prop}\` inv\xE1lida: ${show(value)}. V\xE1lidas: ${allowed.join(", ")}.` + (fallback !== void 0 ? ` Se usa ${show(fallback)}.` : "")
+      `invalid \`${prop}\`: ${show(value)}. Valid values: ${allowed.join(", ")}.` + (fallback !== void 0 ? ` Falling back to ${show(fallback)}.` : "")
     );
   }
 }
 function assertArrayOf(component, prop, value, validateItem) {
   if (value === void 0 || value === null) return;
   if (!Array.isArray(value)) {
-    fail(component, `\`${prop}\` debe ser un array, se recibi\xF3 ${typeof value}.`);
+    fail(component, `\`${prop}\` must be an array, received ${typeof value}.`);
   }
   value.forEach((item, i) => validateItem(item, `${prop}[${i}]`));
 }
@@ -51,23 +50,23 @@ function assertRef(component, prop, value) {
   if (value === void 0 || value === null) return;
   if (typeof value === "function") return;
   if (typeof value !== "object" || !("current" in value)) {
-    fail(component, `\`${prop}\` debe ser un ref (useRef o callback), se recibi\xF3 ${show(value)}.`);
+    fail(component, `\`${prop}\` must be a ref (useRef or callback), received ${show(value)}.`);
   }
 }
 function assertIconLike(component, prop, value) {
   if (value === void 0 || value === null) return;
   if (typeof value === "string" || typeof value === "object") return;
-  fail(component, `\`${prop}\` debe ser el nombre de un \xEDcono (string) o un nodo React, se recibi\xF3 ${typeof value}.`);
+  fail(component, `\`${prop}\` must be an icon name (string) or a React node, received ${typeof value}.`);
 }
 function assertNode(component, prop, value) {
   if (value === void 0 || value === null) return;
   if (typeof value === "string" || typeof value === "number" || typeof value === "object") return;
-  fail(component, `\`${prop}\` debe ser texto o un nodo React, se recibi\xF3 ${typeof value}.`);
+  fail(component, `\`${prop}\` must be text or a React node, received ${typeof value}.`);
 }
 function assertPlainObject(component, prop, value) {
   if (value === void 0 || value === null) return;
   if (typeof value !== "object" || Array.isArray(value)) {
-    fail(component, `\`${prop}\` debe ser un objeto, se recibi\xF3 ${Array.isArray(value) ? "array" : typeof value}.`);
+    fail(component, `\`${prop}\` must be an object, received ${Array.isArray(value) ? "array" : typeof value}.`);
   }
 }
 var CONTROL_SIZES = ["sm", "md", "lg"];
@@ -75,14 +74,12 @@ var BUTTON_TYPES = ["button", "submit", "reset"];
 var TOAST_VARIANTS = ["info", "success", "warning", "danger"];
 var INPUT_TYPES = ["text", "number", "password"];
 function verifyTypesInput({ label, placeholder, type } = {}) {
-  if (!isDev) return true;
   assertType("Input", "label", label, "string");
   assertType("Input", "placeholder", placeholder, "string");
   assertOneOf("Input", "type", type, INPUT_TYPES, "text");
   return true;
 }
 function verifyTypesTextarea({ label, placeholder, width, height } = {}) {
-  if (!isDev) return true;
   assertType("Textarea", "label", label, "string");
   assertType("Textarea", "placeholder", placeholder, "string");
   assertType("Textarea", "width", width, "string");
@@ -90,7 +87,6 @@ function verifyTypesTextarea({ label, placeholder, width, height } = {}) {
   return true;
 }
 function verifyTypesSearch({ label, placeholder, delay, onSearch, onChange, value, defaultValue } = {}) {
-  if (!isDev) return true;
   assertType("Search", "label", label, "string");
   assertType("Search", "placeholder", placeholder, "string");
   assertType("Search", "value", value, "string");
@@ -101,7 +97,6 @@ function verifyTypesSearch({ label, placeholder, delay, onSearch, onChange, valu
   return true;
 }
 function verifyTypesButton({ variant, shape, iconOnly, fullWidth, type } = {}) {
-  if (!isDev) return true;
   assertOneOf("Button", "variant", variant, ["primary", "secondary", "outline", "ghost", "danger"], "primary");
   assertOneOf("Button", "shape", shape, ["rounded", "pill"], "rounded");
   assertOneOf("Button", "type", type, BUTTON_TYPES, "button");
@@ -110,7 +105,6 @@ function verifyTypesButton({ variant, shape, iconOnly, fullWidth, type } = {}) {
   return true;
 }
 function verifyTypesIconButton(component, { icon, color, iconColor, size, type } = {}) {
-  if (!isDev) return true;
   assertRequired(component, "icon", icon);
   assertType(component, "icon", icon, "string");
   assertType(component, "color", color, "string");
@@ -120,7 +114,6 @@ function verifyTypesIconButton(component, { icon, color, iconColor, size, type }
   return true;
 }
 function verifyTypesButtonGroup({ buttons, vertical, color, allowDeselect, onChange, value, defaultSelected } = {}) {
-  if (!isDev) return true;
   assertRequired("ButtonGroup", "buttons", buttons);
   assertArrayOf("ButtonGroup", "buttons", buttons, (item, path) => {
     assertPlainObject("ButtonGroup", path, item);
@@ -128,8 +121,8 @@ function verifyTypesButtonGroup({ buttons, vertical, color, allowDeselect, onCha
     assertIconLike("ButtonGroup", `${path}.icon`, item.icon);
     assertType("ButtonGroup", `${path}.label`, item.label, "string");
     assertRef("ButtonGroup", `${path}.buttonRef`, item.buttonRef);
-    if (item && item.icon === void 0 && item.label === void 0) {
-      warn("ButtonGroup", `${path} no tiene \`icon\` ni \`label\`: se va a renderizar vac\xEDo.`);
+    if (item.icon === void 0 && item.label === void 0) {
+      warn("ButtonGroup", `${path} has no \`icon\` or \`label\`: it will render empty.`);
     }
   });
   assertType("ButtonGroup", "vertical", vertical, "boolean");
@@ -141,7 +134,6 @@ function verifyTypesButtonGroup({ buttons, vertical, color, allowDeselect, onCha
   return true;
 }
 function verifyTypesBadge({ color, solid, size, icon, dot } = {}) {
-  if (!isDev) return true;
   assertType("Badge", "color", color, "string");
   assertType("Badge", "icon", icon, "string");
   assertType("Badge", "solid", solid, "boolean");
@@ -150,7 +142,6 @@ function verifyTypesBadge({ color, solid, size, icon, dot } = {}) {
   return true;
 }
 function verifyTypesIcon({ name, size, filled, weight, grade, opticalSize } = {}) {
-  if (!isDev) return true;
   assertType("Icon", "name", name, "string");
   assertType("Icon", "size", size, "string");
   assertType("Icon", "filled", filled, "boolean");
@@ -160,7 +151,6 @@ function verifyTypesIcon({ name, size, filled, weight, grade, opticalSize } = {}
   return true;
 }
 function verifyTypesSelect({ options, onChange, label, placeholder, disabled } = {}) {
-  if (!isDev) return true;
   assertArrayOf("Select", "options", options, (item, path) => {
     assertPlainObject("Select", path, item);
     if (!item) return;
@@ -174,19 +164,16 @@ function verifyTypesSelect({ options, onChange, label, placeholder, disabled } =
   return true;
 }
 function verifyTypesProgress({ value, color } = {}) {
-  if (!isDev) return true;
   assertRange("Progress", "value", value, 0, 100);
   assertType("Progress", "color", color, "string");
   return true;
 }
 function verifyTypesLoading({ size, color } = {}) {
-  if (!isDev) return true;
   assertOneOf("Loading", "size", size, CONTROL_SIZES, "sm");
   assertType("Loading", "color", color, "string");
   return true;
 }
 function verifyTypesDropdown({ open, onClose, width, height, triggerRef } = {}) {
-  if (!isDev) return true;
   assertType("Dropdown", "open", open, "boolean");
   assertType("Dropdown", "onClose", onClose, "function");
   assertType("Dropdown", "width", width, "string");
@@ -194,24 +181,20 @@ function verifyTypesDropdown({ open, onClose, width, height, triggerRef } = {}) 
   assertRef("Dropdown", "triggerRef", triggerRef);
   return true;
 }
-function verifyTypesCustomModal({ open, onClose, onCloseComplete, width, height, backdropOpacity, triggerRef, animation } = {}) {
-  if (!isDev) return true;
+function verifyTypesCustomModal({ open, onClose, onCloseComplete, backdropOpacity, triggerRef, animation } = {}) {
   assertType("CustomModal", "open", open, "boolean");
   assertType("CustomModal", "onClose", onClose, "function");
   assertType("CustomModal", "onCloseComplete", onCloseComplete, "function");
-  assertType("CustomModal", "width", width, "string");
-  assertType("CustomModal", "height", height, "string");
   assertRange("CustomModal", "backdropOpacity", backdropOpacity, 0, 1);
   assertRef("CustomModal", "triggerRef", triggerRef);
   if (animation !== void 0 && animation !== null) {
     if (typeof (animation == null ? void 0 : animation.open) !== "function" || typeof (animation == null ? void 0 : animation.close) !== "function") {
-      fail("CustomModal", "`animation` debe ser una ModalAnimation (con m\xE9todos `open` y `close`). Ver src/animations/modalAnimation.js.");
+      fail("CustomModal", "`animation` must be a ModalAnimation (with `open` and `close` methods). See src/animations/modalAnimation.js.");
     }
   }
   return true;
 }
 function verifyTypesNavbar({ items, logo, selected, defaultSelected, onChange, color, align } = {}) {
-  if (!isDev) return true;
   assertArrayOf("Navbar", "items", items, (item, path) => {
     assertPlainObject("Navbar", path, item);
     if (!item) return;
@@ -234,8 +217,15 @@ function verifyTypesNavbar({ items, logo, selected, defaultSelected, onChange, c
   assertOneOf("Navbar", "align", align, ["top", "center"], "center");
   return true;
 }
+function verifyTypesDragScroll({ axis, inertia, disabled, fade, fadeSize } = {}) {
+  assertOneOf("DragScroll", "axis", axis, ["y", "x", "both"], "y");
+  assertType("DragScroll", "inertia", inertia, "boolean");
+  assertType("DragScroll", "disabled", disabled, "boolean");
+  assertType("DragScroll", "fade", fade, "boolean");
+  assertRange("DragScroll", "fadeSize", fadeSize, 0, 200);
+  return true;
+}
 function verifyTypesToast({ variant, open, title, duration, dismissThreshold, onClose, onExited } = {}) {
-  if (!isDev) return true;
   assertOneOf("Toast", "variant", variant, TOAST_VARIANTS, "info");
   assertType("Toast", "open", open, "boolean");
   assertNode("Toast", "title", title);
@@ -245,30 +235,28 @@ function verifyTypesToast({ variant, open, title, duration, dismissThreshold, on
   if (dismissThreshold !== void 0 && dismissThreshold !== null) {
     assertType("Toast", "dismissThreshold", dismissThreshold, "number");
     if (!(dismissThreshold > 0 && dismissThreshold <= 1)) {
-      fail("Toast", `\`dismissThreshold\` debe ser un n\xFAmero mayor a 0 y hasta 1, se recibi\xF3 ${show(dismissThreshold)}.`);
+      fail("Toast", `\`dismissThreshold\` must be a number greater than 0 and at most 1, received ${show(dismissThreshold)}.`);
     }
   }
   return true;
 }
 function verifyTypesShowToast({ variant, title, message, duration } = {}) {
-  if (!isDev) return true;
   assertOneOf("useToast", "variant", variant, TOAST_VARIANTS, "info");
   assertNode("useToast", "title", title);
   assertNode("useToast", "message", message);
   assertRange("useToast", "duration", duration, 0, 6e5);
   if (title === void 0 && message === void 0) {
-    warn("useToast", "showToast() sin `title` ni `message`: el toast se va a ver vac\xEDo.");
+    warn("useToast", "showToast() called without `title` or `message`: the toast will render empty.");
   }
   return true;
 }
 function verifyTypesToastProvider({ duration, dismissThreshold, max } = {}) {
-  if (!isDev) return true;
   assertRange("ToastProvider", "duration", duration, 0, 6e5);
   assertRange("ToastProvider", "max", max, 1, 20);
   if (dismissThreshold !== void 0 && dismissThreshold !== null) {
     assertType("ToastProvider", "dismissThreshold", dismissThreshold, "number");
     if (!(dismissThreshold > 0 && dismissThreshold <= 1)) {
-      fail("ToastProvider", `\`dismissThreshold\` debe ser un n\xFAmero mayor a 0 y hasta 1, se recibi\xF3 ${show(dismissThreshold)}.`);
+      fail("ToastProvider", `\`dismissThreshold\` must be a number greater than 0 and at most 1, received ${show(dismissThreshold)}.`);
     }
   }
   return true;
@@ -597,25 +585,25 @@ import { Flip } from "gsap/Flip";
 // src/toast/toastStack.js
 var STACK_ATTR = "data-mott-toast-stack";
 var STACK_STYLE = {
-  // `fixed` cumple dos funciones: saca al stack del área scrolleable (de ahí que el arrastre no
-  // pueda generar scrollX) y lo vuelve containing block de sus hijos absolutos, que es lo que
-  // necesita el despegue del toast saliente (ver `flyOut` en toast.jsx)
+  // `fixed` does two jobs: it lifts the stack out of the scrollable area (which is why dragging
+  // cannot produce scrollX) and makes it the containing block for its absolute children, which is
+  // what the leaving toast's detach needs (see `flyOut` in toast.jsx)
   position: "fixed",
   top: "1rem",
   right: "1rem",
-  // ancho FIJO, y cumple dos roles: es el tope de ancho de los toasts (que se miden por su texto
-  // contra este `max-width: 100%`) y mantiene la geometría estable. Si el stack fuera shrink-to-fit
-  // se mediría según su hijo más ancho, y al despegar un toast para la salida se re-mediría al
-  // siguiente: el saliente se apretaría contra un padre más angosto y el texto se rompería a mitad
-  // de la animación.
+  // FIXED width, with two roles: it caps the toasts (which size themselves by their text against
+  // this `max-width: 100%`) and it keeps the geometry stable. Were the stack shrink-to-fit it would
+  // size to its widest child, and detaching a toast for its exit would re-measure it to the next
+  // one: the leaving toast would be squeezed against a narrower parent and its text would re-wrap
+  // mid-animation.
   width: "min(24rem, calc(100vw - 2rem))",
   display: "flex",
   flexDirection: "column",
   alignItems: "flex-end",
   gap: "var(--gap-section)",
   zIndex: "var(--z-floating)",
-  // la franja vacía alrededor de los toasts no tiene que bloquear clicks en la página; cada toast
-  // se re-habilita a sí mismo
+  // the empty band around the toasts must not swallow clicks on the page; each toast re-enables
+  // itself
   pointerEvents: "none"
 };
 var stack = null;
@@ -745,8 +733,8 @@ function Toast({
     const threshold = width * dismissThreshold;
     const [draggable] = Draggable.create(el, {
       type: "x",
-      // el stack está arriba a la derecha, así que el descarte va hacia el borde más cercano.
-      // Hacia el contenido solo se permite un tironcito.
+      // the stack sits top-right, so dismissal goes towards the nearest edge; only a small tug
+      // is allowed back towards the content
       bounds: { minX: -width * COUNTER_DRAG, maxX: width, minY: 0, maxY: 0 },
       onPressInit: pauseTimer,
       onDrag: function() {
@@ -785,16 +773,16 @@ function Toast({
         className: "inline-flex items-center gap-3 rounded-[var(--radius-lg)] cursor-grab active:cursor-grabbing",
         style: {
           padding: "var(--pad-stat)",
-          // misma superficie neutra para las cuatro variantes. `--white` y no `--modal-surface`
-          // porque es lo que ya usan Dropdown y el panel de Select para superficies flotantes
+          // same neutral surface for all four variants. `--white` and not `--modal-surface`
+          // because that is what Dropdown and the Select panel already use for floating surfaces
           backgroundColor: "var(--white)",
           boxShadow: "var(--shadow-floating)",
-          // se mide por su texto, sin ancho mínimo: un toast corto no tiene por qué arrastrar
-          // espacio en blanco. El tope lo pone el stack, que tiene ancho fijo — ahí es donde el
-          // texto empieza a wrapear.
+          // sized by its text, with no minimum: a short toast has no reason to drag empty space
+          // around. The cap comes from the stack, which has a fixed width - that is where the
+          // text starts wrapping.
           maxWidth: "100%",
-          // el stack tiene `pointer-events: none` para no bloquear la página; cada toast se
-          // re-habilita a sí mismo
+          // the stack sets `pointer-events: none` so it does not block the page; each toast
+          // re-enables itself
           pointerEvents: "auto"
         },
         children: [
@@ -877,7 +865,7 @@ function useToast() {
   const context = useContext(ToastContext);
   if (!context) {
     throw new Error(
-      "[MOTT-COMPONENTS] useToast() debe usarse dentro de <ToastProvider>. Envolv\xE9 tu app con <ToastProvider> (ej. en app/layout.jsx) antes de llamar a los toasts."
+      "[MOTT-COMPONENTS] useToast() must be used inside a <ToastProvider>. Wrap your app with <ToastProvider> (e.g. in app/layout.jsx) before calling toasts."
     );
   }
   return context;
@@ -1319,9 +1307,13 @@ function separationProgress(from, to, target) {
   };
   const p = Math.min(
     edge(from.top, to.top, target.bottom, 1),
+    // cleared downwards
     edge(from.bottom, to.bottom, target.top, -1),
+    // cleared upwards
     edge(from.left, to.left, target.right, 1),
+    // cleared to the right
     edge(from.right, to.right, target.left, -1)
+    // cleared to the left
   );
   return Number.isFinite(p) ? p : 1;
 }
@@ -1415,11 +1407,17 @@ var MorphAnimation = class extends ModalAnimation {
     this.closeGhost = closeGhost;
     this.ghostFade = ghostFade;
   }
+  // Hooks for subclasses that position the panel before it is measured (see AnchoredAnimation).
+  // `placedProps` names the inline props such a subclass sets, so `settle` knows what to clear.
   place() {
   }
   placedProps() {
     return "";
   }
+  // Everything the morph needs, measured once against the final layout:
+  // `buttonOffset` drops the panel's padding box onto the trigger, `buttonClip` shrinks it to the
+  // trigger's exact rect, and `openClip` opens it back up. Live transforms are backed out of
+  // `panelRect` so a re-measure mid-flight still reports the panel's resting position.
   measure(panel, trigger) {
     const cs = getComputedStyle(panel);
     const pad = { top: parseFloat(cs.paddingTop) || 0, left: parseFloat(cs.paddingLeft) || 0 };
@@ -1448,9 +1446,12 @@ var MorphAnimation = class extends ModalAnimation {
       }
     };
   }
+  // GSAP cannot interpolate `inset(... round ...)`, so the clip is written and read by hand and
+  // driven from a scalar tween (see addClipTween).
   applyClip(panel, clip) {
     panel.style.clipPath = `inset(${clip.top}px ${clip.right}px ${clip.bottom}px ${clip.left}px round ${clip.radius}px)`;
   }
+  // recovers the clip an interrupted opening left behind, so a close starts from where it really is
   readClip(panel, fallback) {
     const match = /inset\(([^)]+)\)/.exec(panel.style.clipPath || "");
     if (!match) return fallback;
@@ -1479,6 +1480,9 @@ var MorphAnimation = class extends ModalAnimation {
       }
     }, position);
   }
+  // Two ways to fade the ghost. When the panel separates from the trigger mid-morph (`clearP < 1`)
+  // the fade is driven by geometry so it lands on that exact moment - hence a progress callback for
+  // the clip tween. Otherwise the trigger stays covered and a plain time-based tween will do.
   addGhostFade(tl, ghost, clearP, morphAt, morphSpan, reverse = false) {
     if (clearP < 1) return this.ghostFader(ghost, clearP, reverse);
     const span = morphSpan * this.ghostFade;
@@ -1501,6 +1505,7 @@ var MorphAnimation = class extends ModalAnimation {
       ghost.style.opacity = String(reverse ? t : 1 - t);
     };
   }
+  // Wipes every trace of the animation, handing the panel back to plain CSS.
   settle(dialog, panel, content, alsoClear = "") {
     removeTriggerGhost(dialog);
     panel.style.clipPath = "";
@@ -1508,6 +1513,9 @@ var MorphAnimation = class extends ModalAnimation {
     gsap5.set(panel, { clearProps: `transform,backgroundColor,willChange${alsoClear ? `,${alsoClear}` : ""}` });
     gsap5.set(content, { clearProps: "opacity,visibility" });
   }
+  // Panel starts disguised as the trigger, then one timeline runs the lot: it slides into place, its
+  // colour crossfades, the clip opens up, the content fades in and the backdrop darkens - each on
+  // its own beat.
   open({ dialog, panel, content, overlay, trigger }) {
     if (!trigger) return new FadeScaleAnimation().open({ panel, overlay });
     killRunningMorph(panel);
@@ -1548,6 +1556,8 @@ var MorphAnimation = class extends ModalAnimation {
     tl.to(content, { autoAlpha: 1, duration: d * cont.span, ease: "power1.out" }, d * cont.at);
     this.fadeOverlay(tl, overlay, 1, d * ov.span, d * ov.at);
   }
+  // The inverse, with two differences: the clip starts from wherever an interrupted opening left it,
+  // and the ghost is optional - only subclasses that leave the trigger hidden want it faded back in.
   close({ dialog, panel, content, overlay, trigger }, onDone) {
     if (!trigger) return new FadeScaleAnimation().close({ panel, overlay }, onDone);
     killRunningMorph(panel);
@@ -1618,6 +1628,7 @@ var AnchoredAnimation = class extends MorphAnimation {
     });
     this.cover = cover;
   }
+  // Sits the panel `cover` px above and left of the trigger so it overlaps it, clamped to the viewport.
   computeAnchoredPosition(triggerRect, panelRect) {
     const margin = 8;
     const fit = (value, size, viewport) => Math.max(margin, Math.min(value, viewport - size - margin));
@@ -1672,8 +1683,8 @@ function unlockScroll() {
 
 // src/customModal/customModal.jsx
 import { jsx as jsx14, jsxs as jsxs9 } from "react/jsx-runtime";
-function CustomModal({ open, onClose, onCloseComplete, children, width = "32rem", height = "auto", backdropOpacity = 0.35, triggerRef, animation, className, style }) {
-  verifyTypesCustomModal({ open, onClose, onCloseComplete, width, height, backdropOpacity, triggerRef, animation });
+function CustomModal({ open, onClose, onCloseComplete, children, backdropOpacity = 0.35, triggerRef, animation, className, style }) {
+  verifyTypesCustomModal({ open, onClose, onCloseComplete, backdropOpacity, triggerRef, animation });
   const modalRef = useRef7(null);
   const overlayRef = useRef7(null);
   const panelRef = useRef7(null);
@@ -1737,8 +1748,8 @@ function CustomModal({ open, onClose, onCloseComplete, children, width = "32rem"
           "div",
           {
             ref: panelRef,
-            className: twMerge8("relative m-auto max-h-[85vh] max-w-[92vw] overflow-y-auto rounded-[var(--radius-lg)] bg-[var(--modal-surface)] p-[var(--pad-card)]", className),
-            style: { width, height, ...style },
+            className: twMerge8("relative m-auto max-w-[92vw] rounded-[var(--radius-modal)] bg-[var(--modal-surface)] p-[var(--pad-card)]", className),
+            style,
             children: /* @__PURE__ */ jsx14("div", { ref: contentRef, children })
           }
         )
@@ -1761,13 +1772,13 @@ var COLOR_PRESETS5 = {
 };
 var SHAPES = [
   "50% 50% 50% 50% / 50% 50% 50% 50%",
-  // círculo
+  // circle
   "30% 30% 30% 30% / 30% 30% 30% 30%",
   // squircle
   "22% 22% 22% 22% / 22% 22% 22% 22%",
   // rounded square
   "30% 30% 30% 30% / 30% 30% 30% 30%"
-  // squircle (cierra el loop)
+  // squircle (closes the loop)
 ];
 var PENTAGON = "polygon(50% 0%, 97.55% 34.55%, 79.4% 90.45%, 20.6% 90.45%, 2.45% 34.55%)";
 function Loading({ size = "sm", color = "primary", className, style, ...props }) {
@@ -1982,6 +1993,117 @@ function Navbar({
     )
   ] });
 }
+
+// src/dragScroll/dragScroll.jsx
+import { useCallback as useCallback2, useEffect as useEffect7, useLayoutEffect, useRef as useRef11, useState as useState7 } from "react";
+import { twMerge as twMerge10 } from "tailwind-merge";
+import gsap9 from "gsap";
+import { Draggable as Draggable2 } from "gsap/Draggable";
+import { InertiaPlugin } from "gsap/InertiaPlugin";
+import { jsx as jsx18 } from "react/jsx-runtime";
+gsap9.registerPlugin(Draggable2, InertiaPlugin);
+var DRAG_TYPE = { y: "scrollTop", x: "scrollLeft", both: "scroll" };
+var EDGE_RESISTANCE = 0.85;
+function useDragScroll(ref, { axis = "y", inertia = true, disabled = false } = {}) {
+  useEffect7(() => {
+    if (disabled || !ref.current) return;
+    if (typeof window !== "undefined" && !window.matchMedia("(pointer: fine)").matches) return;
+    const el = ref.current;
+    let draggable = null;
+    const overflows = () => axis === "x" ? el.scrollWidth > el.clientWidth : axis === "both" ? el.scrollWidth > el.clientWidth || el.scrollHeight > el.clientHeight : el.scrollHeight > el.clientHeight;
+    const sync = () => {
+      if (overflows() && !draggable) {
+        [draggable] = Draggable2.create(el, {
+          type: DRAG_TYPE[axis] ?? DRAG_TYPE.y,
+          inertia,
+          edgeResistance: EDGE_RESISTANCE,
+          // a few pixels of slack before the gesture counts as a drag, so a click that
+          // wobbles still reaches the button underneath
+          minimumMovement: 3,
+          // without this a drag starting on a button or a link would be swallowed by the
+          // browser's native drag behaviour instead of scrolling
+          dragClickables: true,
+          cursor: "grab",
+          activeCursor: "grabbing"
+        });
+      } else if (!overflows() && draggable) {
+        draggable.kill();
+        draggable = null;
+        el.style.cursor = "";
+      }
+    };
+    sync();
+    const observer = new ResizeObserver(sync);
+    observer.observe(el);
+    if (el.firstElementChild) observer.observe(el.firstElementChild);
+    return () => {
+      observer.disconnect();
+      draggable == null ? void 0 : draggable.kill();
+      el.style.cursor = "";
+    };
+  }, [ref, axis, inertia, disabled]);
+}
+function useEdgeFade(ref, axis, size) {
+  const [edges, setEdges] = useState7([0, 0]);
+  const measure = useCallback2(() => {
+    const el = ref.current;
+    if (!el) return;
+    const horizontal = axis === "x";
+    const pos = horizontal ? el.scrollLeft : el.scrollTop;
+    const total = horizontal ? el.scrollWidth : el.scrollHeight;
+    const visible = horizontal ? el.clientWidth : el.clientHeight;
+    const remaining = total - visible - pos;
+    setEdges([Math.min(pos, size), Math.min(Math.max(remaining, 0), size)]);
+  }, [ref, axis, size]);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    measure();
+    el.addEventListener("scroll", measure, { passive: true });
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    if (el.firstElementChild) observer.observe(el.firstElementChild);
+    return () => {
+      el.removeEventListener("scroll", measure);
+      observer.disconnect();
+    };
+  }, [ref, measure]);
+  return edges;
+}
+function DragScroll({
+  children,
+  axis = "y",
+  inertia = true,
+  disabled = false,
+  fade = true,
+  fadeSize,
+  className,
+  style,
+  ...props
+}) {
+  verifyTypesDragScroll({ axis, inertia, disabled, fade, fadeSize });
+  const scrollRef = useRef11(null);
+  useDragScroll(scrollRef, { axis, inertia, disabled });
+  const size = fadeSize ?? 32;
+  const [fadeStart, fadeEnd] = useEdgeFade(scrollRef, axis, fade ? size : 0);
+  const horizontal = axis === "x";
+  return /* @__PURE__ */ jsx18(
+    "div",
+    {
+      ref: scrollRef,
+      className: twMerge10(fade && (horizontal ? "mott-fade-x" : "mott-fade-y"), className),
+      style: {
+        overflowX: horizontal || axis === "both" ? "auto" : "hidden",
+        overflowY: horizontal ? "hidden" : "auto",
+        "--mott-fade-start": `${fadeStart}px`,
+        "--mott-fade-end": `${fadeEnd}px`,
+        ...style
+      },
+      ...props,
+      children
+    }
+  );
+}
 export {
   AnchoredAnimation,
   Badge,
@@ -1989,9 +2111,9 @@ export {
   ButtonFullRounded,
   ButtonGroup,
   CustomModal,
+  DragScroll,
   Dropdown,
   FabButton,
-  FadeScaleAnimation,
   Icon,
   Input,
   Loading,
@@ -2005,7 +2127,7 @@ export {
   Toast,
   ToastProvider,
   anchoredAnimation,
-  fadeAnimation,
   morphAnimation,
+  useDragScroll,
   useToast
 };

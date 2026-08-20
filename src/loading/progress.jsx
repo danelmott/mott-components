@@ -12,7 +12,7 @@ const COLOR_PRESETS = {
     danger: 'var(--color-danger)',
 };
 
-//component for progress in mott-design — determinado (value) o indeterminado (estela), animado con GSAP
+//component for progress in mott-design - determinate (value) or indeterminate (travelling sheen), animated with GSAP
 export default function Progress({ value, color = 'primary', className, style, ...props }) {
     verifyTypesProgress({ value, color });
     const fillRef = useRef(null);

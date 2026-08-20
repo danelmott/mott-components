@@ -1,27 +1,27 @@
-// contenedor compartido de los toasts: uno solo para toda la app, creado de forma perezosa la primera
-// vez que se abre un toast y cacheado a nivel de módulo.
+// Shared toast container: one for the whole app, created lazily the first time a toast opens and
+// cached at module level.
 const STACK_ATTR = 'data-mott-toast-stack';
 
 const STACK_STYLE = {
-    // `fixed` cumple dos funciones: saca al stack del área scrolleable (de ahí que el arrastre no
-    // pueda generar scrollX) y lo vuelve containing block de sus hijos absolutos, que es lo que
-    // necesita el despegue del toast saliente (ver `flyOut` en toast.jsx)
+    // `fixed` does two jobs: it lifts the stack out of the scrollable area (which is why dragging
+    // cannot produce scrollX) and makes it the containing block for its absolute children, which is
+    // what the leaving toast's detach needs (see `flyOut` in toast.jsx)
     position: 'fixed',
     top: '1rem',
     right: '1rem',
-    // ancho FIJO, y cumple dos roles: es el tope de ancho de los toasts (que se miden por su texto
-    // contra este `max-width: 100%`) y mantiene la geometría estable. Si el stack fuera shrink-to-fit
-    // se mediría según su hijo más ancho, y al despegar un toast para la salida se re-mediría al
-    // siguiente: el saliente se apretaría contra un padre más angosto y el texto se rompería a mitad
-    // de la animación.
+    // FIXED width, with two roles: it caps the toasts (which size themselves by their text against
+    // this `max-width: 100%`) and it keeps the geometry stable. Were the stack shrink-to-fit it would
+    // size to its widest child, and detaching a toast for its exit would re-measure it to the next
+    // one: the leaving toast would be squeezed against a narrower parent and its text would re-wrap
+    // mid-animation.
     width: 'min(24rem, calc(100vw - 2rem))',
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'flex-end',
     gap: 'var(--gap-section)',
     zIndex: 'var(--z-floating)',
-    // la franja vacía alrededor de los toasts no tiene que bloquear clicks en la página; cada toast
-    // se re-habilita a sí mismo
+    // the empty band around the toasts must not swallow clicks on the page; each toast re-enables
+    // itself
     pointerEvents: 'none',
 };
 
@@ -31,15 +31,15 @@ export function getToastStack() {
     if (typeof document === 'undefined') return null;
 
     if (!stack?.isConnected) {
-        // el nodo puede sobrevivir a un reload del módulo (HMR) aunque la variable se haya reseteado
+        // the node can outlive a module reload (HMR) even though the variable was reset
         stack = document.querySelector(`[${STACK_ATTR}]`) ?? document.createElement('div');
         stack.setAttribute(STACK_ATTR, '');
         if (!stack.isConnected) document.body.appendChild(stack);
     }
 
-    // los estilos se aplican SIEMPRE, también sobre un nodo encontrado. Si solo se aplicaran al
-    // crearlo, un stack sobreviviente de una versión anterior del módulo quedaría con estilos viejos
-    // conviviendo con toasts nuevos — que es justo cómo aparece un toast apretado a mitad del cierre.
+    // Styles are applied ALWAYS, including to a node that was found rather than created. Applying
+    // them only on creation would leave a stack surviving from an older version of the module running
+    // stale styles alongside new toasts - exactly how a toast ends up squeezed mid-close.
     Object.assign(stack.style, STACK_STYLE);
     return stack;
 }

@@ -13,16 +13,16 @@ const COLOR_PRESETS = {
 };
 
 const SHAPES = [
-    '50% 50% 50% 50% / 50% 50% 50% 50%',   // círculo
+    '50% 50% 50% 50% / 50% 50% 50% 50%',   // circle
     '30% 30% 30% 30% / 30% 30% 30% 30%',   // squircle
     '22% 22% 22% 22% / 22% 22% 22% 22%',   // rounded square
-    '30% 30% 30% 30% / 30% 30% 30% 30%',   // squircle (cierra el loop)
+    '30% 30% 30% 30% / 30% 30% 30% 30%',   // squircle (closes the loop)
 ];
 
-// pentágono regular (5 vértices) — necesita clip-path, border-radius no puede hacer esquinas rectas
+// regular pentagon (5 vertices) - needs clip-path; border-radius cannot make straight corners
 const PENTAGON = 'polygon(50% 0%, 97.55% 34.55%, 79.4% 90.45%, 20.6% 90.45%, 2.45% 34.55%)';
 
-//component for loading in mott-design — figuras que cambian de forma en loop, animado con GSAP
+//component for loading in mott-design - shapes morphing in a loop, animated with GSAP
 export default function Loading({ size = 'sm', color = 'primary', className, style, ...props }) {
     verifyTypesLoading({ size, color });
     const shapeRef = useRef(null);
@@ -33,9 +33,9 @@ export default function Loading({ size = 'sm', color = 'primary', className, sty
         const el = shapeRef.current;
         const tl = gsap.timeline({ repeat: -1 });
 
-        // el elemento arranca en círculo (SHAPES[0], scale 1, opacity 1, sin clip-path) — cada
-        // transición hace UN solo pulso, y la última termina exactamente en ese mismo estado inicial,
-        // así el loop conecta sin doble-rebote ni salto en la costura
+        // The element starts as a circle (SHAPES[0], scale 1, opacity 1, no clip-path). Each
+        // transition is ONE single pulse, and the last one ends in exactly that same initial state, so
+        // the loop joins without a double bounce or a jump at the seam.
         const morph = (shape) => {
             tl.to(el, { borderRadius: shape, scale: 1.12, duration: 0.5, ease: 'power2.out' }, '+=0.05')
                 .to(el, { scale: 1, duration: 0.45, ease: 'power2.in' });
@@ -43,15 +43,16 @@ export default function Loading({ size = 'sm', color = 'primary', className, sty
 
         morph(SHAPES[1]); // squircle
         morph(SHAPES[2]); // rounded square
-        morph(SHAPES[3]); // squircle
+        morph(SHAPES[3]); // squircle back
 
-        // pentágono: border-radius y clip-path no se interpolan entre sí, así que se cruza con un fade corto
+        // pentagon: border-radius and clip-path do not interpolate into each other, so it crosses over
+        // with a short fade
         tl.to(el, { opacity: 0, scale: 0.85, duration: 0.2, ease: 'power2.in' }, '+=0.05')
             .set(el, { clipPath: PENTAGON })
             .to(el, { opacity: 1, scale: 1.12, duration: 0.3, ease: 'power2.out' })
             .to(el, { scale: 1, duration: 0.45, ease: 'power2.in' });
 
-        // vuelta a círculo (mismo estado que el arranque) — un solo pulso, sin duplicar el de arriba
+        // back to the circle (the same state it started from) - a single pulse, not a repeat of the above
         tl.to(el, { opacity: 0, scale: 0.85, duration: 0.2, ease: 'power2.in' }, '+=0.3')
             .set(el, { clipPath: 'none', borderRadius: SHAPES[0] })
             .to(el, { opacity: 1, scale: 1.12, duration: 0.3, ease: 'power2.out' })

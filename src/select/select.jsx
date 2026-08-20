@@ -6,11 +6,11 @@ import gsap from 'gsap';
 import Icon from '../icon/icon.jsx';
 import { verifyTypesSelect } from '../utils/verifyTypes.js';
 
-//component for select in mott-design — dropdown custom animado con GSAP.
-//el panel se renderiza en un portal a `document.body` y se posiciona `fixed` contra el rect del
-//trigger, NO `absolute` dentro del componente: así no depende del layout de sus ancestros. Un
-//`overflow: hidden`, un `transform`, un contenedor multi-columna o cualquier stacking context de por
-//medio lo recortaban o lo dejaban empujando el contenido en vez de superponerse.
+//component for select in mott-design - custom dropdown animated with GSAP.
+//The panel renders through a portal into `document.body` and is positioned `fixed` against the
+//trigger's rect, NOT `absolute` inside the component, so it does not depend on its ancestors' layout.
+//An `overflow: hidden`, a `transform`, a multi-column container or any stacking context in between
+//used to clip it or leave it pushing the content around instead of overlapping it.
 export default function Select({ options = [], value, onChange, label, placeholder = 'Seleccionar', disabled, id }) {
     verifyTypesSelect({ options, onChange, label, placeholder, disabled });
     const [open, setOpen] = useState(false);
@@ -35,8 +35,8 @@ export default function Select({ options = [], value, onChange, label, placehold
         syncAnchor();
         setRendered(true);
 
-        // al ser `fixed`, el panel no acompaña al scroll: hay que reanclarlo. El `true` es capture,
-        // para enterarse también del scroll de cualquier contenedor intermedio
+        // being `fixed`, the panel does not follow the scroll and has to be re-anchored. The `true`
+        // is capture, so scrolling of any intermediate container is picked up too
         window.addEventListener('scroll', syncAnchor, true);
         window.addEventListener('resize', syncAnchor);
         return () => {
@@ -77,7 +77,7 @@ export default function Select({ options = [], value, onChange, label, placehold
     useEffect(() => {
         if (!open) return;
         const handleClick = (e) => {
-            // el panel ya no vive adentro del wrapper, así que hay que chequear los dos
+            // the panel no longer lives inside the wrapper, so both have to be checked
             if (wrapperRef.current?.contains(e.target)) return;
             if (panelRef.current?.contains(e.target)) return;
             setOpen(false);

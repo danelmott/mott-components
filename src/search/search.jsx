@@ -4,7 +4,7 @@ import { twMerge } from 'tailwind-merge';
 import Icon from '../icon/icon.jsx';
 import { verifyTypesSearch } from '../utils/verifyTypes.js';
 
-//component for search in mott-design — mismo estilo que Input, con debounce incorporado (onSearch)
+//component for search in mott-design - same styling as Input, with debouncing built in (onSearch)
 export default function Search({
     label,
     id,
@@ -28,7 +28,8 @@ export default function Search({
     
     verifyTypesSearch({ label, placeholder, delay, onSearch, onChange, value: controlledValue, defaultValue });
     
-    // dispara onSearch recién cuando el usuario deja de tipear por `delay` ms — listo para pegarle a una API sin lógica extra del lado del consumidor
+    // fires onSearch only once the user has stopped typing for `delay` ms - ready to hit an API with
+    // no extra logic on the consumer's side
     useEffect(() => {
         if (!onSearch) return;
         clearTimeout(timeoutRef.current);

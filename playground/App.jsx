@@ -17,6 +17,7 @@ import Dropdown from '../src/dropdown/dropdown.jsx';
 import CustomModal from '../src/customModal/customModal.jsx';
 import { anchoredAnimation } from '../src/animations/modalAnimation.js';
 import Navbar from '../src/navbar/navbar.jsx';
+import DragScroll from '../src/dragScroll/dragScroll.jsx';
 
 function Section({ title, wide, children }) {
   return (
@@ -49,8 +50,7 @@ function Section({ title, wide, children }) {
   );
 }
 
-// demo de la API imperativa: el provider mantiene la cola, así que varios `showToast` seguidos se
-// apilan en vez de pisarse
+// imperative API demo: the provider owns the queue, so consecutive showToast calls stack up
 function ToastApiDemo() {
   const { showToast, info, success, warning, danger, closeToast, closeAll } = useToast();
   const lastIdRef = useRef(null);
@@ -75,7 +75,7 @@ function ToastApiDemo() {
         <Button
           variant="secondary"
           onClick={() => {
-            // cuatro de un saque: se ven apilados, y al cerrar uno los de abajo suben con Flip
+            // four at once: they stack, and closing one makes the rest slide up via Flip
             info({ title: 'Uno', message: 'Primero de la tanda.' });
             success({ title: 'Dos', message: 'Segundo de la tanda.' });
             warning({ title: 'Tres', message: 'Tercero de la tanda.' });
@@ -106,6 +106,43 @@ function ToastApiDemo() {
   );
 }
 
+// Cycles the root's `data-theme` through dark -> light -> unset. The unset step matters: that is the
+// one that hands control back to `prefers-color-scheme`.
+function ThemeToggle() {
+  const [theme, setTheme] = useState(null);
+
+  const cycle = () => {
+    const next = theme === null ? 'dark' : theme === 'dark' ? 'light' : null;
+    setTheme(next);
+    if (next === null) delete document.documentElement.dataset.theme;
+    else document.documentElement.dataset.theme = next;
+  };
+
+  return (
+    <Button id="theme-toggle" variant="outline" onClick={cycle}>
+      Tema: {theme ?? 'sistema (prefers-color-scheme)'}
+    </Button>
+  );
+}
+
+function ScrollBox({ id, horizontal, dragScrollProps, children }) {
+  return (
+    <DragScroll
+      id={id}
+      axis={horizontal ? 'x' : 'y'}
+      style={{
+        height: horizontal ? 'auto' : 160,
+        borderRadius: 'var(--radius-lg)',
+        fontSize: 'var(--text-sm)',
+        color: 'var(--slate-gray-text)',
+      }}
+      {...dragScrollProps}
+    >
+      <div style={{ padding: 'var(--gap-block)' }}>{children}</div>
+    </DragScroll>
+  );
+}
+
 function Row({ children }) {
   return (
     <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
@@ -122,23 +159,24 @@ export default function App() {
   const [searchLog, setSearchLog] = useState('(nada buscado todavía)');
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [customModalOpen, setCustomModalOpen] = useState(false);
+  const [autoModalOpen, setAutoModalOpen] = useState(false);
   const dropdownTriggerRef = useRef(null);
   const customModalTriggerRef = useRef(null);
   const [activeRoute, setActiveRoute] = useState(0);
-  // el logo abre el pop up anclado. No lleva estado activo a propósito: el panel se apoya encima y lo
-  // tapa, así que el botón solo recibe el click — cambiarle el estilo no se vería, y encima el `scale`
-  // del estado activo lo haría asomar por detrás del panel
+  // The logo opens the anchored popover. It deliberately has no active state: the panel rests on top
+  // and covers it, so the button only takes the click - restyling it would not be visible, and the
+  // active state's `scale` would make it peek out from behind the panel.
   const [logoPopoverOpen, setLogoPopoverOpen] = useState(false);
   const logoButtonRef = useRef(null);
-  // el engranaje abre la modal centrada. Ese botón sí queda a la vista mientras la modal viaja, así
-  // que sí lleva el efecto de click. Va en un estado aparte de `gearModalOpen` para apagarse recién en
-  // `onCloseComplete`: así la modal aterriza sobre un botón todavía activo y el color no salta
+  // The gear opens the centred modal. That button does stay visible while the modal travels, so it
+  // does get the click effect. It lives in its own state, separate from `gearModalOpen`, to switch off
+  // only on `onCloseComplete`: the modal then lands on a still-active button and the colour does not jump.
   const [gearModalOpen, setGearModalOpen] = useState(false);
   const [gearActive, setGearActive] = useState(false);
   const gearButtonRef = useRef(null);
-  // el Navbar renderiza los mismos items dos veces (rail de desktop + barra de mobile) y solo uno
-  // está visible: nos quedamos con el que realmente tiene caja, porque el oculto mide 0 y el morph
-  // arrancaría desde un rect vacío
+  // Navbar renders the same items twice (desktop rail plus mobile bar) and only one is visible: keep
+  // the one that actually has a box, because the hidden one measures 0 and the morph would start from
+  // an empty rect.
   const setGearTrigger = (node) => {
     if (node && node.offsetWidth > 0) gearButtonRef.current = node;
   };
@@ -156,12 +194,47 @@ export default function App() {
         Mott Design Components — Playground
       </h1>
 
+      <div style={{ marginBottom: '1.5rem' }}>
+        <ThemeToggle />
+      </div>
+
       <div
         style={{
           columnWidth: 320,
           columnGap: '1rem',
         }}
       >
+        <Section title="DragScroll — sin barra, se arrastra" wide>
+          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--slate-gray-text)' }}>
+            Las barras de scroll están ocultas en toda la app. Estas cajas se arrastran con el mouse y
+            siguen de largo al soltar (inercia). La rueda y el teclado funcionan igual que siempre. El
+            degradado en el borde avisa que hay más contenido y se apaga al llegar al tope.
+          </p>
+          <ScrollBox id="scroll-vertical">
+            <p style={{ fontWeight: 600, color: 'var(--dark-navy-text)', marginBottom: '0.5rem' }}>Vertical</p>
+            {Array.from({ length: 25 }, (_, i) => (
+              <p key={i} style={{ marginBottom: '0.5rem' }}>{i + 1}. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation.</p>
+            ))}
+          </ScrollBox>
+
+          <ScrollBox id="scroll-horizontal" horizontal>
+            <div style={{ display: 'flex', gap: '0.5rem', width: 'max-content', paddingBottom: '0.5rem' }}>
+              {Array.from({ length: 40 }, (_, i) => (
+                <Badge key={i} color="info" size="md">Elemento {i + 1}</Badge>
+              ))}
+            </div>
+          </ScrollBox>
+
+          <ScrollBox id="scroll-no-inertia" dragScrollProps={{ inertia: false, fade: false }}>
+            <p style={{ fontWeight: 600, color: 'var(--dark-navy-text)', marginBottom: '0.5rem' }}>
+              inertia={'{false}'} fade={'{false}'} — se arrastra pero frena al soltar, y sin degradado
+            </p>
+            {Array.from({ length: 25 }, (_, i) => (
+              <p key={i} style={{ marginBottom: '0.5rem' }}>{i + 1}. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation.</p>
+            ))}
+          </ScrollBox>
+        </Section>
+
         <Section title="Button — colores">
           <Row>
             <Button variant="primary">Iniciar sesión</Button>
@@ -339,16 +412,37 @@ export default function App() {
             onClose={() => setCustomModalOpen(false)}
             triggerRef={customModalTriggerRef}
             animation={anchoredAnimation}
-            width="26rem"
             backdropOpacity={0.15}
           >
-            <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--dark-navy-text)', marginBottom: '0.5rem' }}>
-              Modal personalizado
+            {/* el ancho lo pone este div, no la modal: el panel se mide por su contenido */}
+            <div className="w-[23rem]">
+              <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--dark-navy-text)', marginBottom: '0.5rem' }}>
+                Modal personalizado
+              </h3>
+              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--slate-gray-text)', marginBottom: '1rem' }}>
+                Backdrop más claro, ancho puesto por el div de adentro, animación anclada junto al botón (AnchoredAnimation).
+              </p>
+              {Array.from({ length: 2 }, (_, i) => (
+                <p key={i} style={{ fontSize: 'var(--text-sm)', color: 'var(--slate-gray-text)', marginBottom: '0.75rem' }}>
+                  {i + 1}. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation.
+                </p>
+              ))}
+              <Button variant="outline" onClick={() => setCustomModalOpen(false)}>Cerrar</Button>
+            </div>
+          </CustomModal>
+
+          <Button id="abrir-auto" variant="outline" onClick={() => setAutoModalOpen(true)}>
+            Sin div — se adapta al contenido
+          </Button>
+          <CustomModal open={autoModalOpen} onClose={() => setAutoModalOpen(false)}>
+            {/* sin div de ancho: el panel mide lo que miden estos hijos y nada más */}
+            <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--dark-navy-text)', marginBottom: '0.75rem' }}>
+              ¿Eliminar el elemento?
             </h3>
-            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--slate-gray-text)', marginBottom: '1rem' }}>
-              Backdrop más claro, ancho fijo vía prop, animación anclada junto al botón (AnchoredAnimation).
-            </p>
-            <Button variant="outline" onClick={() => setCustomModalOpen(false)}>Cerrar</Button>
+            <Row>
+              <Button variant="danger" onClick={() => setAutoModalOpen(false)}>Eliminar</Button>
+              <Button variant="ghost" onClick={() => setAutoModalOpen(false)}>Cancelar</Button>
+            </Row>
           </CustomModal>
         </Section>
 
@@ -390,47 +484,49 @@ export default function App() {
               { icon: 'settings', buttonRef: setGearTrigger },
             ]}
           />
-          {/* modal centrada desde el engranaje: viaja hasta el centro, así que el botón queda a la
-              vista y sí lleva el efecto de click */}
+          {/* centred modal from the gear: it travels to the middle, so the button stays visible and
+              does get the click effect */}
           <CustomModal
             open={gearModalOpen}
             onClose={() => setGearModalOpen(false)}
-            // el engranaje se mantiene activo durante todo el achique — así la modal aterriza sobre el
-            // botón en el mismo estado del que salió, y recién ahí vuelve al default
+            // the gear stays active for the whole shrink, so the modal lands on the button in the same
+            // state it left from, and only then does it return to the default
             onCloseComplete={() => setGearActive(false)}
             triggerRef={gearButtonRef}
-            width="22rem"
           >
-            <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--dark-navy-text)', marginBottom: '0.5rem' }}>
-              Modal centrada desde el nav
-            </h3>
-            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--slate-gray-text)', marginBottom: '1rem' }}>
-              El botón se transforma en la modal y viaja hasta el centro. Como queda a la vista, se ilumina
-              al clickearlo y vuelve al default recién cuando la modal termina de plegarse encima.
-            </p>
-            <Button variant="outline" onClick={() => setGearModalOpen(false)}>
-              Cerrar
-            </Button>
+            <div className="w-[19rem]">
+              <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--dark-navy-text)', marginBottom: '0.5rem' }}>
+                Modal centrada desde el nav
+              </h3>
+              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--slate-gray-text)', marginBottom: '1rem' }}>
+                El botón se transforma en la modal y viaja hasta el centro. Como queda a la vista, se ilumina
+                al clickearlo y vuelve al default recién cuando la modal termina de plegarse encima.
+              </p>
+              <Button variant="outline" onClick={() => setGearModalOpen(false)}>
+                Cerrar
+              </Button>
+            </div>
           </CustomModal>
 
-          {/* pop up anclado al logo: el mismo morph, pero apoyándose encima del propio botón en vez
-              de viajar al centro de la pantalla */}
+          {/* popover anchored to the logo: the same morph, but resting on top of the button itself
+              instead of travelling to the centre of the screen */}
           <CustomModal
             open={logoPopoverOpen}
             onClose={() => setLogoPopoverOpen(false)}
             triggerRef={logoButtonRef}
             animation={anchoredAnimation}
-            width="18rem"
             backdropOpacity={0.15}
           >
-            <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--dark-navy-text)', marginBottom: '0.5rem' }}>
-              Pop up desde el logo
-            </h3>
-            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--slate-gray-text)', marginBottom: '1rem' }}>
-              Se apoya encima del logo y lo tapa: el círculo se estira desde su propia esquina hasta
-              convertirse en este panel. Por eso el logo no cambia de estilo al clickearlo — no se vería.
-            </p>
-            <Button variant="outline" onClick={() => setLogoPopoverOpen(false)}>Cerrar</Button>
+            <div className="w-[15rem]">
+              <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--dark-navy-text)', marginBottom: '0.5rem' }}>
+                Pop up desde el logo
+              </h3>
+              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--slate-gray-text)', marginBottom: '1rem' }}>
+                Se apoya encima del logo y lo tapa: el círculo se estira desde su propia esquina hasta
+                convertirse en este panel. Por eso el logo no cambia de estilo al clickearlo — no se vería.
+              </p>
+              <Button variant="outline" onClick={() => setLogoPopoverOpen(false)}>Cerrar</Button>
+            </div>
           </CustomModal>
         </Section>
 

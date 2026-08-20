@@ -7,18 +7,17 @@ const ToastContext = createContext(null);
 
 const DEFAULT_DURATION = 5000;
 const DEFAULT_DISMISS_THRESHOLD = 0.5;
-// tope de la pila: más que esto y los de abajo se salen de la pantalla en un viewport chico
 const DEFAULT_MAX = 4;
 
-// permite `success('Guardado')` además de `success({ title, message })`
+// allows `success('Saved')` on top of `success({ title, message })`
 const normalize = (options) => (typeof options === 'string' ? { message: options } : (options ?? {}));
 
-//provider de la API imperativa de toasts — se monta una vez, arriba de todo (ej. app/layout.jsx),
-//y expone `useToast()` para dispararlos desde cualquier componente cliente.
+//provider for the imperative toast API — mount it once at the top of the app (e.g. app/layout.jsx)
+//and call the toasts from any client component through `useToast()`.
 //
-//Guarda una COLA, no un toast: cada entrada tiene su id y su propia instancia de Toast (`key={id}`),
-//que es lo que hace que se apilen de verdad. El stack fijo y el reflow con Flip ya están del lado del
-//componente (ver toastStack.js y `flyOut` en toast.jsx) — acá solo se administra quién está vivo.
+//It holds a QUEUE, not a single toast: every entry gets its own id and its own Toast instance
+//(`key={id}`), which is what makes them stack. The fixed stack and the Flip reflow already live in
+//the component (see toastStack.js and `flyOut` in toast.jsx) — this only tracks what is alive.
 export function ToastProvider({
     children,
     duration = DEFAULT_DURATION,
@@ -28,8 +27,8 @@ export function ToastProvider({
     verifyTypesToastProvider({ duration, dismissThreshold, max });
 
     const [toasts, setToasts] = useState([]);
-    // contador en un ref y no en el state: el id tiene que ser único aunque se disparen dos toasts en
-    // el mismo tick, y `toasts.length` se repite apenas se cierra uno
+    // ref, not state: ids must stay unique even for two toasts fired in the same tick, and
+    // `toasts.length` repeats as soon as one closes
     const idRef = useRef(0);
 
     const showToast = useCallback((options) => {
@@ -39,16 +38,15 @@ export function ToastProvider({
         const id = ++idRef.current;
         setToasts((prev) => {
             const next = [...prev, { variant: 'info', duration, ...payload, id, open: true }];
-            // al pasarse del tope se descartan los más viejos. Se cortan de una (no `open: false`)
-            // a propósito: son los que ya se leyeron, y animarles la salida mientras entra uno nuevo
-            // deja la pila saltando
+            // over the cap the oldest are dropped outright (not `open: false`): they have been read
+            // already, and animating them out while a new one enters leaves the stack jumping
             return next.length > max ? next.slice(next.length - max) : next;
         });
         return id;
     }, [duration, max]);
 
-    // marca el cierre pero NO saca la entrada: Toast tiene que seguir montado para animar la salida.
-    // El desmontaje real llega con `onExited`.
+    // flags the close but keeps the entry: Toast must stay mounted to animate its exit.
+    // `onExited` is what actually unmounts it.
     const closeToast = useCallback((id) => {
         setToasts((prev) => prev.map((t) => (t.id === id ? { ...t, open: false } : t)));
     }, []);
@@ -97,8 +95,8 @@ export function useToast() {
 
     if (!context) {
         throw new Error(
-            '[MOTT-COMPONENTS] useToast() debe usarse dentro de <ToastProvider>. ' +
-            'Envolvé tu app con <ToastProvider> (ej. en app/layout.jsx) antes de llamar a los toasts.'
+            '[MOTT-COMPONENTS] useToast() must be used inside a <ToastProvider>. ' +
+            'Wrap your app with <ToastProvider> (e.g. in app/layout.jsx) before calling toasts.'
         );
     }
 

@@ -5,7 +5,7 @@ import gsap from 'gsap';
 import { twMerge } from 'tailwind-merge';
 import { verifyTypesDropdown } from '../utils/verifyTypes.js';
 
-//component for dropdown in mott-design — sin backdrop, cierra con Escape o click afuera
+//component for dropdown in mott-design - no backdrop, closes on Escape or an outside click
 export default function Dropdown({ open, onClose, children, width = 'auto', height = 'auto', triggerRef, className, style, ...props }) {
     verifyTypesDropdown({ open, onClose, width, height, triggerRef });
     const [rendered, setRendered] = useState(open);

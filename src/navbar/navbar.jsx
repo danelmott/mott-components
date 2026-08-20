@@ -23,8 +23,8 @@ function LogoButton({ logo, color }) {
     const ref = useRef(null);
     const preset = COLOR_PRESETS[logo.color ?? color] ?? COLOR_PRESETS.primary;
     
-    // además de la animación propia, permite exponer el nodo del botón hacia afuera
-    // (ej. para usarlo como `triggerRef` de un CustomModal anclado a este botón)
+    // besides driving its own animation, this exposes the button node outwards (e.g. to use it as the
+    // `triggerRef` of a CustomModal anchored to this button)
     const setRefs = (node) => {
         ref.current = node;
         if (typeof logo.buttonRef === 'function') logo.buttonRef(node);
@@ -88,7 +88,7 @@ export default function Navbar({
 
     return (
         <>
-            {/* Desktop: íconos flotando sobre la página, sin tarjeta ni sombra */}
+            {/* Desktop: icons floating over the page, with no card and no shadow */}
             <nav
                 className={twMerge(
                     'hidden md:flex fixed left-4 z-[var(--z-nav)] flex-col items-center gap-[var(--gap-group)]',
@@ -109,7 +109,7 @@ export default function Navbar({
                 />
             </nav>
             
-            {/* Mobile: pill flotante con los íconos + FAB aparte, con margen (no pegado a los bordes) — sin logo, no entra en un bottom bar chico */}
+            {/* Mobile: floating pill with the icons, inset from the edges - no logo, it does not fit a small bottom bar */}
             <nav
                 className={twMerge(
                     'flex md:hidden fixed bottom-4 left-1/2 z-[var(--z-nav)] -translate-x-1/2 items-center gap-3',

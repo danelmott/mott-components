@@ -4,15 +4,17 @@ import CustomEase from 'gsap/CustomEase';
 gsap.registerPlugin(CustomEase);
 
 
+// Shared bezier for every morph: a fast head that settles slowly, so the panel reads as one liquid
+// gesture rather than a box being moved. `_IN` is its mirror, used on close.
 const LIQUID_EASE = CustomEase.create('mottLiquid', '0.32, 0.72, 0, 1');
-
-
 const LIQUID_EASE_IN = CustomEase.create('mottLiquidIn', '1, 0, 0.68, 0.28');
 
 const MORPH_OPEN_DURATION = 0.8;
 const MORPH_CLOSE_DURATION = 0.7;
 
 
+// Choreography, as fractions of the total duration: `at` is when a part starts, `span` how long it
+// runs. Keeping them relative means changing the duration re-times the whole sequence for free.
 const OPEN_BEATS = {
     morph: { at: 0, span: 1 },
     color: { at: 0, span: 1 },
@@ -26,9 +28,14 @@ const CLOSE_BEATS = {
     content: { at: 0, span: 0.25 },
 };
 
+// The ghost is a throwaway clone of the trigger's contents, pinned over the trigger while the panel
+// morphs. The panel covers the real trigger, so without it the label would vanish the instant the
+// animation starts.
 const GHOST_ATTR = 'data-mott-morph-ghost';
 
 
+// The running timeline is parked on the panel element itself so an interrupting open/close can kill
+// it. `Symbol.for` and not `Symbol` so the key survives a module reload (HMR).
 const RUNNING_MORPH = Symbol.for('mott.runningMorph');
 
 function killRunningMorph(panel) {
@@ -37,13 +44,19 @@ function killRunningMorph(panel) {
 }
 
 
+// border-radius may be a percentage, which clip-path's `round` cannot take - resolve it to px.
 function resolveRadius(el, rect) {
     const raw = getComputedStyle(el).borderTopLeftRadius;
     const value = parseFloat(raw) || 0;
     return raw.trim().endsWith('%') ? (value / 100) * Math.min(rect.width, rect.height) : value;
 }
 
+// Progress (0-1) at which the morphing rect stops overlapping `target` - the moment the panel
+// uncovers the trigger. Ties the ghost fade to the geometry instead of the clock, so the fake button
+// disappears exactly when the real one would come back into view.
+// Returns 1 when the two never separate (an anchored panel resting on top of its trigger).
 function separationProgress(from, to, target) {
+    // earliest progress at which one edge travels past the opposite edge of `target`
     const edge = (fromV, toV, limit, sign) => {
         const delta = toV - fromV;
         if (sign * delta <= 0) return Infinity;
@@ -51,19 +64,22 @@ function separationProgress(from, to, target) {
         return p > 0 && p <= 1 ? p : Infinity;
     };
     const p = Math.min(
-        edge(from.top, to.top, target.bottom, 1),      
-        edge(from.bottom, to.bottom, target.top, -1),  
-        edge(from.left, to.left, target.right, 1),     
-        edge(from.right, to.right, target.left, -1),
+        edge(from.top, to.top, target.bottom, 1),      // cleared downwards
+        edge(from.bottom, to.bottom, target.top, -1),  // cleared upwards
+        edge(from.left, to.left, target.right, 1),     // cleared to the right
+        edge(from.right, to.right, target.left, -1),   // cleared to the left
     );
     return Number.isFinite(p) ? p : 1;
 }
 
 const clamp01 = (v) => Math.min(1, Math.max(0, v));
 
-// cuánto dura el fade del ghost, en espacio de progreso geométrico (no de tiempo)
+// how long the ghost fade lasts, measured in geometric progress rather than in time
 const GHOST_FADE_SPAN = 0.2;
 
+// Clones the trigger's children into a fixed box over the trigger. It hangs off the `dialog` and not
+// the panel, so it stays put instead of travelling with the modal. `inner` is scaled because the ghost
+// is sized to the measured rect, which need not match the trigger's layout width.
 function createTriggerGhost(dialog, trigger, originRect) {
     removeTriggerGhost(dialog); 
     const cs = getComputedStyle(trigger);
@@ -105,7 +121,9 @@ function removeTriggerGhost(dialog) {
     dialog?.querySelector(`[${GHOST_ATTR}]`)?.remove();
 }
 
-// interfaz base: cualquier animación de modal opera sobre { panel, content, overlay, trigger }
+// Base interface: every modal animation works on { dialog, panel, content, overlay, trigger }.
+// `fadeOverlay` is shared so the backdrop always fades inside the panel's own timeline - the
+// darkening and the movement then read as one gesture instead of two separate events.
 export class ModalAnimation {
     open(ctx) {}
     close(ctx, onDone) { onDone?.(); }
@@ -118,7 +136,9 @@ export class ModalAnimation {
     }
 }
 
-// fallback sin trigger — fade + scale + leve desplazamiento vertical del panel completo
+// INTERNAL. Not re-exported from index.js: it exists solely because MorphAnimation cannot run without
+// a trigger - `measure()` would call getBoundingClientRect on undefined. A modal opened with no
+// `triggerRef` (a session timeout, an error the app raises on its own) lands here instead of crashing.
 export class FadeScaleAnimation extends ModalAnimation {
     open({ panel, overlay }) {
         const tl = gsap.timeline();
@@ -138,6 +158,9 @@ export class FadeScaleAnimation extends ModalAnimation {
 }
 
 
+// Makes the panel look exactly like the trigger - same spot, same colour, clipped down to the
+// trigger's rect - and then expands it into itself. Nothing is duplicated: it is the real panel the
+// whole way, which is why its content never re-flows mid-flight.
 export class MorphAnimation extends ModalAnimation {
     constructor({
         openDuration = MORPH_OPEN_DURATION,
@@ -160,10 +183,15 @@ export class MorphAnimation extends ModalAnimation {
         this.ghostFade = ghostFade;
     }
     
+    // Hooks for subclasses that position the panel before it is measured (see AnchoredAnimation).
+    // `placedProps` names the inline props such a subclass sets, so `settle` knows what to clear.
     place() {}
-    
     placedProps() { return ''; }
     
+    // Everything the morph needs, measured once against the final layout:
+    // `buttonOffset` drops the panel's padding box onto the trigger, `buttonClip` shrinks it to the
+    // trigger's exact rect, and `openClip` opens it back up. Live transforms are backed out of
+    // `panelRect` so a re-measure mid-flight still reports the panel's resting position.
     measure(panel, trigger) {
         const cs = getComputedStyle(panel);
         const pad = { top: parseFloat(cs.paddingTop) || 0, left: parseFloat(cs.paddingLeft) || 0 };
@@ -196,10 +224,13 @@ export class MorphAnimation extends ModalAnimation {
         };
     }
     
+    // GSAP cannot interpolate `inset(... round ...)`, so the clip is written and read by hand and
+    // driven from a scalar tween (see addClipTween).
     applyClip(panel, clip) {
         panel.style.clipPath = `inset(${clip.top}px ${clip.right}px ${clip.bottom}px ${clip.left}px round ${clip.radius}px)`;
     }
     
+    // recovers the clip an interrupted opening left behind, so a close starts from where it really is
     readClip(panel, fallback) {
         const match = /inset\(([^)]+)\)/.exec(panel.style.clipPath || '');
         if (!match) return fallback;
@@ -230,6 +261,9 @@ export class MorphAnimation extends ModalAnimation {
         }, position);
     }
     
+    // Two ways to fade the ghost. When the panel separates from the trigger mid-morph (`clearP < 1`)
+    // the fade is driven by geometry so it lands on that exact moment - hence a progress callback for
+    // the clip tween. Otherwise the trigger stays covered and a plain time-based tween will do.
     addGhostFade(tl, ghost, clearP, morphAt, morphSpan, reverse = false) {
         if (clearP < 1) return this.ghostFader(ghost, clearP, reverse);
         
@@ -256,6 +290,7 @@ export class MorphAnimation extends ModalAnimation {
         };
     }
     
+    // Wipes every trace of the animation, handing the panel back to plain CSS.
     settle(dialog, panel, content, alsoClear = '') {
         removeTriggerGhost(dialog);
         panel.style.clipPath = '';
@@ -264,6 +299,9 @@ export class MorphAnimation extends ModalAnimation {
         gsap.set(content, { clearProps: 'opacity,visibility' });
     }
     
+    // Panel starts disguised as the trigger, then one timeline runs the lot: it slides into place, its
+    // colour crossfades, the clip opens up, the content fades in and the backdrop darkens - each on
+    // its own beat.
     open({ dialog, panel, content, overlay, trigger }) {
         if (!trigger) return new FadeScaleAnimation().open({ panel, overlay });
         
@@ -307,11 +345,13 @@ export class MorphAnimation extends ModalAnimation {
         this.fadeOverlay(tl, overlay, 1, d * ov.span, d * ov.at);
     }
     
+    // The inverse, with two differences: the clip starts from wherever an interrupted opening left it,
+    // and the ghost is optional - only subclasses that leave the trigger hidden want it faded back in.
     close({ dialog, panel, content, overlay, trigger }, onDone) {
         if (!trigger) return new FadeScaleAnimation().close({ panel, overlay }, onDone);
         
         killRunningMorph(panel);
-        removeTriggerGhost(dialog); // por si el cierre interrumpe una apertura
+        removeTriggerGhost(dialog); // in case the close interrupts an opening
         
         const { originRect, clearP, openClip, buttonClip, buttonOffset } = this.measure(panel, trigger);
         const originColor = getComputedStyle(trigger).backgroundColor;
@@ -358,6 +398,9 @@ export class MorphAnimation extends ModalAnimation {
 }
 
 
+// Morph variant for popovers: instead of travelling to the centre of the screen the panel unfolds
+// from the trigger and settles on top of it. Quicker beats, and it fades the ghost back in on close
+// because the trigger stays hidden underneath the whole time.
 export class AnchoredAnimation extends MorphAnimation {
     constructor({ cover = 6, ...options } = {}) {
         super({
@@ -385,6 +428,7 @@ export class AnchoredAnimation extends MorphAnimation {
         this.cover = cover;
     }
     
+    // Sits the panel `cover` px above and left of the trigger so it overlaps it, clamped to the viewport.
     computeAnchoredPosition(triggerRect, panelRect) {
         const margin = 8;
         const fit = (value, size, viewport) =>
@@ -407,6 +451,7 @@ export class AnchoredAnimation extends MorphAnimation {
     placedProps() { return 'position,left,top,margin'; }
 }
 
+// ready-made singletons - these are stateless, so one instance each is enough
 export const morphAnimation = new MorphAnimation();
 export const fadeAnimation = new FadeScaleAnimation();
 export const anchoredAnimation = new AnchoredAnimation();

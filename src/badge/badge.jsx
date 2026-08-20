@@ -16,13 +16,13 @@ const SIZE = {
     lg: { pad: 'var(--pad-badge-lg)', text: 'var(--text-base)', icon: '16px', dot: 7 },
 };
 
-//component for badge in mott-design — nativo, sin depender de Button
+//component for badge in mott-design - native, does not depend on Button
 export default function Badge({ children, color = 'neutral', solid = false, size = 'sm', icon, dot = false, style, ...props }) {
     verifyTypesBadge({ color, solid, size, icon, dot });
     const preset = COLOR_PRESETS[color];
     const scale = SIZE[size] ?? SIZE.sm;
 
-    // si `color` no es una variante predefinida, se usa tal cual como color CSS custom (sólido)
+    // when `color` is not a preset variant it is used as-is, as a custom CSS colour (solid)
     const background = preset ? (solid ? preset.solidBg : preset.bg) : color;
     const foreground = preset ? (solid ? preset.solidFg : preset.fg) : 'var(--white)';
 

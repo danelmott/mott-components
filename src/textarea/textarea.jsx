@@ -3,7 +3,7 @@ import { useId } from 'react';
 import { twMerge } from 'tailwind-merge';
 import { verifyTypesTextarea } from '../utils/verifyTypes.js';
 
-//component for textarea in mott-design — mismo estilo visual que Input, tamaño fijo (sin resize ni scroll)
+//component for textarea in mott-design - same look as Input, fixed size (no resize, no scroll)
 export default function Textarea({
     label,
     id,

@@ -3,7 +3,7 @@ import { useId } from 'react';
 import { twMerge } from 'tailwind-merge';
 import { verifyTypesInput } from '../utils/verifyTypes.js';
 
-//component for input in mott-design — label chico arriba + input, estética Material Expressive
+//component for input in mott-design - small label on top plus the field, Material Expressive styling
 export default function Input({
     label,
     type = 'text',

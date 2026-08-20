@@ -15,4 +15,7 @@ export { default as Icon } from './src/icon/icon.jsx';
 export { default as Loading } from './src/loading/loading.jsx';
 export { default as Progress } from './src/loading/progress.jsx';
 export { default as Navbar } from './src/navbar/navbar.jsx';
-export { ModalAnimation, MorphAnimation, FadeScaleAnimation, AnchoredAnimation, morphAnimation, fadeAnimation, anchoredAnimation } from './src/animations/modalAnimation.js';
+export { default as DragScroll, useDragScroll } from './src/dragScroll/dragScroll.jsx';
+// FadeScaleAnimation/fadeAnimation stay out of the public API on purpose: they are the internal
+// safety net for a modal opened without a `triggerRef`, never something to reach for by name.
+export { ModalAnimation, MorphAnimation, AnchoredAnimation, morphAnimation, anchoredAnimation } from './src/animations/modalAnimation.js';

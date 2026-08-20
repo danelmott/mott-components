@@ -14,7 +14,7 @@ const COLOR_PRESETS = {
     danger: { bg: 'var(--color-danger)', fg: 'var(--text-on-danger)' },
 };
 
-//component for buttonGroup in mott-design — selección única, morph animado con GSAP
+//component for buttonGroup in mott-design - single selection, morph animated with GSAP
 export default function ButtonGroup({ buttons, vertical = true, color = 'primary', defaultSelected = null, value, allowDeselect = true, onChange }) {
     verifyTypesButtonGroup({ buttons, vertical, color, allowDeselect, onChange, value, defaultSelected });
     const [internalSelected, setInternalSelected] = useState(defaultSelected);
@@ -24,7 +24,7 @@ export default function ButtonGroup({ buttons, vertical = true, color = 'primary
     const containerRef = useRef(null);
     const preset = COLOR_PRESETS[color] ?? COLOR_PRESETS.primary;
 
-    // GSAP no puede interpolar "var(--token)" como color — hay que resolverlo al valor real antes de animar
+    // GSAP cannot interpolate "var(--token)" as a colour - resolve it to its real value before animating
     const resolveColor = (value) => {
         if (typeof value === 'string' && value.startsWith('var(')) {
             const token = value.slice(4, -1).trim();
@@ -63,8 +63,8 @@ export default function ButtonGroup({ buttons, vertical = true, color = 'primary
                         key={btn.id ?? i}
                         ref={(el) => {
                             itemRefs.current[i] = el;
-                            // además de la animación propia, permite exponer el nodo hacia afuera
-                            // (ej. para anclarle un CustomModal), igual que `logo.buttonRef` en Navbar
+                            // besides driving its own animation, this exposes the node outwards (e.g.
+                            // to anchor a CustomModal to it), just like `logo.buttonRef` in Navbar
                             if (typeof btn.buttonRef === 'function') btn.buttonRef(el);
                             else if (btn.buttonRef) btn.buttonRef.current = el;
                         }}

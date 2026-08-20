@@ -16,7 +16,7 @@ const COLOR_PRESETS = {
     danger: { bg: 'var(--color-danger)', fg: 'var(--text-on-danger)' },
 };
 
-//component for buttonFullRounded in mott-design — circular, solo ícono, nativo (no depende de Button)
+//component for buttonFullRounded in mott-design - circular, icon only, native (does not depend on Button)
 export default function ButtonFullRounded({
     icon,
     color = 'primary',
@@ -32,7 +32,7 @@ export default function ButtonFullRounded({
     const scale = SIZE[size] ?? SIZE.md;
     const preset = COLOR_PRESETS[color];
     
-    // si `color` no es una variante predefinida, se usa tal cual como color CSS custom
+    // when `color` is not a preset variant it is used as-is, as a custom CSS colour
     const background = preset ? preset.bg : color;
     const foreground = iconColor ?? (preset ? preset.fg : 'var(--white)');
     

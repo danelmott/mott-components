@@ -16,7 +16,7 @@ const COLOR_PRESETS = {
     danger: { bg: 'var(--color-danger)', fg: 'var(--text-on-danger)' },
 };
 
-//component for fabButton in mott-design — nativo, no depende de Button
+//component for fabButton in mott-design - native, does not depend on Button
 export default function FabButton({
     color = 'primary',
     iconColor,
@@ -32,7 +32,7 @@ export default function FabButton({
     const dimensions = FAB_SIZE[size] ?? FAB_SIZE.md;
     const preset = COLOR_PRESETS[color];
     
-    // si `color` no es una variante predefinida, se usa tal cual como color CSS custom
+    // when `color` is not a preset variant it is used as-is, as a custom CSS colour
     const background = preset ? preset.bg : color;
     const foreground = iconColor ?? (preset ? preset.fg : 'var(--white)');
     

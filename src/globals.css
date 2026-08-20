@@ -1,4 +1,4 @@
-/*tokens for mott design*/
+/*design tokens for mott*/
 @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap');
 @import 'material-symbols/rounded.css';
 @import "tailwindcss";
@@ -9,20 +9,20 @@
     --font-family: 'DM Sans', sans-serif;
     --font-regular: 400;
     --font-medium: 500;
-    --leading-tight: 1.1;   /* headings grandes */
-    --leading-snug: 1.25;  /* headings medianos */
+    --leading-tight: 1.1;   /* large headings */
+    --leading-snug: 1.25;  /* medium headings */
     --leading-normal: 1.5;   /* body */
-    --leading-relaxed: 1.6;   /* body largo / párrafos */
+    --leading-relaxed: 1.6;   /* long body / paragraphs */
     --tracking-display: -0.02em;  /* 48px+ */
     --tracking-h1: -0.015em; /* 30-36px */
     --tracking-h3: -0.01em;  /* 24px */
     --tracking-h4: -0.005em; /* 18-20px */
     --tracking-body: 0em;     /* 14-16px */
     --tracking-label: 0.02em;  /* 12px */
-    --tracking-caps: 0.06em;  /* mayúsculas, cualquier tamaño chico */
+    --tracking-caps: 0.06em;  /* uppercase, any small size */
     --text-xs: 0.75rem;   /* 12px */
     --text-sm: 0.875rem;  /* 14px */
-    --text-base: 1rem;      /* 16px — body */
+    --text-base: 1rem;      /* 16px - body */
     --text-md: 1.125rem;  /* 18px */
     --text-lg: 1.25rem;   /* 20px */
     --text-xl: 1.5rem;    /* 24px */
@@ -32,7 +32,7 @@
     
     /*neutral colors*/
     
-    /*ligth*/
+    /*light*/
     --white: #ffffff;
     --off-white-background: #f8fafc;
     --light-gray-background: #f1f5f9;
@@ -73,53 +73,15 @@
     --modal-surface: var(--white);
     --overlay-backdrop:rgb(15 23 42 / 0.6);
 
-    [data-theme="dark"] {
-        --color-action:#5e8bff;
-        --color-action-hover:#8aa8ff;
-        --color-action-bg:#172554;
-        --text-on-action:#ffffff;
-        --color-success:#4ade80;
-        --color-success-hover:#86efac;
-        --color-success-bg:#052e16;
-        --text-on-success: #052e16;
-        --color-warning:#fbbf24;
-        --color-warning-hover:#fcd34d;
-        --color-warning-bg:#451a03;
-        --text-on-warning:#451a03;
-        --color-danger:#f87171;
-        --color-danger-hover:#fca5a5;
-        --color-danger-bg:#450a0a;
-        --text-on-danger:#450a0a;
-        --modal-surface:var(--dark-navy-background);
-        --overlay-backdrop:rgb(2 6 23 / 0.7);
-    }
-    @media (prefers-color-scheme: dark) {
-        :root:not([data-theme="light"]) {
-            --color-action:#5e8bff;
-            --color-action-hover:#8aa8ff;
-            --color-action-bg:#172554;
-            --text-on-action:#ffffff;
-            --color-success:#4ade80;
-            --color-success-hover:#86efac;
-            --color-success-bg:#052e16;
-            --text-on-success:#052e16;
-            --color-warning:#fbbf24;
-            --color-warning-hover:#fcd34d;
-            --color-warning-bg:#451a03;
-            --text-on-warning:#451a03;
-            --color-danger:#f87171;
-            --color-danger-hover:#fca5a5;
-            --color-danger-bg:#450a0a;
-            --text-on-danger:#450a0a;
-            --modal-surface:var(--dark-navy-background);
-            --overlay-backdrop:rgb(2 6 23 / 0.7);
-        }
-    }
     
     /*padding and border tokens*/
     --radius-sm: 10px;
     --radius-lg: 16px;
     --radius-full: 9999px;
+    /*Modals get their own step, softer than --radius-lg. A panel this large reads square at the
+      radius that suits an input or a toast, and those share --radius-lg - hence a separate token
+      rather than bending the shared one.*/
+    --radius-modal: 24px;
     --pad-button: 18px 32px;
     --pad-button-icon: 12px;
     --pad-input: 13px 18px;
@@ -143,7 +105,7 @@
     --lg-icon: 24px;
     --xl-icon: 32px;
     
-    /*control sizes (dimensiones fijas cuadradas, reusable por cualquier control tipo FAB)*/
+    /*control sizes (fixed square dimensions, reusable by any FAB-like control)*/
     --control-size-sm: 40px;
     --control-size-md: 56px;
     --control-size-lg: 80px;
@@ -154,12 +116,125 @@
         0 20px 40px -12px rgb(15 23 42 / 0.12);
     --z-nav: 20;
     --z-floating: 50;
+
+    /*how far the edge fade reaches into a scrollable surface that still has content behind it*/
+    --fade-edge: 2rem;
+}
+
+/*Dark theme, two ways in: an explicit `data-theme` on the root, or the OS preference when the
+  consumer has not pinned a light theme. Both must be kept in sync when adding tokens.
+  They live at TOP LEVEL, not nested inside `:root` - nesting them compiles to the descendant
+  selectors `:root [data-theme=dark]` and `:root :root:not(...)`, neither of which can ever match.*/
+[data-theme="dark"] {
+    --color-action:#5e8bff;
+    --color-action-hover:#8aa8ff;
+    --color-action-bg:#172554;
+    --text-on-action:#ffffff;
+    --color-success:#4ade80;
+    --color-success-hover:#86efac;
+    --color-success-bg:#052e16;
+    --text-on-success: #052e16;
+    --color-warning:#fbbf24;
+    --color-warning-hover:#fcd34d;
+    --color-warning-bg:#451a03;
+    --text-on-warning:#451a03;
+    --color-danger:#f87171;
+    --color-danger-hover:#fca5a5;
+    --color-danger-bg:#450a0a;
+    --text-on-danger:#450a0a;
+    --modal-surface:var(--dark-navy-background);
+    --overlay-backdrop:rgb(2 6 23 / 0.7);
+}
+
+@media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+        --color-action:#5e8bff;
+        --color-action-hover:#8aa8ff;
+        --color-action-bg:#172554;
+        --text-on-action:#ffffff;
+        --color-success:#4ade80;
+        --color-success-hover:#86efac;
+        --color-success-bg:#052e16;
+        --text-on-success:#052e16;
+        --color-warning:#fbbf24;
+        --color-warning-hover:#fcd34d;
+        --color-warning-bg:#451a03;
+        --text-on-warning:#451a03;
+        --color-danger:#f87171;
+        --color-danger-hover:#fca5a5;
+        --color-danger-bg:#450a0a;
+        --text-on-danger:#450a0a;
+        --modal-surface:var(--dark-navy-background);
+        --overlay-backdrop:rgb(2 6 23 / 0.7);
+    }
 }
 
 body {
     font-family: var(--font-family);
 }
 
+
+/*Scrollbars are hidden everywhere. Scrolling itself is untouched - wheel, trackpad, keyboard and
+  touch all still work; only the bar is gone. Surfaces that opt into `useDragScroll`/`<DragScroll>`
+  additionally scroll by dragging, and signal that there is more content with a fade at the edge
+  instead of with a bar.
+  Two declarations because the two engines disagree: `scrollbar-width` is the standard property
+  (Firefox, Chrome 121+), the pseudo-element is what WebKit/Blink has always understood.*/
+* {
+    scrollbar-width: none;
+}
+
+::-webkit-scrollbar {
+    display: none;
+}
+
+
+/*Registered so they can be transitioned: an unregistered custom property is just a token to the
+  engine and jumps between values instead of animating.*/
+@property --mott-fade-start {
+    syntax: '<length>';
+    inherits: false;
+    initial-value: 0px;
+}
+
+@property --mott-fade-end {
+    syntax: '<length>';
+    inherits: false;
+    initial-value: 0px;
+}
+
+/*Fade at whichever edge still has content behind it, driven by the two properties above - the
+  component sets them from the scroll position and they animate to 0 on reaching either end.
+  It is a mask and not an overlay gradient on purpose: a mask needs no knowledge of what colour it
+  sits on, so the same utility works on any surface. The flip side is that it fades the element's own
+  background too, so it belongs on a transparent scroll container.*/
+@utility mott-fade-y {
+    mask-image: linear-gradient(
+        to bottom,
+        transparent 0,
+        black var(--mott-fade-start),
+        black calc(100% - var(--mott-fade-end)),
+        transparent 100%
+    );
+    transition: --mott-fade-start 180ms ease-out, --mott-fade-end 180ms ease-out;
+}
+
+@utility mott-fade-x {
+    mask-image: linear-gradient(
+        to right,
+        transparent 0,
+        black var(--mott-fade-start),
+        black calc(100% - var(--mott-fade-end)),
+        transparent 100%
+    );
+    transition: --mott-fade-start 180ms ease-out, --mott-fade-end 180ms ease-out;
+}
+
+/*opt out: hand the surface back to the browser's native scrollbar*/
+@utility mott-scrollbar-auto {
+    scrollbar-width: auto;
+    &::-webkit-scrollbar { display: block; width: auto; height: auto; }
+}
 
 @utility default-modal {
     position: fixed;
@@ -184,7 +259,7 @@ body {
 }
 
 
-/*breakpoints responvise*/
+/*responsive breakpoints*/
 @media (min-width: 640px)  { }
 @media (min-width: 768px)  { }
 @media (min-width: 1024px) { }
