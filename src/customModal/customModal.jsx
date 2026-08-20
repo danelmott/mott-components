@@ -3,11 +3,13 @@ import { useEffect, useRef } from 'react';
 import { twMerge } from 'tailwind-merge';
 import { morphAnimation, fadeAnimation } from '../animations/modalAnimation.js';
 import { lockScroll, unlockScroll } from '../utils/scrollLock.js';
+import { verifyTypesCustomModal } from '../utils/verifyTypes.js';
 
 //component for customModal in mott-design — width/height configurables, backdrop claro,
 //la animación de apertura/cierre del panel se delega a una `ModalAnimation` (ver src/animations/modalAnimation.js):
 //por defecto usa MorphAnimation (nace desde la forma/posición de `triggerRef`) si hay trigger, o FadeScaleAnimation si no
 export default function CustomModal({ open, onClose, onCloseComplete, children, width = '32rem', height = 'auto', backdropOpacity = 0.35, triggerRef, animation, className, style }) {
+    verifyTypesCustomModal({ open, onClose, onCloseComplete, width, height, backdropOpacity, triggerRef, animation });
     const modalRef = useRef(null);
     const overlayRef = useRef(null);
     const panelRef = useRef(null);

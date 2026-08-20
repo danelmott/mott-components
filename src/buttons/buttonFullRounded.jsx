@@ -1,5 +1,6 @@
 'use client';
 import Icon from '../icon/icon.jsx';
+import { verifyTypesIconButton } from '../utils/verifyTypes.js';
 
 const SIZE = {
     sm: { box: 'var(--control-size-sm)', icon: 'var(--lg-icon)' },
@@ -26,6 +27,8 @@ export default function ButtonFullRounded({
     style,
     ...props
 }) {
+    verifyTypesIconButton('ButtonFullRounded', { icon, color, iconColor, size, type });
+
     const scale = SIZE[size] ?? SIZE.md;
     const preset = COLOR_PRESETS[color];
     

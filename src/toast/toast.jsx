@@ -7,6 +7,7 @@ import { Draggable } from 'gsap/Draggable';
 import { Flip } from 'gsap/Flip';
 import Icon from '../icon/icon.jsx';
 import { getToastStack } from './toastStack.js';
+import { verifyTypesToast } from '../utils/verifyTypes.js';
 
 gsap.registerPlugin(Draggable, Flip);
 
@@ -31,9 +32,12 @@ export default function Toast({
     children,
     open,
     onClose,
+    onExited,
     duration = 5000,
     dismissThreshold = 0.5,
 }) {
+    verifyTypesToast({ variant, open, title, duration, dismissThreshold, onClose, onExited });
+
     const [rendered, setRendered] = useState(open);
     const toastRef = useRef(null);
 
@@ -42,6 +46,18 @@ export default function Toast({
     // se recreaba en cada render, y si eso pasaba a mitad de un arrastre, cortaba el gesto.
     const onCloseRef = useRef(onClose);
     useEffect(() => { onCloseRef.current = onClose; }, [onClose]);
+
+    // mismo tratamiento para `onExited`: avisa que el toast terminó de irse y ya se puede desmontar.
+    // Es lo que le permite a quien maneja una cola (ver ToastProvider) sacar la entrada del array —
+    // sin esto no hay forma de distinguir "cerrando" de "ya salió", y las entradas se acumularían.
+    const onExitedRef = useRef(onExited);
+    useEffect(() => { onExitedRef.current = onExited; }, [onExited]);
+
+    // único punto de desmontaje: los dos caminos de salida (arrastre y animación) pasan por acá
+    const finishExit = () => {
+        setRendered(false);
+        onExitedRef.current?.();
+    };
 
     // marca que el toast ya se fue por arrastre: sin esto, cuando el consumidor reacciona al
     // `onClose` poniendo `open` en false, la animación de salida se dispararía sobre un toast que ya
@@ -139,7 +155,7 @@ export default function Toast({
     useEffect(() => {
         if (open || !rendered || !toastRef.current) return;
         // si ya salió arrastrado, no hay nada que animar: solo desmontar
-        if (dismissedRef.current) { setRendered(false); return; }
+        if (dismissedRef.current) { finishExit(); return; }
 
         // se va por el mismo borde por el que entró, sin fade. `back.in` es el espejo exacto del
         // `back.out` de la entrada: retrocede un poco hacia adentro para tomar impulso y recién ahí
@@ -147,7 +163,7 @@ export default function Toast({
         flyOut(toastRef.current, {
             ease: 'back.in(1.7)',
             duration: 0.45,
-            onDone: () => setRendered(false),
+            onDone: finishExit,
         });
     }, [open, rendered]);
 

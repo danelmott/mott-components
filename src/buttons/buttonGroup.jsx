@@ -4,6 +4,7 @@ import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
 import { twMerge } from 'tailwind-merge';
 import Icon from '../icon/icon.jsx';
+import { verifyTypesButtonGroup } from '../utils/verifyTypes.js';
 
 const COLOR_PRESETS = {
     primary: { bg: 'var(--color-action)', fg: 'var(--text-on-action)' },
@@ -15,6 +16,7 @@ const COLOR_PRESETS = {
 
 //component for buttonGroup in mott-design — selección única, morph animado con GSAP
 export default function ButtonGroup({ buttons, vertical = true, color = 'primary', defaultSelected = null, value, allowDeselect = true, onChange }) {
+    verifyTypesButtonGroup({ buttons, vertical, color, allowDeselect, onChange, value, defaultSelected });
     const [internalSelected, setInternalSelected] = useState(defaultSelected);
     const isControlled = value !== undefined;
     const selectedButton = isControlled ? value : internalSelected;

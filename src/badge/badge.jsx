@@ -1,5 +1,6 @@
 'use client';
 import Icon from '../icon/icon.jsx';
+import { verifyTypesBadge } from '../utils/verifyTypes.js';
 
 const COLOR_PRESETS = {
     neutral: { bg: 'var(--light-gray-background)', fg: 'var(--dark-navy-text)', solidBg: 'var(--dark-navy-text)', solidFg: 'var(--white)' },
@@ -17,6 +18,7 @@ const SIZE = {
 
 //component for badge in mott-design — nativo, sin depender de Button
 export default function Badge({ children, color = 'neutral', solid = false, size = 'sm', icon, dot = false, style, ...props }) {
+    verifyTypesBadge({ color, solid, size, icon, dot });
     const preset = COLOR_PRESETS[color];
     const scale = SIZE[size] ?? SIZE.sm;
 

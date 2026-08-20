@@ -2,7 +2,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { twMerge } from 'tailwind-merge';
 import Icon from '../icon/icon.jsx';
-import { verifyTypesInput } from '../utils/verifyTypes.js';
+import { verifyTypesSearch } from '../utils/verifyTypes.js';
 
 //component for search in mott-design — mismo estilo que Input, con debounce incorporado (onSearch)
 export default function Search({
@@ -26,7 +26,7 @@ export default function Search({
     const timeoutRef = useRef(null);
     
     
-    verifyTypesInput(label, placeholder);
+    verifyTypesSearch({ label, placeholder, delay, onSearch, onChange, value: controlledValue, defaultValue });
     
     // dispara onSearch recién cuando el usuario deja de tipear por `delay` ms — listo para pegarle a una API sin lógica extra del lado del consumidor
     useEffect(() => {

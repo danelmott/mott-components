@@ -2,6 +2,7 @@
 import { forwardRef } from 'react';
 import { cva } from 'class-variance-authority';
 import { twMerge } from 'tailwind-merge';
+import { verifyTypesButton } from '../utils/verifyTypes.js';
 
 //styles for variants buttons
 const buttonVariants = cva(
@@ -46,8 +47,10 @@ const Button = forwardRef(function Button({
     className,
     type = 'button',
     onClick,
-    ...props,
+    ...props
 }, ref) {
+    verifyTypesButton({ variant, shape, iconOnly, fullWidth, type });
+
     return (
         <button
             ref={ref}

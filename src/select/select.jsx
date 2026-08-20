@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
 import Icon from '../icon/icon.jsx';
+import { verifyTypesSelect } from '../utils/verifyTypes.js';
 
 //component for select in mott-design — dropdown custom animado con GSAP.
 //el panel se renderiza en un portal a `document.body` y se posiciona `fixed` contra el rect del
@@ -11,6 +12,7 @@ import Icon from '../icon/icon.jsx';
 //`overflow: hidden`, un `transform`, un contenedor multi-columna o cualquier stacking context de por
 //medio lo recortaban o lo dejaban empujando el contenido en vez de superponerse.
 export default function Select({ options = [], value, onChange, label, placeholder = 'Seleccionar', disabled, id }) {
+    verifyTypesSelect({ options, onChange, label, placeholder, disabled });
     const [open, setOpen] = useState(false);
     const [rendered, setRendered] = useState(false);
     const [anchor, setAnchor] = useState(null);

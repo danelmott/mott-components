@@ -2,6 +2,279 @@
 import { forwardRef } from "react";
 import { cva } from "class-variance-authority";
 import { twMerge } from "tailwind-merge";
+
+// src/utils/verifyTypes.js
+var prefixLog = "[MOTT-COMPONENTS]";
+var isDev = typeof process === "undefined" || process.env.NODE_ENV !== "production";
+var show = (value) => typeof value === "string" ? `"${value}"` : String(value);
+var fail = (component, message) => {
+  throw new TypeError(`${prefixLog} <${component}>: ${message}`);
+};
+var warn = (component, message) => {
+  console.error(`${prefixLog} <${component}>: ${message}`);
+};
+function assertType(component, prop, value, expected) {
+  if (value === void 0 || value === null) return;
+  if (typeof value !== expected) {
+    fail(component, `\`${prop}\` debe ser ${expected}, se recibi\xF3 ${typeof value} (${show(value)}).`);
+  }
+}
+function assertRequired(component, prop, value) {
+  if (value === void 0 || value === null) {
+    fail(component, `falta la prop requerida \`${prop}\`.`);
+  }
+}
+function assertRange(component, prop, value, min, max) {
+  if (value === void 0 || value === null) return;
+  assertType(component, prop, value, "number");
+  if (Number.isNaN(value) || value < min || value > max) {
+    fail(component, `\`${prop}\` debe ser un n\xFAmero entre ${min} y ${max}, se recibi\xF3 ${show(value)}.`);
+  }
+}
+function assertOneOf(component, prop, value, allowed, fallback) {
+  if (value === void 0 || value === null) return;
+  if (!allowed.includes(value)) {
+    warn(
+      component,
+      `\`${prop}\` inv\xE1lida: ${show(value)}. V\xE1lidas: ${allowed.join(", ")}.` + (fallback !== void 0 ? ` Se usa ${show(fallback)}.` : "")
+    );
+  }
+}
+function assertArrayOf(component, prop, value, validateItem) {
+  if (value === void 0 || value === null) return;
+  if (!Array.isArray(value)) {
+    fail(component, `\`${prop}\` debe ser un array, se recibi\xF3 ${typeof value}.`);
+  }
+  value.forEach((item, i) => validateItem(item, `${prop}[${i}]`));
+}
+function assertRef(component, prop, value) {
+  if (value === void 0 || value === null) return;
+  if (typeof value === "function") return;
+  if (typeof value !== "object" || !("current" in value)) {
+    fail(component, `\`${prop}\` debe ser un ref (useRef o callback), se recibi\xF3 ${show(value)}.`);
+  }
+}
+function assertIconLike(component, prop, value) {
+  if (value === void 0 || value === null) return;
+  if (typeof value === "string" || typeof value === "object") return;
+  fail(component, `\`${prop}\` debe ser el nombre de un \xEDcono (string) o un nodo React, se recibi\xF3 ${typeof value}.`);
+}
+function assertNode(component, prop, value) {
+  if (value === void 0 || value === null) return;
+  if (typeof value === "string" || typeof value === "number" || typeof value === "object") return;
+  fail(component, `\`${prop}\` debe ser texto o un nodo React, se recibi\xF3 ${typeof value}.`);
+}
+function assertPlainObject(component, prop, value) {
+  if (value === void 0 || value === null) return;
+  if (typeof value !== "object" || Array.isArray(value)) {
+    fail(component, `\`${prop}\` debe ser un objeto, se recibi\xF3 ${Array.isArray(value) ? "array" : typeof value}.`);
+  }
+}
+var CONTROL_SIZES = ["sm", "md", "lg"];
+var BUTTON_TYPES = ["button", "submit", "reset"];
+var TOAST_VARIANTS = ["info", "success", "warning", "danger"];
+var INPUT_TYPES = ["text", "number", "password"];
+function verifyTypesInput({ label, placeholder, type } = {}) {
+  if (!isDev) return true;
+  assertType("Input", "label", label, "string");
+  assertType("Input", "placeholder", placeholder, "string");
+  assertOneOf("Input", "type", type, INPUT_TYPES, "text");
+  return true;
+}
+function verifyTypesTextarea({ label, placeholder, width, height } = {}) {
+  if (!isDev) return true;
+  assertType("Textarea", "label", label, "string");
+  assertType("Textarea", "placeholder", placeholder, "string");
+  assertType("Textarea", "width", width, "string");
+  assertType("Textarea", "height", height, "string");
+  return true;
+}
+function verifyTypesSearch({ label, placeholder, delay, onSearch, onChange, value, defaultValue } = {}) {
+  if (!isDev) return true;
+  assertType("Search", "label", label, "string");
+  assertType("Search", "placeholder", placeholder, "string");
+  assertType("Search", "value", value, "string");
+  assertType("Search", "defaultValue", defaultValue, "string");
+  assertType("Search", "onSearch", onSearch, "function");
+  assertType("Search", "onChange", onChange, "function");
+  assertRange("Search", "delay", delay, 0, 6e4);
+  return true;
+}
+function verifyTypesButton({ variant, shape, iconOnly, fullWidth, type } = {}) {
+  if (!isDev) return true;
+  assertOneOf("Button", "variant", variant, ["primary", "secondary", "outline", "ghost", "danger"], "primary");
+  assertOneOf("Button", "shape", shape, ["rounded", "pill"], "rounded");
+  assertOneOf("Button", "type", type, BUTTON_TYPES, "button");
+  assertType("Button", "iconOnly", iconOnly, "boolean");
+  assertType("Button", "fullWidth", fullWidth, "boolean");
+  return true;
+}
+function verifyTypesIconButton(component, { icon, color, iconColor, size, type } = {}) {
+  if (!isDev) return true;
+  assertRequired(component, "icon", icon);
+  assertType(component, "icon", icon, "string");
+  assertType(component, "color", color, "string");
+  assertType(component, "iconColor", iconColor, "string");
+  assertOneOf(component, "size", size, CONTROL_SIZES, "md");
+  assertOneOf(component, "type", type, BUTTON_TYPES, "button");
+  return true;
+}
+function verifyTypesButtonGroup({ buttons, vertical, color, allowDeselect, onChange, value, defaultSelected } = {}) {
+  if (!isDev) return true;
+  assertRequired("ButtonGroup", "buttons", buttons);
+  assertArrayOf("ButtonGroup", "buttons", buttons, (item, path) => {
+    assertPlainObject("ButtonGroup", path, item);
+    if (!item) return;
+    assertIconLike("ButtonGroup", `${path}.icon`, item.icon);
+    assertType("ButtonGroup", `${path}.label`, item.label, "string");
+    assertRef("ButtonGroup", `${path}.buttonRef`, item.buttonRef);
+    if (item && item.icon === void 0 && item.label === void 0) {
+      warn("ButtonGroup", `${path} no tiene \`icon\` ni \`label\`: se va a renderizar vac\xEDo.`);
+    }
+  });
+  assertType("ButtonGroup", "vertical", vertical, "boolean");
+  assertType("ButtonGroup", "allowDeselect", allowDeselect, "boolean");
+  assertType("ButtonGroup", "color", color, "string");
+  assertType("ButtonGroup", "onChange", onChange, "function");
+  assertType("ButtonGroup", "value", value, "number");
+  assertType("ButtonGroup", "defaultSelected", defaultSelected, "number");
+  return true;
+}
+function verifyTypesBadge({ color, solid, size, icon, dot } = {}) {
+  if (!isDev) return true;
+  assertType("Badge", "color", color, "string");
+  assertType("Badge", "icon", icon, "string");
+  assertType("Badge", "solid", solid, "boolean");
+  assertType("Badge", "dot", dot, "boolean");
+  assertOneOf("Badge", "size", size, CONTROL_SIZES, "sm");
+  return true;
+}
+function verifyTypesIcon({ name, size, filled, weight, grade, opticalSize } = {}) {
+  if (!isDev) return true;
+  assertType("Icon", "name", name, "string");
+  assertType("Icon", "size", size, "string");
+  assertType("Icon", "filled", filled, "boolean");
+  assertRange("Icon", "weight", weight, 100, 700);
+  assertRange("Icon", "grade", grade, -50, 200);
+  assertRange("Icon", "opticalSize", opticalSize, 20, 48);
+  return true;
+}
+function verifyTypesSelect({ options, onChange, label, placeholder, disabled } = {}) {
+  if (!isDev) return true;
+  assertArrayOf("Select", "options", options, (item, path) => {
+    assertPlainObject("Select", path, item);
+    if (!item) return;
+    assertRequired("Select", `${path}.value`, item.value);
+    assertNode("Select", `${path}.label`, item.label);
+  });
+  assertType("Select", "onChange", onChange, "function");
+  assertType("Select", "label", label, "string");
+  assertType("Select", "placeholder", placeholder, "string");
+  assertType("Select", "disabled", disabled, "boolean");
+  return true;
+}
+function verifyTypesProgress({ value, color } = {}) {
+  if (!isDev) return true;
+  assertRange("Progress", "value", value, 0, 100);
+  assertType("Progress", "color", color, "string");
+  return true;
+}
+function verifyTypesLoading({ size, color } = {}) {
+  if (!isDev) return true;
+  assertOneOf("Loading", "size", size, CONTROL_SIZES, "sm");
+  assertType("Loading", "color", color, "string");
+  return true;
+}
+function verifyTypesDropdown({ open, onClose, width, height, triggerRef } = {}) {
+  if (!isDev) return true;
+  assertType("Dropdown", "open", open, "boolean");
+  assertType("Dropdown", "onClose", onClose, "function");
+  assertType("Dropdown", "width", width, "string");
+  assertType("Dropdown", "height", height, "string");
+  assertRef("Dropdown", "triggerRef", triggerRef);
+  return true;
+}
+function verifyTypesCustomModal({ open, onClose, onCloseComplete, width, height, backdropOpacity, triggerRef, animation } = {}) {
+  if (!isDev) return true;
+  assertType("CustomModal", "open", open, "boolean");
+  assertType("CustomModal", "onClose", onClose, "function");
+  assertType("CustomModal", "onCloseComplete", onCloseComplete, "function");
+  assertType("CustomModal", "width", width, "string");
+  assertType("CustomModal", "height", height, "string");
+  assertRange("CustomModal", "backdropOpacity", backdropOpacity, 0, 1);
+  assertRef("CustomModal", "triggerRef", triggerRef);
+  if (animation !== void 0 && animation !== null) {
+    if (typeof (animation == null ? void 0 : animation.open) !== "function" || typeof (animation == null ? void 0 : animation.close) !== "function") {
+      fail("CustomModal", "`animation` debe ser una ModalAnimation (con m\xE9todos `open` y `close`). Ver src/animations/modalAnimation.js.");
+    }
+  }
+  return true;
+}
+function verifyTypesNavbar({ items, logo, selected, defaultSelected, onChange, color, align } = {}) {
+  if (!isDev) return true;
+  assertArrayOf("Navbar", "items", items, (item, path) => {
+    assertPlainObject("Navbar", path, item);
+    if (!item) return;
+    assertIconLike("Navbar", `${path}.icon`, item.icon);
+    assertRef("Navbar", `${path}.buttonRef`, item.buttonRef);
+  });
+  if (logo !== void 0 && logo !== null) {
+    assertPlainObject("Navbar", "logo", logo);
+    assertRequired("Navbar", "logo.icon", logo.icon);
+    assertIconLike("Navbar", "logo.icon", logo.icon);
+    assertType("Navbar", "logo.label", logo.label, "string");
+    assertType("Navbar", "logo.onClick", logo.onClick, "function");
+    assertType("Navbar", "logo.active", logo.active, "boolean");
+    assertRef("Navbar", "logo.buttonRef", logo.buttonRef);
+  }
+  assertType("Navbar", "selected", selected, "number");
+  assertType("Navbar", "defaultSelected", defaultSelected, "number");
+  assertType("Navbar", "onChange", onChange, "function");
+  assertType("Navbar", "color", color, "string");
+  assertOneOf("Navbar", "align", align, ["top", "center"], "center");
+  return true;
+}
+function verifyTypesToast({ variant, open, title, duration, dismissThreshold, onClose, onExited } = {}) {
+  if (!isDev) return true;
+  assertOneOf("Toast", "variant", variant, TOAST_VARIANTS, "info");
+  assertType("Toast", "open", open, "boolean");
+  assertNode("Toast", "title", title);
+  assertRange("Toast", "duration", duration, 0, 6e5);
+  assertType("Toast", "onClose", onClose, "function");
+  assertType("Toast", "onExited", onExited, "function");
+  if (dismissThreshold !== void 0 && dismissThreshold !== null) {
+    assertType("Toast", "dismissThreshold", dismissThreshold, "number");
+    if (!(dismissThreshold > 0 && dismissThreshold <= 1)) {
+      fail("Toast", `\`dismissThreshold\` debe ser un n\xFAmero mayor a 0 y hasta 1, se recibi\xF3 ${show(dismissThreshold)}.`);
+    }
+  }
+  return true;
+}
+function verifyTypesShowToast({ variant, title, message, duration } = {}) {
+  if (!isDev) return true;
+  assertOneOf("useToast", "variant", variant, TOAST_VARIANTS, "info");
+  assertNode("useToast", "title", title);
+  assertNode("useToast", "message", message);
+  assertRange("useToast", "duration", duration, 0, 6e5);
+  if (title === void 0 && message === void 0) {
+    warn("useToast", "showToast() sin `title` ni `message`: el toast se va a ver vac\xEDo.");
+  }
+  return true;
+}
+function verifyTypesToastProvider({ duration, dismissThreshold, max } = {}) {
+  if (!isDev) return true;
+  assertRange("ToastProvider", "duration", duration, 0, 6e5);
+  assertRange("ToastProvider", "max", max, 1, 20);
+  if (dismissThreshold !== void 0 && dismissThreshold !== null) {
+    assertType("ToastProvider", "dismissThreshold", dismissThreshold, "number");
+    if (!(dismissThreshold > 0 && dismissThreshold <= 1)) {
+      fail("ToastProvider", `\`dismissThreshold\` debe ser un n\xFAmero mayor a 0 y hasta 1, se recibi\xF3 ${show(dismissThreshold)}.`);
+    }
+  }
+  return true;
+}
+
+// src/buttons/button.jsx
 import { jsx } from "react/jsx-runtime";
 var buttonVariants = cva(
   "inline-flex items-center justify-center gap-2.5 text-[length:var(--text-md)] tracking-[var(--tracking-h4)] font-[number:var(--font-medium)] transition-all duration-150 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-action)] focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none disabled:active:scale-100",
@@ -45,6 +318,7 @@ var Button = forwardRef(function Button2({
   onClick,
   ...props
 }, ref) {
+  verifyTypesButton({ variant, shape, iconOnly, fullWidth, type });
   return /* @__PURE__ */ jsx(
     "button",
     {
@@ -77,6 +351,7 @@ function Icon({
   opticalSize = 24,
   className
 }) {
+  verifyTypesIcon({ name, size, filled, weight, grade, opticalSize });
   if (!name) return null;
   const iconSize = SIZE_TOKEN[size] ?? size;
   return /* @__PURE__ */ jsx2(
@@ -117,6 +392,7 @@ function FabButton({
   style,
   ...props
 }) {
+  verifyTypesIconButton("FabButton", { icon, color, iconColor, size, type });
   const dimensions = FAB_SIZE[size] ?? FAB_SIZE.md;
   const preset = COLOR_PRESETS[color];
   const background = preset ? preset.bg : color;
@@ -166,6 +442,7 @@ function ButtonFullRounded({
   style,
   ...props
 }) {
+  verifyTypesIconButton("ButtonFullRounded", { icon, color, iconColor, size, type });
   const scale = SIZE[size] ?? SIZE.md;
   const preset = COLOR_PRESETS2[color];
   const background = preset ? preset.bg : color;
@@ -204,6 +481,7 @@ var COLOR_PRESETS3 = {
   danger: { bg: "var(--color-danger)", fg: "var(--text-on-danger)" }
 };
 function ButtonGroup({ buttons, vertical = true, color = "primary", defaultSelected = null, value, allowDeselect = true, onChange }) {
+  verifyTypesButtonGroup({ buttons, vertical, color, allowDeselect, onChange, value, defaultSelected });
   const [internalSelected, setInternalSelected] = useState(defaultSelected);
   const isControlled = value !== void 0;
   const selectedButton = isControlled ? value : internalSelected;
@@ -282,6 +560,7 @@ var SIZE2 = {
   lg: { pad: "var(--pad-badge-lg)", text: "var(--text-base)", icon: "16px", dot: 7 }
 };
 function Badge({ children, color = "neutral", solid = false, size = "sm", icon, dot = false, style, ...props }) {
+  verifyTypesBadge({ color, solid, size, icon, dot });
   const preset = COLOR_PRESETS4[color];
   const scale = SIZE2[size] ?? SIZE2.sm;
   const background = preset ? solid ? preset.solidBg : preset.bg : color;
@@ -367,15 +646,26 @@ function Toast({
   children,
   open,
   onClose,
+  onExited,
   duration = 5e3,
   dismissThreshold = 0.5
 }) {
+  verifyTypesToast({ variant, open, title, duration, dismissThreshold, onClose, onExited });
   const [rendered, setRendered] = useState2(open);
   const toastRef = useRef2(null);
   const onCloseRef = useRef2(onClose);
   useEffect(() => {
     onCloseRef.current = onClose;
   }, [onClose]);
+  const onExitedRef = useRef2(onExited);
+  useEffect(() => {
+    onExitedRef.current = onExited;
+  }, [onExited]);
+  const finishExit = () => {
+    var _a;
+    setRendered(false);
+    (_a = onExitedRef.current) == null ? void 0 : _a.call(onExitedRef);
+  };
   const dismissedRef = useRef2(false);
   const preset = VARIANTS[variant] ?? VARIANTS.info;
   useEffect(() => {
@@ -439,13 +729,13 @@ function Toast({
   useEffect(() => {
     if (open || !rendered || !toastRef.current) return;
     if (dismissedRef.current) {
-      setRendered(false);
+      finishExit();
       return;
     }
     flyOut(toastRef.current, {
       ease: "back.in(1.7)",
       duration: 0.45,
-      onDone: () => setRendered(false)
+      onDone: finishExit
     });
   }, [open, rendered]);
   useEffect(() => {
@@ -520,22 +810,99 @@ function Toast({
   );
 }
 
+// src/toast/toastContext.jsx
+import { createContext, useCallback, useContext, useMemo, useRef as useRef3, useState as useState3 } from "react";
+import { jsx as jsx8, jsxs as jsxs4 } from "react/jsx-runtime";
+var ToastContext = createContext(null);
+var DEFAULT_DURATION = 5e3;
+var DEFAULT_DISMISS_THRESHOLD = 0.5;
+var DEFAULT_MAX = 4;
+var normalize = (options) => typeof options === "string" ? { message: options } : options ?? {};
+function ToastProvider({
+  children,
+  duration = DEFAULT_DURATION,
+  dismissThreshold = DEFAULT_DISMISS_THRESHOLD,
+  max = DEFAULT_MAX
+}) {
+  verifyTypesToastProvider({ duration, dismissThreshold, max });
+  const [toasts, setToasts] = useState3([]);
+  const idRef = useRef3(0);
+  const showToast = useCallback((options) => {
+    const payload = normalize(options);
+    verifyTypesShowToast(payload);
+    const id = ++idRef.current;
+    setToasts((prev) => {
+      const next = [...prev, { variant: "info", duration, ...payload, id, open: true }];
+      return next.length > max ? next.slice(next.length - max) : next;
+    });
+    return id;
+  }, [duration, max]);
+  const closeToast = useCallback((id) => {
+    setToasts((prev) => prev.map((t) => t.id === id ? { ...t, open: false } : t));
+  }, []);
+  const removeToast = useCallback((id) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  }, []);
+  const closeAll = useCallback(() => {
+    setToasts((prev) => prev.map((t) => ({ ...t, open: false })));
+  }, []);
+  const api = useMemo(() => ({
+    showToast,
+    closeToast,
+    closeAll,
+    info: (options) => showToast({ ...normalize(options), variant: "info" }),
+    success: (options) => showToast({ ...normalize(options), variant: "success" }),
+    warning: (options) => showToast({ ...normalize(options), variant: "warning" }),
+    danger: (options) => showToast({ ...normalize(options), variant: "danger" })
+  }), [showToast, closeToast, closeAll]);
+  return /* @__PURE__ */ jsxs4(ToastContext.Provider, { value: api, children: [
+    children,
+    toasts.map((toast) => /* @__PURE__ */ jsx8(
+      Toast,
+      {
+        open: toast.open,
+        variant: toast.variant,
+        title: toast.title,
+        duration: toast.duration,
+        dismissThreshold,
+        onClose: () => closeToast(toast.id),
+        onExited: () => removeToast(toast.id),
+        children: toast.message
+      },
+      toast.id
+    ))
+  ] });
+}
+function useToast() {
+  const context = useContext(ToastContext);
+  if (!context) {
+    throw new Error(
+      "[MOTT-COMPONENTS] useToast() debe usarse dentro de <ToastProvider>. Envolv\xE9 tu app con <ToastProvider> (ej. en app/layout.jsx) antes de llamar a los toasts."
+    );
+  }
+  return context;
+}
+
 // src/input/input.jsx
 import { useId } from "react";
 import { twMerge as twMerge4 } from "tailwind-merge";
-import { jsx as jsx8, jsxs as jsxs4 } from "react/jsx-runtime";
+import { jsx as jsx9, jsxs as jsxs5 } from "react/jsx-runtime";
 function Input({
   label,
   type = "text",
   id,
   className,
   style,
+  placeholder,
+  value,
+  onChange,
   ...props
 }) {
   const generatedId = useId();
   const inputId = id ?? generatedId;
-  return /* @__PURE__ */ jsxs4("div", { className: "flex w-full flex-col gap-1", children: [
-    label && /* @__PURE__ */ jsx8(
+  verifyTypesInput({ label, placeholder, type });
+  return /* @__PURE__ */ jsxs5("div", { className: "flex w-full flex-col gap-1", children: [
+    label && /* @__PURE__ */ jsx9(
       "label",
       {
         htmlFor: inputId,
@@ -543,7 +910,7 @@ function Input({
         children: label
       }
     ),
-    /* @__PURE__ */ jsx8(
+    /* @__PURE__ */ jsx9(
       "input",
       {
         id: inputId,
@@ -552,7 +919,10 @@ function Input({
           "w-full rounded-[var(--radius-lg)] bg-[var(--light-gray-background)] text-[length:var(--text-base)] tracking-[var(--tracking-body)] font-[family-name:var(--font-family)] text-[var(--dark-navy-text)] placeholder:text-[var(--muted-gray-text)] outline-none transition-colors duration-150 focus:bg-[var(--pale-gray-hover)] disabled:opacity-50 disabled:cursor-not-allowed",
           className
         ),
+        value,
+        onChange: (e) => onChange == null ? void 0 : onChange(e.target.value),
         style: { padding: "var(--pad-input)", ...style },
+        placeholder,
         ...props
       }
     )
@@ -562,7 +932,7 @@ function Input({
 // src/textarea/textarea.jsx
 import { useId as useId2 } from "react";
 import { twMerge as twMerge5 } from "tailwind-merge";
-import { jsx as jsx9, jsxs as jsxs5 } from "react/jsx-runtime";
+import { jsx as jsx10, jsxs as jsxs6 } from "react/jsx-runtime";
 function Textarea({
   label,
   id,
@@ -570,12 +940,14 @@ function Textarea({
   height = "6rem",
   className,
   style,
+  placeholder,
   ...props
 }) {
   const generatedId = useId2();
   const textareaId = id ?? generatedId;
-  return /* @__PURE__ */ jsxs5("div", { className: "flex flex-col gap-1", style: { width }, children: [
-    label && /* @__PURE__ */ jsx9(
+  verifyTypesTextarea({ label, placeholder, width, height });
+  return /* @__PURE__ */ jsxs6("div", { className: "flex flex-col gap-1", style: { width }, children: [
+    label && /* @__PURE__ */ jsx10(
       "label",
       {
         htmlFor: textareaId,
@@ -583,7 +955,7 @@ function Textarea({
         children: label
       }
     ),
-    /* @__PURE__ */ jsx9(
+    /* @__PURE__ */ jsx10(
       "textarea",
       {
         id: textareaId,
@@ -598,25 +970,26 @@ function Textarea({
           overflow: "hidden",
           ...style
         },
-        ...props
+        placeholder
       }
     )
   ] });
 }
 
 // src/select/select.jsx
-import { useEffect as useEffect2, useId as useId3, useRef as useRef3, useState as useState3 } from "react";
+import { useEffect as useEffect2, useId as useId3, useRef as useRef4, useState as useState4 } from "react";
 import { createPortal as createPortal2 } from "react-dom";
 import { useGSAP as useGSAP3 } from "@gsap/react";
 import gsap3 from "gsap";
-import { jsx as jsx10, jsxs as jsxs6 } from "react/jsx-runtime";
+import { jsx as jsx11, jsxs as jsxs7 } from "react/jsx-runtime";
 function Select({ options = [], value, onChange, label, placeholder = "Seleccionar", disabled, id }) {
-  const [open, setOpen] = useState3(false);
-  const [rendered, setRendered] = useState3(false);
-  const [anchor, setAnchor] = useState3(null);
-  const wrapperRef = useRef3(null);
-  const triggerRef = useRef3(null);
-  const panelRef = useRef3(null);
+  verifyTypesSelect({ options, onChange, label, placeholder, disabled });
+  const [open, setOpen] = useState4(false);
+  const [rendered, setRendered] = useState4(false);
+  const [anchor, setAnchor] = useState4(null);
+  const wrapperRef = useRef4(null);
+  const triggerRef = useRef4(null);
+  const panelRef = useRef4(null);
   const generatedId = useId3();
   const selectId = id ?? generatedId;
   const selected = options.find((o) => o.value === value);
@@ -686,8 +1059,8 @@ function Select({ options = [], value, onChange, label, placeholder = "Seleccion
     onChange == null ? void 0 : onChange(option.value, option);
     setOpen(false);
   };
-  return /* @__PURE__ */ jsxs6("div", { ref: wrapperRef, className: "flex w-full flex-col gap-1", children: [
-    label && /* @__PURE__ */ jsx10(
+  return /* @__PURE__ */ jsxs7("div", { ref: wrapperRef, className: "flex w-full flex-col gap-1", children: [
+    label && /* @__PURE__ */ jsx11(
       "label",
       {
         htmlFor: selectId,
@@ -695,7 +1068,7 @@ function Select({ options = [], value, onChange, label, placeholder = "Seleccion
         children: label
       }
     ),
-    /* @__PURE__ */ jsxs6(
+    /* @__PURE__ */ jsxs7(
       "button",
       {
         ref: triggerRef,
@@ -706,13 +1079,13 @@ function Select({ options = [], value, onChange, label, placeholder = "Seleccion
         className: "flex w-full items-center justify-between rounded-[var(--radius-lg)] bg-[var(--light-gray-background)] text-[length:var(--text-base)] tracking-[var(--tracking-body)] font-[family-name:var(--font-family)] text-[var(--dark-navy-text)] outline-none transition-colors duration-150 focus:bg-[var(--pale-gray-hover)] disabled:opacity-50 disabled:cursor-not-allowed",
         style: { padding: "var(--pad-input)" },
         children: [
-          /* @__PURE__ */ jsx10("span", { className: selected ? "" : "text-[var(--muted-gray-text)]", children: selected ? selected.label : placeholder }),
-          /* @__PURE__ */ jsx10(Icon, { name: "expand_more", size: "sm", className: `transition-transform duration-200 ${open ? "rotate-180" : ""}` })
+          /* @__PURE__ */ jsx11("span", { className: selected ? "" : "text-[var(--muted-gray-text)]", children: selected ? selected.label : placeholder }),
+          /* @__PURE__ */ jsx11(Icon, { name: "expand_more", size: "sm", className: `transition-transform duration-200 ${open ? "rotate-180" : ""}` })
         ]
       }
     ),
     rendered && anchor && createPortal2(
-      /* @__PURE__ */ jsx10(
+      /* @__PURE__ */ jsx11(
         "div",
         {
           ref: panelRef,
@@ -720,7 +1093,7 @@ function Select({ options = [], value, onChange, label, placeholder = "Seleccion
           style: { top: anchor.top, left: anchor.left, width: anchor.width },
           children: options.map((option) => {
             const isSelected = option.value === value;
-            return /* @__PURE__ */ jsx10(
+            return /* @__PURE__ */ jsx11(
               "button",
               {
                 type: "button",
@@ -749,9 +1122,9 @@ function Select({ options = [], value, onChange, label, placeholder = "Seleccion
 }
 
 // src/search/search.jsx
-import { useEffect as useEffect3, useId as useId4, useRef as useRef4, useState as useState4 } from "react";
+import { useEffect as useEffect3, useId as useId4, useRef as useRef5, useState as useState5 } from "react";
 import { twMerge as twMerge6 } from "tailwind-merge";
-import { jsx as jsx11, jsxs as jsxs7 } from "react/jsx-runtime";
+import { jsx as jsx12, jsxs as jsxs8 } from "react/jsx-runtime";
 function Search({
   label,
   id,
@@ -765,12 +1138,13 @@ function Search({
   style,
   ...props
 }) {
-  const [internalValue, setInternalValue] = useState4(defaultValue);
+  const [internalValue, setInternalValue] = useState5(defaultValue);
   const isControlled = controlledValue !== void 0;
   const value = isControlled ? controlledValue : internalValue;
   const generatedId = useId4();
   const searchId = id ?? generatedId;
-  const timeoutRef = useRef4(null);
+  const timeoutRef = useRef5(null);
+  verifyTypesSearch({ label, placeholder, delay, onSearch, onChange, value: controlledValue, defaultValue });
   useEffect3(() => {
     if (!onSearch) return;
     clearTimeout(timeoutRef.current);
@@ -787,8 +1161,8 @@ function Search({
     onChange == null ? void 0 : onChange("");
     onSearch == null ? void 0 : onSearch("");
   };
-  return /* @__PURE__ */ jsxs7("div", { className: "flex w-full flex-col gap-1", children: [
-    label && /* @__PURE__ */ jsx11(
+  return /* @__PURE__ */ jsxs8("div", { className: "flex w-full flex-col gap-1", children: [
+    label && /* @__PURE__ */ jsx12(
       "label",
       {
         htmlFor: searchId,
@@ -796,7 +1170,7 @@ function Search({
         children: label
       }
     ),
-    /* @__PURE__ */ jsxs7(
+    /* @__PURE__ */ jsxs8(
       "div",
       {
         className: twMerge6(
@@ -805,8 +1179,8 @@ function Search({
         ),
         style: { padding: "var(--pad-input)", ...style },
         children: [
-          /* @__PURE__ */ jsx11(Icon, { name: "search", size: "sm", className: "shrink-0 text-[var(--muted-gray-text)]" }),
-          /* @__PURE__ */ jsx11(
+          /* @__PURE__ */ jsx12(Icon, { name: "search", size: "sm", className: "shrink-0 text-[var(--muted-gray-text)]" }),
+          /* @__PURE__ */ jsx12(
             "input",
             {
               id: searchId,
@@ -818,14 +1192,14 @@ function Search({
               ...props
             }
           ),
-          value && /* @__PURE__ */ jsx11(
+          value && /* @__PURE__ */ jsx12(
             "button",
             {
               type: "button",
               onClick: handleClear,
               "aria-label": "Limpiar b\xFAsqueda",
               className: "flex shrink-0 items-center justify-center border-0 bg-transparent cursor-pointer",
-              children: /* @__PURE__ */ jsx11(Icon, { name: "close", size: "sm", className: "text-[var(--muted-gray-text)]" })
+              children: /* @__PURE__ */ jsx12(Icon, { name: "close", size: "sm", className: "text-[var(--muted-gray-text)]" })
             }
           )
         ]
@@ -835,14 +1209,15 @@ function Search({
 }
 
 // src/dropdown/dropdown.jsx
-import { useEffect as useEffect4, useRef as useRef5, useState as useState5 } from "react";
+import { useEffect as useEffect4, useRef as useRef6, useState as useState6 } from "react";
 import { useGSAP as useGSAP4 } from "@gsap/react";
 import gsap4 from "gsap";
 import { twMerge as twMerge7 } from "tailwind-merge";
-import { jsx as jsx12 } from "react/jsx-runtime";
+import { jsx as jsx13 } from "react/jsx-runtime";
 function Dropdown({ open, onClose, children, width = "auto", height = "auto", triggerRef, className, style, ...props }) {
-  const [rendered, setRendered] = useState5(open);
-  const panelRef = useRef5(null);
+  verifyTypesDropdown({ open, onClose, width, height, triggerRef });
+  const [rendered, setRendered] = useState6(open);
+  const panelRef = useRef6(null);
   useEffect4(() => {
     if (open) setRendered(true);
   }, [open]);
@@ -886,7 +1261,7 @@ function Dropdown({ open, onClose, children, width = "auto", height = "auto", tr
     };
   }, [open, onClose, triggerRef]);
   if (!rendered) return null;
-  return /* @__PURE__ */ jsx12(
+  return /* @__PURE__ */ jsx13(
     "div",
     {
       ref: panelRef,
@@ -900,7 +1275,7 @@ function Dropdown({ open, onClose, children, width = "auto", height = "auto", tr
 }
 
 // src/customModal/customModal.jsx
-import { useEffect as useEffect5, useRef as useRef6 } from "react";
+import { useEffect as useEffect5, useRef as useRef7 } from "react";
 import { twMerge as twMerge8 } from "tailwind-merge";
 
 // src/animations/modalAnimation.js
@@ -944,13 +1319,9 @@ function separationProgress(from, to, target) {
   };
   const p = Math.min(
     edge(from.top, to.top, target.bottom, 1),
-    // la ventana se va por abajo del botón
     edge(from.bottom, to.bottom, target.top, -1),
-    // ...por arriba
     edge(from.left, to.left, target.right, 1),
-    // ...por la derecha
     edge(from.right, to.right, target.left, -1)
-    // ...por la izquierda
   );
   return Number.isFinite(p) ? p : 1;
 }
@@ -1001,8 +1372,6 @@ var ModalAnimation = class {
   close(ctx, onDone) {
     onDone == null ? void 0 : onDone();
   }
-  // el backdrop siempre va en la misma timeline que el panel, para que oscurecer la pantalla y
-  // mover el panel se lean como un mismo gesto y no como dos eventos separados
   fadeOverlay(tl, overlay, to, duration, position = 0) {
     if (!overlay) return tl;
     return to === 1 ? tl.fromTo(overlay, { opacity: 0 }, { opacity: 1, duration, ease: "power1.out" }, position) : tl.to(overlay, { opacity: 0, duration, ease: "power1.in" }, position);
@@ -1026,20 +1395,14 @@ var FadeScaleAnimation = class extends ModalAnimation {
   }
 };
 var MorphAnimation = class extends ModalAnimation {
-  // los defaults reproducen el morph centrado tal cual está aprobado. `AnchoredAnimation` los pisa
-  // con valores de pop up (ver más abajo por qué el color necesita retrasarse en ese caso).
   constructor({
     openDuration = MORPH_OPEN_DURATION,
     closeDuration = MORPH_CLOSE_DURATION,
-    // `at`/`span` como fracciones de la duración: permiten retener el color del botón mientras el
-    // panel todavía lo está tapando, en vez de virar de entrada
     openBeats = {},
     closeBeats = {},
     openEase = LIQUID_EASE,
     closeEase = LIQUID_EASE_IN,
     closeGhost = false,
-    // fracción de la duración que tarda el ícono en disolverse. Solo se usa cuando el panel tapa
-    // al botón todo el tiempo: ahí no hay relevo que cronometrar y el fade es puramente estético.
     ghostFade = 0.2
   } = {}) {
     super();
@@ -1052,16 +1415,11 @@ var MorphAnimation = class extends ModalAnimation {
     this.closeGhost = closeGhost;
     this.ghostFade = ghostFade;
   }
-  // hook: ubica el panel en su lugar de reposo ANTES de medir. El panel centrado ya se ubica solo
-  // con su `m-auto`, así que acá no hay nada que hacer — `AnchoredAnimation` sí lo implementa.
   place() {
   }
-  // props inline que deja `place()` y que hay que limpiar recién cuando la modal cierra del todo
-  // (mientras está abierta el panel tiene que quedarse donde lo pusieron)
   placedProps() {
     return "";
   }
-  // geometría de la ventana del clip y del translate que la deja encima del botón
   measure(panel, trigger) {
     const cs = getComputedStyle(panel);
     const pad = { top: parseFloat(cs.paddingTop) || 0, left: parseFloat(cs.paddingLeft) || 0 };
@@ -1075,13 +1433,8 @@ var MorphAnimation = class extends ModalAnimation {
       pad,
       panelRect,
       originRect,
-      // progreso geométrico en el que el panel deja de tapar al botón: con esto se cronometra el
-      // ghost sin números mágicos. 1 = el panel en reposo lo sigue tapando (el ghost se queda).
       clearP: separationProgress(originRect, panelBox, originRect),
-      // el panel entero a la vista, con el radio de la modal
       openClip: { top: 0, right: 0, bottom: 0, left: 0, radius: resolveRadius(panel, panelRect) },
-      // solo la ventana del tamaño del botón, con el radio del botón. El clamp cubre el caso
-      // degenerado de un botón más grande que el panel: la ventana se queda en el borde.
       buttonClip: {
         top: pad.top,
         right: Math.max(0, panelRect.width - pad.left - originRect.width),
@@ -1089,7 +1442,6 @@ var MorphAnimation = class extends ModalAnimation {
         left: pad.left,
         radius: resolveRadius(trigger, originRect)
       },
-      // deja la esquina de la ventana exactamente sobre la esquina del botón
       buttonOffset: {
         x: originRect.left - panelRect.left - pad.left,
         y: originRect.top - panelRect.top - pad.top
@@ -1099,7 +1451,6 @@ var MorphAnimation = class extends ModalAnimation {
   applyClip(panel, clip) {
     panel.style.clipPath = `inset(${clip.top}px ${clip.right}px ${clip.bottom}px ${clip.left}px round ${clip.radius}px)`;
   }
-  // lee el estado actual del clip para poder arrancar desde ahí si se interrumpe una animación
   readClip(panel, fallback) {
     const match = /inset\(([^)]+)\)/.exec(panel.style.clipPath || "");
     if (!match) return fallback;
@@ -1107,11 +1458,6 @@ var MorphAnimation = class extends ModalAnimation {
     const at = (i) => parseFloat(parts[i]);
     return { top: at(0), right: at(1), bottom: at(2), left: at(3), radius: at(5) };
   }
-  // GSAP no interpola strings `inset(... round ...)` de forma confiable, así que animamos un proxy
-  // y componemos el string a mano. Al ir en la misma timeline y con el mismo ease que el translate,
-  // los dos quedan sincronizados frame a frame.
-  // `onProgress` recibe el progreso geométrico (no el temporal): es lo que permite atar la opacidad
-  // del ghost a dónde está realmente la ventana respecto del botón.
   addClipTween(tl, panel, from, to, duration, ease, position = 0, onProgress) {
     const state = { p: 0 };
     const lerp = (a, b) => a + (b - a) * state.p;
@@ -1133,13 +1479,6 @@ var MorphAnimation = class extends ModalAnimation {
       }
     }, position);
   }
-  // el ghost tiene que estar entero mientras el panel tapa al botón y desvanecerse apenas lo
-  // destapa. `clearP` viene de la geometría real, así que esto se acomoda solo a cualquier tamaño
-  // de botón, gap, y a que la modal abra para arriba o para abajo.
-  // el ícono del botón tiene dos regímenes según si el panel llega a destaparlo o no.
-  // Devuelve el `onProgress` para el clip, o `null` si el fade se resolvió con un tween por tiempo.
-  // `morphAt`/`morphSpan` son la ventana del morph en segundos, no la del timeline entero: el ícono
-  // tiene que resolverse mientras la forma se está transformando, no durante el tramo del backdrop.
   addGhostFade(tl, ghost, clearP, morphAt, morphSpan, reverse = false) {
     if (clearP < 1) return this.ghostFader(ghost, clearP, reverse);
     const span = morphSpan * this.ghostFade;
@@ -1147,8 +1486,6 @@ var MorphAnimation = class extends ModalAnimation {
     else tl.to(ghost, { opacity: 0, duration: span, ease: "power1.in" }, morphAt);
     return null;
   }
-  // el ghost aguanta hasta el punto exacto en que el panel destapa al botón y ahí se funde contra el
-  // ícono de verdad que queda abajo — al ser una copia idéntica, el cambio no se ve
   ghostFader(ghost, clearP, reverse = false) {
     let from, span;
     if (reverse) {
@@ -1211,9 +1548,6 @@ var MorphAnimation = class extends ModalAnimation {
     tl.to(content, { autoAlpha: 1, duration: d * cont.span, ease: "power1.out" }, d * cont.at);
     this.fadeOverlay(tl, overlay, 1, d * ov.span, d * ov.at);
   }
-  // al cerrar NO hay ghost: el cuadro viaja sin ícono, aterriza sobre el botón y desaparece — recién
-  // ahí se ve el ícono del botón real. Lo que hace que eso funcione es el ease-in: el panel acelera
-  // hacia el botón y llega justo al final, en vez de plantarse encima tapándolo media animación.
   close({ dialog, panel, content, overlay, trigger }, onDone) {
     if (!trigger) return new FadeScaleAnimation().close({ panel, overlay }, onDone);
     killRunningMorph(panel);
@@ -1263,13 +1597,9 @@ var MorphAnimation = class extends ModalAnimation {
 var AnchoredAnimation = class extends MorphAnimation {
   constructor({ cover = 6, ...options } = {}) {
     super({
-      // mucho menos recorrido que la modal centrada: tiene que sentirse ágil
       openDuration: 0.45,
       closeDuration: 0.38,
       closeEase: "power1.in",
-      // el morph arranca un toque tarde al abrir y termina antes al cerrar: en los dos casos
-      // deja un tramo en el que se ve la forma exacta del botón, que es lo que hace legible que
-      // la modal sale de él y vuelve a él
       openBeats: {
         morph: { at: 0.15, span: 0.85 },
         color: { at: 0.3, span: 0.7 },
@@ -1282,22 +1612,12 @@ var AnchoredAnimation = class extends MorphAnimation {
         overlay: { at: 0.75, span: 0.25 },
         content: { at: 0, span: 0.2 }
       },
-      // con una curva pareja el panel pasa más tiempo cerca del tamaño del botón, así que sin
-      // ghost se vería un círculo azul vacío antes de desaparecer
       closeGhost: true,
       ghostFade: 0.3,
       ...options
     });
     this.cover = cover;
   }
-  // el panel se apoya SOBRE el botón: arranca en su misma esquina y crece hacia abajo y a la
-  // derecha, así que mientras está abierto lo tapa. Solo se corre lo mínimo para no salirse de la
-  // pantalla. Como nunca lo destapa, el translate del morph es apenas el padding del panel: el
-  // efecto es casi puro `clip-path` abriéndose desde el botón.
-  //
-  // el `cover` existe porque el trigger se mide al hacer click, cuando su animación de estado activo
-  // recién arranca: un control de 56px que pasa a `scale: 1.1` termina desbordando 2.8px hacia
-  // arriba y hacia la izquierda de la caja que medimos, y asomaría por detrás del panel.
   computeAnchoredPosition(triggerRect, panelRect) {
     const margin = 8;
     const fit = (value, size, viewport) => Math.max(margin, Math.min(value, viewport - size - margin));
@@ -1351,14 +1671,15 @@ function unlockScroll() {
 }
 
 // src/customModal/customModal.jsx
-import { jsx as jsx13, jsxs as jsxs8 } from "react/jsx-runtime";
+import { jsx as jsx14, jsxs as jsxs9 } from "react/jsx-runtime";
 function CustomModal({ open, onClose, onCloseComplete, children, width = "32rem", height = "auto", backdropOpacity = 0.35, triggerRef, animation, className, style }) {
-  const modalRef = useRef6(null);
-  const overlayRef = useRef6(null);
-  const panelRef = useRef6(null);
-  const contentRef = useRef6(null);
+  verifyTypesCustomModal({ open, onClose, onCloseComplete, width, height, backdropOpacity, triggerRef, animation });
+  const modalRef = useRef7(null);
+  const overlayRef = useRef7(null);
+  const panelRef = useRef7(null);
+  const contentRef = useRef7(null);
   const activeAnimation = animation ?? (triggerRef ? morphAnimation : fadeAnimation);
-  const lockedRef = useRef6(false);
+  const lockedRef = useRef7(false);
   const lock = () => {
     if (!lockedRef.current) {
       lockedRef.current = true;
@@ -1396,14 +1717,14 @@ function CustomModal({ open, onClose, onCloseComplete, children, width = "32rem"
     onClose == null ? void 0 : onClose();
   };
   const handleOverlayClick = () => onClose == null ? void 0 : onClose();
-  return /* @__PURE__ */ jsxs8(
+  return /* @__PURE__ */ jsxs9(
     "dialog",
     {
       ref: modalRef,
       onCancel: handleCancel,
       className: "default-modal",
       children: [
-        /* @__PURE__ */ jsx13(
+        /* @__PURE__ */ jsx14(
           "div",
           {
             ref: overlayRef,
@@ -1412,13 +1733,13 @@ function CustomModal({ open, onClose, onCloseComplete, children, width = "32rem"
             style: { backgroundColor: `rgb(15 23 42 / ${backdropOpacity})` }
           }
         ),
-        /* @__PURE__ */ jsx13(
+        /* @__PURE__ */ jsx14(
           "div",
           {
             ref: panelRef,
             className: twMerge8("relative m-auto max-h-[85vh] max-w-[92vw] overflow-y-auto rounded-[var(--radius-lg)] bg-[var(--modal-surface)] p-[var(--pad-card)]", className),
             style: { width, height, ...style },
-            children: /* @__PURE__ */ jsx13("div", { ref: contentRef, children })
+            children: /* @__PURE__ */ jsx14("div", { ref: contentRef, children })
           }
         )
       ]
@@ -1427,10 +1748,10 @@ function CustomModal({ open, onClose, onCloseComplete, children, width = "32rem"
 }
 
 // src/loading/loading.jsx
-import { useRef as useRef7 } from "react";
+import { useRef as useRef8 } from "react";
 import { useGSAP as useGSAP5 } from "@gsap/react";
 import gsap6 from "gsap";
-import { jsx as jsx14 } from "react/jsx-runtime";
+import { jsx as jsx15 } from "react/jsx-runtime";
 var COLOR_PRESETS5 = {
   primary: "var(--color-action)",
   secondary: "var(--dark-navy-text)",
@@ -1450,7 +1771,8 @@ var SHAPES = [
 ];
 var PENTAGON = "polygon(50% 0%, 97.55% 34.55%, 79.4% 90.45%, 20.6% 90.45%, 2.45% 34.55%)";
 function Loading({ size = "sm", color = "primary", className, style, ...props }) {
-  const shapeRef = useRef7(null);
+  verifyTypesLoading({ size, color });
+  const shapeRef = useRef8(null);
   const box = `var(--control-size-${size})`;
   const background = COLOR_PRESETS5[color] ?? color;
   useGSAP5(() => {
@@ -1466,7 +1788,7 @@ function Loading({ size = "sm", color = "primary", className, style, ...props })
     tl.to(el, { opacity: 0, scale: 0.85, duration: 0.2, ease: "power2.in" }, "+=0.3").set(el, { clipPath: "none", borderRadius: SHAPES[0] }).to(el, { opacity: 1, scale: 1.12, duration: 0.3, ease: "power2.out" }).to(el, { scale: 1, duration: 0.45, ease: "power2.in" });
     gsap6.to(el, { rotate: 360, duration: 5, repeat: -1, ease: "none" });
   }, []);
-  return /* @__PURE__ */ jsx14(
+  return /* @__PURE__ */ jsx15(
     "div",
     {
       ref: shapeRef,
@@ -1487,10 +1809,10 @@ function Loading({ size = "sm", color = "primary", className, style, ...props })
 }
 
 // src/loading/progress.jsx
-import { useRef as useRef8 } from "react";
+import { useRef as useRef9 } from "react";
 import { useGSAP as useGSAP6 } from "@gsap/react";
 import gsap7 from "gsap";
-import { jsx as jsx15 } from "react/jsx-runtime";
+import { jsx as jsx16 } from "react/jsx-runtime";
 var COLOR_PRESETS6 = {
   primary: "var(--color-action)",
   secondary: "var(--dark-navy-text)",
@@ -1499,8 +1821,9 @@ var COLOR_PRESETS6 = {
   danger: "var(--color-danger)"
 };
 function Progress({ value, color = "primary", className, style, ...props }) {
-  const fillRef = useRef8(null);
-  const trackRef = useRef8(null);
+  verifyTypesProgress({ value, color });
+  const fillRef = useRef9(null);
+  const trackRef = useRef9(null);
   const resolved = COLOR_PRESETS6[color] ?? color;
   const indeterminate = value === void 0 || value === null;
   useGSAP6(() => {
@@ -1512,7 +1835,7 @@ function Progress({ value, color = "primary", className, style, ...props }) {
       gsap7.to(fillRef.current, { width: `${Math.min(100, Math.max(0, value))}%`, duration: 0.4, ease: "power3.out" });
     }
   }, { dependencies: [indeterminate, value] });
-  return /* @__PURE__ */ jsx15(
+  return /* @__PURE__ */ jsx16(
     "div",
     {
       ref: trackRef,
@@ -1523,7 +1846,7 @@ function Progress({ value, color = "primary", className, style, ...props }) {
       className,
       style: { width: "100%", height: 8, borderRadius: "var(--radius-full)", backgroundColor: "var(--light-gray-background)", overflow: "hidden", position: "relative", ...style },
       ...props,
-      children: /* @__PURE__ */ jsx15(
+      children: /* @__PURE__ */ jsx16(
         "div",
         {
           ref: fillRef,
@@ -1535,10 +1858,10 @@ function Progress({ value, color = "primary", className, style, ...props }) {
 }
 
 // src/navbar/navbar.jsx
-import { useEffect as useEffect6, useRef as useRef9 } from "react";
+import { useEffect as useEffect6, useRef as useRef10 } from "react";
 import { twMerge as twMerge9 } from "tailwind-merge";
 import gsap8 from "gsap";
-import { Fragment, jsx as jsx16, jsxs as jsxs9 } from "react/jsx-runtime";
+import { Fragment, jsx as jsx17, jsxs as jsxs10 } from "react/jsx-runtime";
 var COLOR_PRESETS7 = {
   primary: { bg: "var(--color-action)", fg: "var(--text-on-action)" },
   secondary: { bg: "var(--dark-navy-text)", fg: "var(--white)" },
@@ -1551,7 +1874,7 @@ var DESKTOP_ALIGN = {
   top: "top-8"
 };
 function LogoButton({ logo, color }) {
-  const ref = useRef9(null);
+  const ref = useRef10(null);
   const preset = COLOR_PRESETS7[logo.color ?? color] ?? COLOR_PRESETS7.primary;
   const setRefs = (node) => {
     ref.current = node;
@@ -1576,7 +1899,7 @@ function LogoButton({ logo, color }) {
       ease: "power3.out"
     });
   }, [logo.active, preset]);
-  return /* @__PURE__ */ jsx16(
+  return /* @__PURE__ */ jsx17(
     "button",
     {
       ref: setRefs,
@@ -1592,7 +1915,7 @@ function LogoButton({ logo, color }) {
         backgroundColor: "var(--light-gray-background)",
         color: "var(--dark-navy-text)"
       },
-      children: typeof logo.icon === "string" ? /* @__PURE__ */ jsx16(Icon, { name: logo.icon }) : logo.icon
+      children: typeof logo.icon === "string" ? /* @__PURE__ */ jsx17(Icon, { name: logo.icon }) : logo.icon
     }
   );
 }
@@ -1607,8 +1930,9 @@ function Navbar({
   className,
   style
 }) {
-  return /* @__PURE__ */ jsxs9(Fragment, { children: [
-    /* @__PURE__ */ jsxs9(
+  verifyTypesNavbar({ items, logo, selected, defaultSelected, onChange, color, align });
+  return /* @__PURE__ */ jsxs10(Fragment, { children: [
+    /* @__PURE__ */ jsxs10(
       "nav",
       {
         className: twMerge9(
@@ -1618,8 +1942,8 @@ function Navbar({
         ),
         style,
         children: [
-          logo && /* @__PURE__ */ jsx16(LogoButton, { logo, color }),
-          /* @__PURE__ */ jsx16(
+          logo && /* @__PURE__ */ jsx17(LogoButton, { logo, color }),
+          /* @__PURE__ */ jsx17(
             ButtonGroup,
             {
               vertical: true,
@@ -1634,7 +1958,7 @@ function Navbar({
         ]
       }
     ),
-    /* @__PURE__ */ jsx16(
+    /* @__PURE__ */ jsx17(
       "nav",
       {
         className: twMerge9(
@@ -1642,7 +1966,7 @@ function Navbar({
           className
         ),
         style,
-        children: /* @__PURE__ */ jsx16("div", { className: "flex items-center gap-1 rounded-[var(--radius-full)] bg-[var(--white)] p-1 shadow-md", children: /* @__PURE__ */ jsx16(
+        children: /* @__PURE__ */ jsx17("div", { className: "flex items-center gap-1 rounded-[var(--radius-full)] bg-[var(--white)] p-1 shadow-md", children: /* @__PURE__ */ jsx17(
           ButtonGroup,
           {
             vertical: false,
@@ -1679,7 +2003,9 @@ export {
   Select,
   Textarea,
   Toast,
+  ToastProvider,
   anchoredAnimation,
   fadeAnimation,
-  morphAnimation
+  morphAnimation,
+  useToast
 };

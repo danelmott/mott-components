@@ -2,6 +2,7 @@
 import { useRef } from 'react';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
+import { verifyTypesProgress } from '../utils/verifyTypes.js';
 
 const COLOR_PRESETS = {
     primary: 'var(--color-action)',
@@ -13,6 +14,7 @@ const COLOR_PRESETS = {
 
 //component for progress in mott-design — determinado (value) o indeterminado (estela), animado con GSAP
 export default function Progress({ value, color = 'primary', className, style, ...props }) {
+    verifyTypesProgress({ value, color });
     const fillRef = useRef(null);
     const trackRef = useRef(null);
     const resolved = COLOR_PRESETS[color] ?? color;
@@ -22,7 +24,8 @@ export default function Progress({ value, color = 'primary', className, style, .
         if (indeterminate) {
             gsap.set(fillRef.current, { xPercent: -100 });
             gsap.to(fillRef.current, { xPercent: 200, duration: 1.2, repeat: -1, ease: 'none' });
-        } else {
+        } 
+        else {
             gsap.killTweensOf(fillRef.current);
             gsap.to(fillRef.current, { width: `${Math.min(100, Math.max(0, value))}%`, duration: 0.4, ease: 'power3.out' });
         }

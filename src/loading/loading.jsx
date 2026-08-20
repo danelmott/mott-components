@@ -2,6 +2,7 @@
 import { useRef } from 'react';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
+import { verifyTypesLoading } from '../utils/verifyTypes.js';
 
 const COLOR_PRESETS = {
     primary: 'var(--color-action)',
@@ -23,6 +24,7 @@ const PENTAGON = 'polygon(50% 0%, 97.55% 34.55%, 79.4% 90.45%, 20.6% 90.45%, 2.4
 
 //component for loading in mott-design — figuras que cambian de forma en loop, animado con GSAP
 export default function Loading({ size = 'sm', color = 'primary', className, style, ...props }) {
+    verifyTypesLoading({ size, color });
     const shapeRef = useRef(null);
     const box = `var(--control-size-${size})`;
     const background = COLOR_PRESETS[color] ?? color;

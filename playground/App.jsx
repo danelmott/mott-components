@@ -8,6 +8,7 @@ import Badge from '../src/badge/badge.jsx';
 import Input from '../src/input/input.jsx';
 import Textarea from '../src/textarea/textarea.jsx';
 import Toast from '../src/toast/toast.jsx';
+import { useToast } from '../src/toast/toastContext.jsx';
 import Select from '../src/select/select.jsx';
 import Search from '../src/search/search.jsx';
 import Loading from '../src/loading/loading.jsx';
@@ -45,6 +46,63 @@ function Section({ title, wide, children }) {
       </p>
       {children}
     </section>
+  );
+}
+
+// demo de la API imperativa: el provider mantiene la cola, así que varios `showToast` seguidos se
+// apilan en vez de pisarse
+function ToastApiDemo() {
+  const { showToast, info, success, warning, danger, closeToast, closeAll } = useToast();
+  const lastIdRef = useRef(null);
+
+  return (
+    <>
+      <Row>
+        <Button variant="outline" onClick={() => info({ title: 'Info', message: 'Un dato para tener en cuenta.' })}>
+          info()
+        </Button>
+        <Button variant="outline" onClick={() => success('Guardado')}>
+          success() con string
+        </Button>
+        <Button variant="outline" onClick={() => warning({ title: 'Atención', message: 'Revisá este dato.' })}>
+          warning()
+        </Button>
+        <Button variant="outline" onClick={() => danger({ title: 'Error', message: 'Algo salió mal.' })}>
+          danger()
+        </Button>
+      </Row>
+      <Row>
+        <Button
+          variant="secondary"
+          onClick={() => {
+            // cuatro de un saque: se ven apilados, y al cerrar uno los de abajo suben con Flip
+            info({ title: 'Uno', message: 'Primero de la tanda.' });
+            success({ title: 'Dos', message: 'Segundo de la tanda.' });
+            warning({ title: 'Tres', message: 'Tercero de la tanda.' });
+            danger({ title: 'Cuatro', message: 'Cuarto de la tanda.' });
+          }}
+        >
+          Disparar 4 juntos
+        </Button>
+        <Button
+          variant="outline"
+          onClick={() => {
+            lastIdRef.current = showToast({
+              variant: 'info',
+              title: 'Dura 15s',
+              message: 'Este sobrevive a los de 5s. Cerralo con el botón de al lado.',
+              duration: 15000,
+            });
+          }}
+        >
+          duration: 15000
+        </Button>
+        <Button variant="outline" onClick={() => lastIdRef.current && closeToast(lastIdRef.current)}>
+          closeToast(id)
+        </Button>
+        <Button variant="ghost" onClick={closeAll}>closeAll()</Button>
+      </Row>
+    </>
   );
 }
 
@@ -193,7 +251,7 @@ export default function App() {
         </Section>
 
         <Section title="Input">
-          <Input label="Correo" type="email" placeholder="Escribe tu correo" />
+          <Input label="Correo" type="text" placeholder="Escribe tu correo" />
           <Input label="Contraseña" type="password" placeholder="Escribe tu contraseña" />
           <Input label="Deshabilitado" placeholder="No editable" disabled />
         </Section>
@@ -376,7 +434,16 @@ export default function App() {
           </CustomModal>
         </Section>
 
-        <Section title="Toast — se apila solo arriba a la derecha" wide>
+        <Section title="Toast — API imperativa con useToast()" wide>
+          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--slate-gray-text)' }}>
+            La forma recomendada de usar toasts: <code>{'<ToastProvider>'}</code> envuelve la app (acá está en
+            main.jsx) y <code>useToast()</code> devuelve la API. El provider mantiene una cola, así que varios
+            toasts seguidos se apilan; <code>showToast()</code> devuelve un id para cerrarlo a mano.
+          </p>
+          <ToastApiDemo />
+        </Section>
+
+        <Section title="Toast — uso declarativo (open / onClose)" wide>
           <p style={{ fontSize: 'var(--text-sm)', color: 'var(--slate-gray-text)' }}>
             Los toasts se renderizan en un stack fijo arriba a la derecha, no donde se los declara. Se
             cierran solos a los 5s —el contador se pausa si les pasás el mouse por encima o los

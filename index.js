@@ -4,6 +4,7 @@ export { default as ButtonFullRounded } from './src/buttons/buttonFullRounded.js
 export { default as ButtonGroup } from './src/buttons/buttonGroup.jsx';
 export { default as Badge } from './src/badge/badge.jsx';
 export { default as Toast } from './src/toast/toast.jsx';
+export { ToastProvider, useToast } from './src/toast/toastContext.jsx';
 export { default as Input } from './src/input/input.jsx';
 export { default as Textarea } from './src/textarea/textarea.jsx';
 export { default as Select } from './src/select/select.jsx';

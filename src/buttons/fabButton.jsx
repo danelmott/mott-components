@@ -1,5 +1,6 @@
 'use client';
 import Icon from '../icon/icon.jsx';
+import { verifyTypesIconButton } from '../utils/verifyTypes.js';
 
 const FAB_SIZE = {
     sm: { box: 'var(--control-size-sm)', icon: 'var(--lg-icon)' },
@@ -26,6 +27,8 @@ export default function FabButton({
     style,
     ...props
 }) {
+    verifyTypesIconButton('FabButton', { icon, color, iconColor, size, type });
+
     const dimensions = FAB_SIZE[size] ?? FAB_SIZE.md;
     const preset = COLOR_PRESETS[color];
     

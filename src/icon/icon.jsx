@@ -1,5 +1,6 @@
 'use client';
 import { twMerge } from "tailwind-merge";
+import { verifyTypesIcon } from '../utils/verifyTypes.js';
 
 const SIZE_TOKEN = {
     sm: 'var(--sm-icon)',
@@ -19,6 +20,8 @@ export default function Icon({
     opticalSize = 24,
     className,
 }) {
+    verifyTypesIcon({ name, size, filled, weight, grade, opticalSize });
+
     if (!name) return null;
     
     const iconSize = SIZE_TOKEN[size] ?? size;

@@ -4,6 +4,7 @@ import { twMerge } from 'tailwind-merge';
 import gsap from 'gsap';
 import ButtonGroup from '../buttons/buttonGroup.jsx';
 import Icon from '../icon/icon.jsx';
+import { verifyTypesNavbar } from '../utils/verifyTypes.js';
 
 const COLOR_PRESETS = {
     primary: { bg: 'var(--color-action)', fg: 'var(--text-on-action)' },
@@ -18,12 +19,10 @@ const DESKTOP_ALIGN = {
     top: 'top-8',
 };
 
-// mismo tratamiento visual que el ítem seleccionado de ButtonGroup (squircle + escala + color),
-// pero con su propio estado `active` controlado por quien use Navbar — no depende de `selected`/rutas
 function LogoButton({ logo, color }) {
     const ref = useRef(null);
     const preset = COLOR_PRESETS[logo.color ?? color] ?? COLOR_PRESETS.primary;
-
+    
     // además de la animación propia, permite exponer el nodo del botón hacia afuera
     // (ej. para usarlo como `triggerRef` de un CustomModal anclado a este botón)
     const setRefs = (node) => {
@@ -31,7 +30,7 @@ function LogoButton({ logo, color }) {
         if (typeof logo.buttonRef === 'function') logo.buttonRef(node);
         else if (logo.buttonRef) logo.buttonRef.current = node;
     };
-
+    
     const resolveColor = (value) => {
         if (typeof value === 'string' && value.startsWith('var(')) {
             const token = value.slice(4, -1).trim();
@@ -39,7 +38,7 @@ function LogoButton({ logo, color }) {
         }
         return value;
     };
-
+    
     useEffect(() => {
         if (!ref.current) return;
         gsap.to(ref.current, {
@@ -51,7 +50,7 @@ function LogoButton({ logo, color }) {
             ease: 'power3.out',
         });
     }, [logo.active, preset]);
-
+    
     return (
         <button
             ref={setRefs}
@@ -73,9 +72,7 @@ function LogoButton({ logo, color }) {
     );
 }
 
-//navbar responsive — rail minimalista en desktop (md+, centrado o arriba vía `align`), pill flotante + FAB en mobile.
-//`selected` es controlado (ej. derivado de la ruta actual) — el logo tiene su propio estado `active` independiente,
-//y el fab queda afuera de cualquier sistema de selección (son acciones, no rutas).
+
 export default function Navbar({
     items = [],
     selected,
@@ -87,6 +84,8 @@ export default function Navbar({
     className,
     style,
 }) {
+    verifyTypesNavbar({ items, logo, selected, defaultSelected, onChange, color, align });
+
     return (
         <>
             {/* Desktop: íconos flotando sobre la página, sin tarjeta ni sombra */}
@@ -109,7 +108,7 @@ export default function Navbar({
                     color={color}
                 />
             </nav>
-
+            
             {/* Mobile: pill flotante con los íconos + FAB aparte, con margen (no pegado a los bordes) — sin logo, no entra en un bottom bar chico */}
             <nav
                 className={twMerge(

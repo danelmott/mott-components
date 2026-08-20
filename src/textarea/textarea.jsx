@@ -1,7 +1,7 @@
 'use client';
 import { useId } from 'react';
 import { twMerge } from 'tailwind-merge';
-import { verifyTypesInput } from '../utils/verifyTypes.js';
+import { verifyTypesTextarea } from '../utils/verifyTypes.js';
 
 //component for textarea in mott-design — mismo estilo visual que Input, tamaño fijo (sin resize ni scroll)
 export default function Textarea({
@@ -16,7 +16,7 @@ export default function Textarea({
 }) {
     const generatedId = useId();
     const textareaId = id ?? generatedId;
-    verifyTypesInput(label, placeholder);
+    verifyTypesTextarea({ label, placeholder, width, height });
     
     
     return (

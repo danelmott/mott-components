@@ -17,7 +17,7 @@ export default function Input({
 }) {
     const generatedId = useId();
     const inputId = id ?? generatedId;
-    verifyTypesInput(label, placeholder, type);
+    verifyTypesInput({ label, placeholder, type });
     
     return (
         <div className="flex w-full flex-col gap-1">
