@@ -6,8 +6,9 @@ import { lockScroll, unlockScroll } from '../utils/scrollLock.js';
 import { verifyTypesCustomModal } from '../utils/verifyTypes.js';
 
 
-export default function CustomModal({ open, onClose, onCloseComplete, children, backdropOpacity = 0.35, triggerRef, animation, className, style }) {
-    verifyTypesCustomModal({ open, onClose, onCloseComplete, backdropOpacity, triggerRef, animation });
+//Components for custom modal in mott-design-system
+export default function CustomModal({ open, onClose, onCloseComplete, children, triggerRef, animation, className, style }) {
+    verifyTypesCustomModal({ open, onClose, onCloseComplete, triggerRef, animation });
     const modalRef = useRef(null);
     const overlayRef = useRef(null);
     const panelRef = useRef(null);
@@ -59,8 +60,7 @@ export default function CustomModal({ open, onClose, onCloseComplete, children, 
             <div
                 ref={overlayRef}
                 onClick={handleOverlayClick}
-                className="absolute inset-0"
-                style={{ backgroundColor: `rgb(15 23 42 / ${backdropOpacity})` }}
+                className="absolute inset-0 bg-[var(--overlay-backdrop)]"
             />
             <div
                 ref={panelRef}
@@ -72,5 +72,5 @@ export default function CustomModal({ open, onClose, onCloseComplete, children, 
                 </div>
             </div>
         </dialog>
-    )
+    );
 }

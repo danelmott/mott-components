@@ -6,7 +6,7 @@ const SIZE = {
     sm: { box: 'var(--control-size-sm)', icon: 'var(--lg-icon)' },
     md: { box: 'var(--control-size-md)', icon: 'var(--lg-icon)' },
     lg: { box: 'var(--control-size-lg)', icon: 'var(--xl-icon)' },
-};
+};  
 
 const COLOR_PRESETS = {
     primary: { bg: 'var(--color-action)', fg: 'var(--text-on-action)' },
@@ -55,3 +55,4 @@ export default function ButtonFullRounded({
         </button>
     )
 }
+

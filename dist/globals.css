@@ -69,9 +69,32 @@
     --color-danger-hover:#b91c1c;
     --color-danger-bg:#fef2f2;
     --text-on-danger:#ffffff;
+    /*surfaces - the semantic ramp every themed surface should reach for. Light steps DOWN from
+      white, dark steps UP from black, so the same token means "one step above the page" in both
+      themes and a component never has to know which theme it is in.*/
+    --surface-background: #ffffff;
+    --surface-container-low: #f8fafc;
+    --surface-container: #f1f5f9;
+    --surface-select: #cbd5e1;
+
+    /*text*/
+    --text-primary: #0f172a;
+    --text-secondary: #475569;
+
+    /*navbar. Only --nav-surface is redeclared per theme; the rest point at the ramp above, which
+      already swaps itself, so redeclaring them in the dark blocks would be a no-op.*/
+    --nav-surface: var(--surface-background);
+    --nav-item-surface: var(--surface-container);
+    --nav-item-text: var(--text-secondary);
+    --nav-item-surface-selected: var(--surface-select);
+    --nav-item-text-selected: var(--text-primary);
+
     /*overlay/surface colors*/
     --modal-surface: var(--white);
-    --overlay-backdrop:rgb(15 23 42 / 0.6);
+    /*Negro puro y no slate: el velo tiene que oscurecer sin teñir de azul el fondo que tapa.
+      Alfa baja a proposito - el fondo debe seguir leyendose - y sin `backdrop-filter`: el velo
+      atenua, no desenfoca. Es constante para todas las modales, por eso no hay prop que lo ajuste.*/
+    --overlay-backdrop:rgb(0 0 0 / 0.28);
 
     
     /*padding and border tokens*/
@@ -110,6 +133,9 @@
     --control-size-md: 56px;
     --control-size-lg: 80px;
     --control-radius: 28%; 
+    /*motion. Aproximacion en cubic-bezier de la `power3.out` de GSAP, para que lo que anima CSS
+      (el color) y lo que anima GSAP (la geometria) se muevan con la misma curva.*/
+    --ease-morph: cubic-bezier(0.165, 0.84, 0.44, 1);
     --shadow-floating:
         0 1px 2px rgb(15 23 42 / 0.05),
         0 6px 16px -4px rgb(15 23 42 / 0.08),
@@ -142,8 +168,15 @@
     --color-danger-hover:#fca5a5;
     --color-danger-bg:#450a0a;
     --text-on-danger:#450a0a;
+    --surface-background: #000000;
+    --surface-container-low: #101012;
+    --surface-container: #18181b;
+    --surface-select: #28282b;
+    --text-primary: #f8fafc;
+    --text-secondary: #cbd5e1;
+    --nav-surface: var(--surface-container-low);
     --modal-surface:var(--dark-navy-background);
-    --overlay-backdrop:rgb(2 6 23 / 0.7);
+    --overlay-backdrop:rgb(0 0 0 / 0.45);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -164,13 +197,22 @@
         --color-danger-hover:#fca5a5;
         --color-danger-bg:#450a0a;
         --text-on-danger:#450a0a;
+        --surface-background: #000000;
+        --surface-container-low: #101012;
+        --surface-container: #18181b;
+        --surface-select: #28282b;
+        --text-primary: #f8fafc;
+        --text-secondary: #cbd5e1;
+        --nav-surface: var(--surface-container-low);
         --modal-surface:var(--dark-navy-background);
-        --overlay-backdrop:rgb(2 6 23 / 0.7);
+        --overlay-backdrop:rgb(0 0 0 / 0.45);
     }
 }
 
 body {
     font-family: var(--font-family);
+    background-color: var(--surface-background);
+    color: var(--text-primary);
 }
 
 

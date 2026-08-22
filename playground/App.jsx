@@ -25,7 +25,7 @@ function Section({ title, wide, children }) {
       style={{
         columnSpan: wide ? 'all' : undefined,
         breakInside: 'avoid',
-        backgroundColor: 'var(--off-white-background)',
+        backgroundColor: 'var(--surface-container-low)',
         borderRadius: 'var(--radius-lg)',
         padding: 'var(--pad-card)',
         display: 'flex',
@@ -134,7 +134,7 @@ function ScrollBox({ id, horizontal, dragScrollProps, children }) {
         height: horizontal ? 'auto' : 160,
         borderRadius: 'var(--radius-lg)',
         fontSize: 'var(--text-sm)',
-        color: 'var(--slate-gray-text)',
+        color: 'var(--text-secondary)',
       }}
       {...dragScrollProps}
     >
@@ -187,7 +187,7 @@ export default function App() {
         style={{
           fontSize: 'var(--text-3xl)',
           fontWeight: 700,
-          color: 'var(--dark-navy-text)',
+          color: 'var(--text-primary)',
           marginBottom: '1.5rem',
         }}
       >
@@ -205,13 +205,13 @@ export default function App() {
         }}
       >
         <Section title="DragScroll — sin barra, se arrastra" wide>
-          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--slate-gray-text)' }}>
+          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
             Las barras de scroll están ocultas en toda la app. Estas cajas se arrastran con el mouse y
             siguen de largo al soltar (inercia). La rueda y el teclado funcionan igual que siempre. El
             degradado en el borde avisa que hay más contenido y se apaga al llegar al tope.
           </p>
           <ScrollBox id="scroll-vertical">
-            <p style={{ fontWeight: 600, color: 'var(--dark-navy-text)', marginBottom: '0.5rem' }}>Vertical</p>
+            <p style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>Vertical</p>
             {Array.from({ length: 25 }, (_, i) => (
               <p key={i} style={{ marginBottom: '0.5rem' }}>{i + 1}. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation.</p>
             ))}
@@ -226,7 +226,7 @@ export default function App() {
           </ScrollBox>
 
           <ScrollBox id="scroll-no-inertia" dragScrollProps={{ inertia: false, fade: false }}>
-            <p style={{ fontWeight: 600, color: 'var(--dark-navy-text)', marginBottom: '0.5rem' }}>
+            <p style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
               inertia={'{false}'} fade={'{false}'} — se arrastra pero frena al soltar, y sin degradado
             </p>
             {Array.from({ length: 25 }, (_, i) => (
@@ -340,7 +340,7 @@ export default function App() {
             delay={400}
             onSearch={(query) => setSearchLog(query ? `Llamando a la API con: "${query}"` : '(nada buscado todavía)')}
           />
-          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--slate-gray-text)' }}>{searchLog}</p>
+          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>{searchLog}</p>
         </Section>
 
         <Section title="Select">
@@ -369,11 +369,11 @@ export default function App() {
 
         <Section title="Progress">
           <div>
-            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--slate-gray-text)', marginBottom: '0.5rem' }}>Indeterminado</p>
+            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Indeterminado</p>
             <Progress color="primary" />
           </div>
           <div>
-            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--slate-gray-text)', marginBottom: '0.5rem' }}>Determinado ({progressValue}%)</p>
+            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Determinado ({progressValue}%)</p>
             <Progress color="success" value={progressValue} />
             <Row>
               <Button variant="outline" onClick={() => setProgressValue((v) => Math.max(0, v - 10))}>-10</Button>
@@ -395,9 +395,9 @@ export default function App() {
               className="absolute top-full left-0 mt-1"
             >
               <div style={{ padding: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                <span style={{ fontSize: 'var(--text-sm)', color: 'var(--dark-navy-text)', padding: '0.5rem' }}>Opción 1</span>
-                <span style={{ fontSize: 'var(--text-sm)', color: 'var(--dark-navy-text)', padding: '0.5rem' }}>Opción 2</span>
-                <span style={{ fontSize: 'var(--text-sm)', color: 'var(--dark-navy-text)', padding: '0.5rem' }}>Opción 3</span>
+                <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-primary)', padding: '0.5rem' }}>Opción 1</span>
+                <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-primary)', padding: '0.5rem' }}>Opción 2</span>
+                <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-primary)', padding: '0.5rem' }}>Opción 3</span>
               </div>
             </Dropdown>
           </div>
@@ -412,18 +412,17 @@ export default function App() {
             onClose={() => setCustomModalOpen(false)}
             triggerRef={customModalTriggerRef}
             animation={anchoredAnimation}
-            backdropOpacity={0.15}
           >
             {/* el ancho lo pone este div, no la modal: el panel se mide por su contenido */}
             <div className="w-[23rem]">
-              <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--dark-navy-text)', marginBottom: '0.5rem' }}>
+              <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
                 Modal personalizado
               </h3>
-              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--slate-gray-text)', marginBottom: '1rem' }}>
-                Backdrop más claro, ancho puesto por el div de adentro, animación anclada junto al botón (AnchoredAnimation).
+              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+                Backdrop constante (igual en todas las modales), ancho puesto por el div de adentro, animación anclada junto al botón (AnchoredAnimation).
               </p>
               {Array.from({ length: 2 }, (_, i) => (
-                <p key={i} style={{ fontSize: 'var(--text-sm)', color: 'var(--slate-gray-text)', marginBottom: '0.75rem' }}>
+                <p key={i} style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>
                   {i + 1}. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation.
                 </p>
               ))}
@@ -436,7 +435,7 @@ export default function App() {
           </Button>
           <CustomModal open={autoModalOpen} onClose={() => setAutoModalOpen(false)}>
             {/* sin div de ancho: el panel mide lo que miden estos hijos y nada más */}
-            <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--dark-navy-text)', marginBottom: '0.75rem' }}>
+            <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.75rem' }}>
               ¿Eliminar el elemento?
             </h3>
             <Row>
@@ -447,7 +446,7 @@ export default function App() {
         </Section>
 
         <Section title="Navbar — rail en desktop, barra inferior en mobile" wide>
-          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--slate-gray-text)' }}>
+          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
             Achicá la ventana por debajo de ~768px para ver el cambio de rail a barra inferior. El activo está
             controlado (simula la ruta actual) — reclickear el mismo ítem no lo deselecciona. Los dos triggers
             muestran las dos variantes del morph: el <strong>logo</strong> abre un pop up que se apoya encima y lo
@@ -455,7 +454,6 @@ export default function App() {
             que viaja hasta el medio de la pantalla (por eso sí se ilumina: ese botón queda a la vista).
           </p>
           <Navbar
-            color="primary"
             selected={gearActive ? 4 : activeRoute}
             onChange={(index) => {
               if (index === 4) {
@@ -495,10 +493,10 @@ export default function App() {
             triggerRef={gearButtonRef}
           >
             <div className="w-[19rem]">
-              <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--dark-navy-text)', marginBottom: '0.5rem' }}>
+              <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
                 Modal centrada desde el nav
               </h3>
-              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--slate-gray-text)', marginBottom: '1rem' }}>
+              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
                 El botón se transforma en la modal y viaja hasta el centro. Como queda a la vista, se ilumina
                 al clickearlo y vuelve al default recién cuando la modal termina de plegarse encima.
               </p>
@@ -515,13 +513,12 @@ export default function App() {
             onClose={() => setLogoPopoverOpen(false)}
             triggerRef={logoButtonRef}
             animation={anchoredAnimation}
-            backdropOpacity={0.15}
           >
             <div className="w-[15rem]">
-              <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--dark-navy-text)', marginBottom: '0.5rem' }}>
+              <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
                 Pop up desde el logo
               </h3>
-              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--slate-gray-text)', marginBottom: '1rem' }}>
+              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
                 Se apoya encima del logo y lo tapa: el círculo se estira desde su propia esquina hasta
                 convertirse en este panel. Por eso el logo no cambia de estilo al clickearlo — no se vería.
               </p>
@@ -531,7 +528,7 @@ export default function App() {
         </Section>
 
         <Section title="Toast — API imperativa con useToast()" wide>
-          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--slate-gray-text)' }}>
+          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
             La forma recomendada de usar toasts: <code>{'<ToastProvider>'}</code> envuelve la app (acá está en
             main.jsx) y <code>useToast()</code> devuelve la API. El provider mantiene una cola, así que varios
             toasts seguidos se apilan; <code>showToast()</code> devuelve un id para cerrarlo a mano.
@@ -540,7 +537,7 @@ export default function App() {
         </Section>
 
         <Section title="Toast — uso declarativo (open / onClose)" wide>
-          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--slate-gray-text)' }}>
+          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
             Los toasts se renderizan en un stack fijo arriba a la derecha, no donde se los declara. Se
             cierran solos a los 5s —el contador se pausa si les pasás el mouse por encima o los
             arrastrás— o arrastrándolos hacia la derecha más de la mitad de su ancho.

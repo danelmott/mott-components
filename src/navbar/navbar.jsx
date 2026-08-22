@@ -1,70 +1,124 @@
 'use client';
-import { useEffect, useRef } from 'react';
-import { twMerge } from 'tailwind-merge';
+import { useRef, useState } from 'react';
+import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
-import ButtonGroup from '../buttons/buttonGroup.jsx';
+import { twMerge } from 'tailwind-merge';
 import Icon from '../icon/icon.jsx';
 import { verifyTypesNavbar } from '../utils/verifyTypes.js';
-
-const COLOR_PRESETS = {
-    primary: { bg: 'var(--color-action)', fg: 'var(--text-on-action)' },
-    secondary: { bg: 'var(--dark-navy-text)', fg: 'var(--white)' },
-    outline: { bg: 'var(--light-gray-background)', fg: 'var(--dark-navy-text)' },
-    ghost: { bg: 'transparent', fg: 'var(--dark-navy-text)' },
-    danger: { bg: 'var(--color-danger)', fg: 'var(--text-on-danger)' },
-};
 
 const DESKTOP_ALIGN = {
     center: 'top-1/2 -translate-y-1/2',
     top: 'top-8',
 };
 
-function LogoButton({ logo, color }) {
+/*The navbar is deliberately neutral and has no `color` prop: its palette comes from the theme
+  (--nav-item-* in globals.css), not from the caller. Selection reads as a morph - circle to
+  squircle, scaled up - plus one step up the grey ramp, the same in light and dark.
+  The split between the two animation systems is deliberate. COLOUR is transitioned by CSS because
+  GSAP writes what it animates into the element's inline style: tweening backgroundColor would bake a
+  literal hex over the var() and the button would stop following the theme from its first click
+  onwards. GEOMETRY (borderRadius + scale) stays in GSAP because those two have to move as one, and
+  splitting them across two engines with two different curves is what makes a morph look broken.
+  The resting 50% matters beyond the look: `resolveRadius` in modalAnimation.js reads the trigger's
+  computed radius to build the modal's clip-path, and it needs a percentage. Do NOT swap it for
+  Tailwind's full-round radius utility: it compiles to border-radius:2147483647px, which corrupts
+  both the morph (px/% interpolation) and the modal's clip-path. Keep the percentage.*/
+const ITEM_BASE =
+    'inline-flex items-center justify-center gap-2 border-0 cursor-pointer p-0' +
+    ' text-[length:var(--text-md)] tracking-[var(--tracking-h4)] font-[number:var(--font-medium)]' +
+    ' bg-[var(--nav-item-surface)] text-[var(--nav-item-text)]' +
+    ' transition-[background-color,color] duration-400 ease-[var(--ease-morph)]' +
+    ' focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--color-action)]';
+
+const ITEM_SELECTED = 'bg-[var(--nav-item-surface-selected)] text-[var(--nav-item-text-selected)]';
+
+const MORPH = { duration: 0.4, ease: 'power3.out' };
+const CIRCLE = '50%';
+
+// Safe here and NOT for colour: --control-radius is static, it does not change with the theme, so a
+// one-shot read can never go stale the way a resolved colour would.
+const squircleRadius = () =>
+    getComputedStyle(document.documentElement).getPropertyValue('--control-radius').trim() || '28%';
+
+// besides driving the animation, the ref is exposed outwards (e.g. to use the node as the
+// `triggerRef` of a CustomModal anchored to this button)
+const attachRef = (node, store, i, forwarded) => {
+    if (i === null) store.current = node;
+    else store.current[i] = node;
+    if (typeof forwarded === 'function') forwarded(node);
+    else if (forwarded) forwarded.current = node;
+};
+
+function NavItems({ items, selectedItem, onSelect, vertical }) {
+    const itemRefs = useRef([]);
+    const containerRef = useRef(null);
+
+    useGSAP(() => {
+        const squircle = squircleRadius();
+        itemRefs.current.forEach((el, i) => {
+            if (!el) return;
+            const isSelected = i === selectedItem;
+            gsap.to(el, {
+                borderRadius: isSelected ? squircle : CIRCLE,
+                scale: isSelected ? 1.1 : 1,
+                ...MORPH,
+            });
+        });
+    }, { dependencies: [selectedItem, items.length], scope: containerRef });
+
+    return (
+        <div ref={containerRef} className={twMerge('inline-flex gap-[var(--gap-group)]', vertical && 'flex-col')}>
+            {items.map((item, i) => {
+                const iconOnly = !item.label;
+                return (
+                    <button
+                        key={item.id ?? i}
+                        ref={(el) => attachRef(el, itemRefs, i, item.buttonRef)}
+                        type="button"
+                        onClick={() => onSelect(i)}
+                        aria-pressed={selectedItem === i}
+                        className={twMerge(ITEM_BASE, selectedItem === i && ITEM_SELECTED)}
+                        style={{
+                            borderRadius: CIRCLE,
+                            height: 'var(--control-size-md)',
+                            ...(iconOnly
+                                ? { width: 'var(--control-size-md)' }
+                                : { padding: '0 20px' }),
+                        }}
+                    >
+                        {item.icon && (typeof item.icon === 'string' ? <Icon name={item.icon} /> : item.icon)}
+                        {item.label && <span>{item.label}</span>}
+                    </button>
+                );
+            })}
+        </div>
+    );
+}
+
+function LogoButton({ logo }) {
     const ref = useRef(null);
-    const preset = COLOR_PRESETS[logo.color ?? color] ?? COLOR_PRESETS.primary;
-    
-    // besides driving its own animation, this exposes the button node outwards (e.g. to use it as the
-    // `triggerRef` of a CustomModal anchored to this button)
-    const setRefs = (node) => {
-        ref.current = node;
-        if (typeof logo.buttonRef === 'function') logo.buttonRef(node);
-        else if (logo.buttonRef) logo.buttonRef.current = node;
-    };
-    
-    const resolveColor = (value) => {
-        if (typeof value === 'string' && value.startsWith('var(')) {
-            const token = value.slice(4, -1).trim();
-            return getComputedStyle(document.documentElement).getPropertyValue(token).trim();
-        }
-        return value;
-    };
-    
-    useEffect(() => {
+
+    useGSAP(() => {
         if (!ref.current) return;
         gsap.to(ref.current, {
-            borderRadius: logo.active ? '28%' : '50%',
+            borderRadius: logo.active ? squircleRadius() : CIRCLE,
             scale: logo.active ? 1.1 : 1,
-            backgroundColor: resolveColor(logo.active ? preset.bg : 'var(--light-gray-background)'),
-            color: resolveColor(logo.active ? preset.fg : 'var(--dark-navy-text)'),
-            duration: 0.4,
-            ease: 'power3.out',
+            ...MORPH,
         });
-    }, [logo.active, preset]);
-    
+    }, { dependencies: [logo.active] });
+
     return (
         <button
-            ref={setRefs}
+            ref={(el) => attachRef(el, ref, null, logo.buttonRef)}
             type="button"
             onClick={logo.onClick}
             aria-pressed={!!logo.active}
             aria-label={logo.label ?? 'Inicio'}
-            className="inline-flex items-center justify-center border-0 cursor-pointer p-0"
+            className={twMerge(ITEM_BASE, logo.active && ITEM_SELECTED)}
             style={{
                 width: 'var(--control-size-md)',
                 height: 'var(--control-size-md)',
-                borderRadius: '50%',
-                backgroundColor: 'var(--light-gray-background)',
-                color: 'var(--dark-navy-text)',
+                borderRadius: CIRCLE,
             }}
         >
             {typeof logo.icon === 'string' ? <Icon name={logo.icon} /> : logo.icon}
@@ -78,13 +132,21 @@ export default function Navbar({
     selected,
     defaultSelected = null,
     onChange,
-    color = 'primary',
     logo,
     align = 'top',
     className,
     style,
 }) {
-    verifyTypesNavbar({ items, logo, selected, defaultSelected, onChange, color, align });
+    verifyTypesNavbar({ items, logo, selected, defaultSelected, onChange, align });
+    const [internalSelected, setInternalSelected] = useState(defaultSelected);
+    const isControlled = selected !== undefined;
+    const selectedItem = isControlled ? selected : internalSelected;
+
+    // no deselect: re-clicking the active route keeps it active, a route is always current
+    const handleSelect = (i) => {
+        if (!isControlled) setInternalSelected(i);
+        onChange?.(i, items[i]);
+    };
 
     return (
         <>
@@ -97,18 +159,10 @@ export default function Navbar({
                 )}
                 style={style}
             >
-                {logo && <LogoButton logo={logo} color={color} />}
-                <ButtonGroup
-                    vertical
-                    buttons={items}
-                    value={selected}
-                    defaultSelected={defaultSelected}
-                    allowDeselect={false}
-                    onChange={onChange}
-                    color={color}
-                />
+                {logo && <LogoButton logo={logo} />}
+                <NavItems items={items} selectedItem={selectedItem} onSelect={handleSelect} vertical />
             </nav>
-            
+
             {/* Mobile: floating pill with the icons, inset from the edges - no logo, it does not fit a small bottom bar */}
             <nav
                 className={twMerge(
@@ -117,18 +171,13 @@ export default function Navbar({
                 )}
                 style={style}
             >
-                <div className="flex items-center gap-1 rounded-[var(--radius-full)] bg-[var(--white)] p-1 shadow-md">
-                    <ButtonGroup
-                        vertical={false}
-                        buttons={items}
-                        value={selected}
-                        defaultSelected={defaultSelected}
-                        allowDeselect={false}
-                        onChange={onChange}
-                        color={color}
-                    />
+                <div
+                    className="flex items-center gap-1 rounded-[var(--radius-full)] bg-[var(--nav-surface)] p-1"
+                    style={{ boxShadow: 'var(--shadow-floating)' }}
+                >
+                    <NavItems items={items} selectedItem={selectedItem} onSelect={handleSelect} vertical={false} />
                 </div>
             </nav>
         </>
-    )
+    );
 }

@@ -220,11 +220,10 @@ export function verifyTypesDropdown({ open, onClose, width, height, triggerRef }
     return true;
 }
 
-export function verifyTypesCustomModal({ open, onClose, onCloseComplete, backdropOpacity, triggerRef, animation } = {}) {
+export function verifyTypesCustomModal({ open, onClose, onCloseComplete, triggerRef, animation } = {}) {
     assertType('CustomModal', 'open', open, 'boolean');
     assertType('CustomModal', 'onClose', onClose, 'function');
     assertType('CustomModal', 'onCloseComplete', onCloseComplete, 'function');
-    assertRange('CustomModal', 'backdropOpacity', backdropOpacity, 0, 1);
     assertRef('CustomModal', 'triggerRef', triggerRef);
     // duck typing instead of `instanceof ModalAnimation`: importing modalAnimation.js here would drag
     // GSAP into this otherwise pure module
@@ -236,11 +235,12 @@ export function verifyTypesCustomModal({ open, onClose, onCloseComplete, backdro
     return true;
 }
 
-export function verifyTypesNavbar({ items, logo, selected, defaultSelected, onChange, color, align } = {}) {
+export function verifyTypesNavbar({ items, logo, selected, defaultSelected, onChange, align } = {}) {
     assertArrayOf('Navbar', 'items', items, (item, path) => {
         assertPlainObject('Navbar', path, item);
         if (!item) return;
         assertIconLike('Navbar', `${path}.icon`, item.icon);
+        assertType('Navbar', `${path}.label`, item.label, 'string');
         assertRef('Navbar', `${path}.buttonRef`, item.buttonRef);
     });
     if (logo !== undefined && logo !== null) {
@@ -255,7 +255,6 @@ export function verifyTypesNavbar({ items, logo, selected, defaultSelected, onCh
     assertType('Navbar', 'selected', selected, 'number');
     assertType('Navbar', 'defaultSelected', defaultSelected, 'number');
     assertType('Navbar', 'onChange', onChange, 'function');
-    assertType('Navbar', 'color', color, 'string');
     assertOneOf('Navbar', 'align', align, ['top', 'center'], 'center');
     return true;
 }

@@ -181,11 +181,10 @@ function verifyTypesDropdown({ open, onClose, width, height, triggerRef } = {}) 
   assertRef("Dropdown", "triggerRef", triggerRef);
   return true;
 }
-function verifyTypesCustomModal({ open, onClose, onCloseComplete, backdropOpacity, triggerRef, animation } = {}) {
+function verifyTypesCustomModal({ open, onClose, onCloseComplete, triggerRef, animation } = {}) {
   assertType("CustomModal", "open", open, "boolean");
   assertType("CustomModal", "onClose", onClose, "function");
   assertType("CustomModal", "onCloseComplete", onCloseComplete, "function");
-  assertRange("CustomModal", "backdropOpacity", backdropOpacity, 0, 1);
   assertRef("CustomModal", "triggerRef", triggerRef);
   if (animation !== void 0 && animation !== null) {
     if (typeof (animation == null ? void 0 : animation.open) !== "function" || typeof (animation == null ? void 0 : animation.close) !== "function") {
@@ -194,11 +193,12 @@ function verifyTypesCustomModal({ open, onClose, onCloseComplete, backdropOpacit
   }
   return true;
 }
-function verifyTypesNavbar({ items, logo, selected, defaultSelected, onChange, color, align } = {}) {
+function verifyTypesNavbar({ items, logo, selected, defaultSelected, onChange, align } = {}) {
   assertArrayOf("Navbar", "items", items, (item, path) => {
     assertPlainObject("Navbar", path, item);
     if (!item) return;
     assertIconLike("Navbar", `${path}.icon`, item.icon);
+    assertType("Navbar", `${path}.label`, item.label, "string");
     assertRef("Navbar", `${path}.buttonRef`, item.buttonRef);
   });
   if (logo !== void 0 && logo !== null) {
@@ -213,7 +213,6 @@ function verifyTypesNavbar({ items, logo, selected, defaultSelected, onChange, c
   assertType("Navbar", "selected", selected, "number");
   assertType("Navbar", "defaultSelected", defaultSelected, "number");
   assertType("Navbar", "onChange", onChange, "function");
-  assertType("Navbar", "color", color, "string");
   assertOneOf("Navbar", "align", align, ["top", "center"], "center");
   return true;
 }
@@ -1683,8 +1682,8 @@ function unlockScroll() {
 
 // src/customModal/customModal.jsx
 import { jsx as jsx14, jsxs as jsxs9 } from "react/jsx-runtime";
-function CustomModal({ open, onClose, onCloseComplete, children, backdropOpacity = 0.35, triggerRef, animation, className, style }) {
-  verifyTypesCustomModal({ open, onClose, onCloseComplete, backdropOpacity, triggerRef, animation });
+function CustomModal({ open, onClose, onCloseComplete, children, triggerRef, animation, className, style }) {
+  verifyTypesCustomModal({ open, onClose, onCloseComplete, triggerRef, animation });
   const modalRef = useRef7(null);
   const overlayRef = useRef7(null);
   const panelRef = useRef7(null);
@@ -1740,8 +1739,7 @@ function CustomModal({ open, onClose, onCloseComplete, children, backdropOpacity
           {
             ref: overlayRef,
             onClick: handleOverlayClick,
-            className: "absolute inset-0",
-            style: { backgroundColor: `rgb(15 23 42 / ${backdropOpacity})` }
+            className: "absolute inset-0 bg-[var(--overlay-backdrop)]"
           }
         ),
         /* @__PURE__ */ jsx14(
@@ -1869,62 +1867,88 @@ function Progress({ value, color = "primary", className, style, ...props }) {
 }
 
 // src/navbar/navbar.jsx
-import { useEffect as useEffect6, useRef as useRef10 } from "react";
-import { twMerge as twMerge9 } from "tailwind-merge";
+import { useRef as useRef10, useState as useState7 } from "react";
+import { useGSAP as useGSAP7 } from "@gsap/react";
 import gsap8 from "gsap";
+import { twMerge as twMerge9 } from "tailwind-merge";
 import { Fragment, jsx as jsx17, jsxs as jsxs10 } from "react/jsx-runtime";
-var COLOR_PRESETS7 = {
-  primary: { bg: "var(--color-action)", fg: "var(--text-on-action)" },
-  secondary: { bg: "var(--dark-navy-text)", fg: "var(--white)" },
-  outline: { bg: "var(--light-gray-background)", fg: "var(--dark-navy-text)" },
-  ghost: { bg: "transparent", fg: "var(--dark-navy-text)" },
-  danger: { bg: "var(--color-danger)", fg: "var(--text-on-danger)" }
-};
 var DESKTOP_ALIGN = {
   center: "top-1/2 -translate-y-1/2",
   top: "top-8"
 };
-function LogoButton({ logo, color }) {
+var ITEM_BASE = "inline-flex items-center justify-center gap-2 border-0 cursor-pointer p-0 text-[length:var(--text-md)] tracking-[var(--tracking-h4)] font-[number:var(--font-medium)] bg-[var(--nav-item-surface)] text-[var(--nav-item-text)] transition-[background-color,color] duration-400 ease-[var(--ease-morph)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--color-action)]";
+var ITEM_SELECTED = "bg-[var(--nav-item-surface-selected)] text-[var(--nav-item-text-selected)]";
+var MORPH = { duration: 0.4, ease: "power3.out" };
+var CIRCLE = "50%";
+var squircleRadius = () => getComputedStyle(document.documentElement).getPropertyValue("--control-radius").trim() || "28%";
+var attachRef = (node, store, i, forwarded) => {
+  if (i === null) store.current = node;
+  else store.current[i] = node;
+  if (typeof forwarded === "function") forwarded(node);
+  else if (forwarded) forwarded.current = node;
+};
+function NavItems({ items, selectedItem, onSelect, vertical }) {
+  const itemRefs = useRef10([]);
+  const containerRef = useRef10(null);
+  useGSAP7(() => {
+    const squircle = squircleRadius();
+    itemRefs.current.forEach((el, i) => {
+      if (!el) return;
+      const isSelected = i === selectedItem;
+      gsap8.to(el, {
+        borderRadius: isSelected ? squircle : CIRCLE,
+        scale: isSelected ? 1.1 : 1,
+        ...MORPH
+      });
+    });
+  }, { dependencies: [selectedItem, items.length], scope: containerRef });
+  return /* @__PURE__ */ jsx17("div", { ref: containerRef, className: twMerge9("inline-flex gap-[var(--gap-group)]", vertical && "flex-col"), children: items.map((item, i) => {
+    const iconOnly = !item.label;
+    return /* @__PURE__ */ jsxs10(
+      "button",
+      {
+        ref: (el) => attachRef(el, itemRefs, i, item.buttonRef),
+        type: "button",
+        onClick: () => onSelect(i),
+        "aria-pressed": selectedItem === i,
+        className: twMerge9(ITEM_BASE, selectedItem === i && ITEM_SELECTED),
+        style: {
+          borderRadius: CIRCLE,
+          height: "var(--control-size-md)",
+          ...iconOnly ? { width: "var(--control-size-md)" } : { padding: "0 20px" }
+        },
+        children: [
+          item.icon && (typeof item.icon === "string" ? /* @__PURE__ */ jsx17(Icon, { name: item.icon }) : item.icon),
+          item.label && /* @__PURE__ */ jsx17("span", { children: item.label })
+        ]
+      },
+      item.id ?? i
+    );
+  }) });
+}
+function LogoButton({ logo }) {
   const ref = useRef10(null);
-  const preset = COLOR_PRESETS7[logo.color ?? color] ?? COLOR_PRESETS7.primary;
-  const setRefs = (node) => {
-    ref.current = node;
-    if (typeof logo.buttonRef === "function") logo.buttonRef(node);
-    else if (logo.buttonRef) logo.buttonRef.current = node;
-  };
-  const resolveColor = (value) => {
-    if (typeof value === "string" && value.startsWith("var(")) {
-      const token = value.slice(4, -1).trim();
-      return getComputedStyle(document.documentElement).getPropertyValue(token).trim();
-    }
-    return value;
-  };
-  useEffect6(() => {
+  useGSAP7(() => {
     if (!ref.current) return;
     gsap8.to(ref.current, {
-      borderRadius: logo.active ? "28%" : "50%",
+      borderRadius: logo.active ? squircleRadius() : CIRCLE,
       scale: logo.active ? 1.1 : 1,
-      backgroundColor: resolveColor(logo.active ? preset.bg : "var(--light-gray-background)"),
-      color: resolveColor(logo.active ? preset.fg : "var(--dark-navy-text)"),
-      duration: 0.4,
-      ease: "power3.out"
+      ...MORPH
     });
-  }, [logo.active, preset]);
+  }, { dependencies: [logo.active] });
   return /* @__PURE__ */ jsx17(
     "button",
     {
-      ref: setRefs,
+      ref: (el) => attachRef(el, ref, null, logo.buttonRef),
       type: "button",
       onClick: logo.onClick,
       "aria-pressed": !!logo.active,
       "aria-label": logo.label ?? "Inicio",
-      className: "inline-flex items-center justify-center border-0 cursor-pointer p-0",
+      className: twMerge9(ITEM_BASE, logo.active && ITEM_SELECTED),
       style: {
         width: "var(--control-size-md)",
         height: "var(--control-size-md)",
-        borderRadius: "50%",
-        backgroundColor: "var(--light-gray-background)",
-        color: "var(--dark-navy-text)"
+        borderRadius: CIRCLE
       },
       children: typeof logo.icon === "string" ? /* @__PURE__ */ jsx17(Icon, { name: logo.icon }) : logo.icon
     }
@@ -1935,13 +1959,19 @@ function Navbar({
   selected,
   defaultSelected = null,
   onChange,
-  color = "primary",
   logo,
   align = "top",
   className,
   style
 }) {
-  verifyTypesNavbar({ items, logo, selected, defaultSelected, onChange, color, align });
+  verifyTypesNavbar({ items, logo, selected, defaultSelected, onChange, align });
+  const [internalSelected, setInternalSelected] = useState7(defaultSelected);
+  const isControlled = selected !== void 0;
+  const selectedItem = isControlled ? selected : internalSelected;
+  const handleSelect = (i) => {
+    if (!isControlled) setInternalSelected(i);
+    onChange == null ? void 0 : onChange(i, items[i]);
+  };
   return /* @__PURE__ */ jsxs10(Fragment, { children: [
     /* @__PURE__ */ jsxs10(
       "nav",
@@ -1953,19 +1983,8 @@ function Navbar({
         ),
         style,
         children: [
-          logo && /* @__PURE__ */ jsx17(LogoButton, { logo, color }),
-          /* @__PURE__ */ jsx17(
-            ButtonGroup,
-            {
-              vertical: true,
-              buttons: items,
-              value: selected,
-              defaultSelected,
-              allowDeselect: false,
-              onChange,
-              color
-            }
-          )
+          logo && /* @__PURE__ */ jsx17(LogoButton, { logo }),
+          /* @__PURE__ */ jsx17(NavItems, { items, selectedItem, onSelect: handleSelect, vertical: true })
         ]
       }
     ),
@@ -1977,25 +1996,21 @@ function Navbar({
           className
         ),
         style,
-        children: /* @__PURE__ */ jsx17("div", { className: "flex items-center gap-1 rounded-[var(--radius-full)] bg-[var(--white)] p-1 shadow-md", children: /* @__PURE__ */ jsx17(
-          ButtonGroup,
+        children: /* @__PURE__ */ jsx17(
+          "div",
           {
-            vertical: false,
-            buttons: items,
-            value: selected,
-            defaultSelected,
-            allowDeselect: false,
-            onChange,
-            color
+            className: "flex items-center gap-1 rounded-[var(--radius-full)] bg-[var(--nav-surface)] p-1",
+            style: { boxShadow: "var(--shadow-floating)" },
+            children: /* @__PURE__ */ jsx17(NavItems, { items, selectedItem, onSelect: handleSelect, vertical: false })
           }
-        ) })
+        )
       }
     )
   ] });
 }
 
 // src/dragScroll/dragScroll.jsx
-import { useCallback as useCallback2, useEffect as useEffect7, useLayoutEffect, useRef as useRef11, useState as useState7 } from "react";
+import { useCallback as useCallback2, useEffect as useEffect6, useLayoutEffect, useRef as useRef11, useState as useState8 } from "react";
 import { twMerge as twMerge10 } from "tailwind-merge";
 import gsap9 from "gsap";
 import { Draggable as Draggable2 } from "gsap/Draggable";
@@ -2005,7 +2020,7 @@ gsap9.registerPlugin(Draggable2, InertiaPlugin);
 var DRAG_TYPE = { y: "scrollTop", x: "scrollLeft", both: "scroll" };
 var EDGE_RESISTANCE = 0.85;
 function useDragScroll(ref, { axis = "y", inertia = true, disabled = false } = {}) {
-  useEffect7(() => {
+  useEffect6(() => {
     if (disabled || !ref.current) return;
     if (typeof window !== "undefined" && !window.matchMedia("(pointer: fine)").matches) return;
     const el = ref.current;
@@ -2017,11 +2032,7 @@ function useDragScroll(ref, { axis = "y", inertia = true, disabled = false } = {
           type: DRAG_TYPE[axis] ?? DRAG_TYPE.y,
           inertia,
           edgeResistance: EDGE_RESISTANCE,
-          // a few pixels of slack before the gesture counts as a drag, so a click that
-          // wobbles still reaches the button underneath
           minimumMovement: 3,
-          // without this a drag starting on a button or a link would be swallowed by the
-          // browser's native drag behaviour instead of scrolling
           dragClickables: true,
           cursor: "grab",
           activeCursor: "grabbing"
@@ -2044,7 +2055,7 @@ function useDragScroll(ref, { axis = "y", inertia = true, disabled = false } = {
   }, [ref, axis, inertia, disabled]);
 }
 function useEdgeFade(ref, axis, size) {
-  const [edges, setEdges] = useState7([0, 0]);
+  const [edges, setEdges] = useState8([0, 0]);
   const measure = useCallback2(() => {
     const el = ref.current;
     if (!el) return;
