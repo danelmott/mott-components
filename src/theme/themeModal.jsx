@@ -51,10 +51,13 @@ function Swatch({ theme, selected, onSelect }) {
                 height: SWATCH,
                 borderRadius: CIRCLE,
                 background: theme.hex,
-                // offset ring rather than a border: it never eats into the colour, and it is the one
-                // marker that stays visible on a swatch as dark as the neutral one
+                // Offset ring rather than a border: it never eats into the colour. The outer stroke
+                // is `on-surface` and deliberately NOT `primary` — the ring lives on the panel, and
+                // `on-surface` is the role guaranteed to read there. `primary` was the bug: in the
+                // neutral themes it is near-black or near-white, the very colours it had to stand
+                // out from, so the marker disappeared against the swatch or against the panel.
                 boxShadow: selected
-                    ? '0 0 0 2px var(--md-sys-color-surface-container-high), 0 0 0 4px var(--md-sys-color-primary)'
+                    ? '0 0 0 2px var(--md-sys-color-surface-container-high), 0 0 0 4px var(--md-sys-color-on-surface)'
                     : 'none',
             }}
         />
@@ -78,7 +81,11 @@ export default function ThemeModal({ open, onClose, triggerRef, title = 'Aparien
         <CustomModal open={open} onClose={onClose} triggerRef={triggerRef} className="w-[360px]">
             <div className="flex flex-col gap-[var(--gap-page)]">
                 <div className="flex items-center gap-[var(--gap-group)]">
-                    <Icon name="palette" size="lg" />
+                    {/* `primary` and not the inherited `on-surface`: it answers both halves at once.
+                        In dark mode primary is a light colour by construction (near-white on the
+                        black theme), so the icon reads without a per-mode special case, and it
+                        carries the accent while it is at it. */}
+                    <Icon name="palette" size="lg" style={{ color: 'var(--md-sys-color-primary)' }} />
                     <h2
                         className="font-[number:var(--font-medium)] tracking-[var(--tracking-h3)]"
                         style={{ fontSize: 'var(--text-xl)', color: 'var(--md-sys-color-on-surface)' }}

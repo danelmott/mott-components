@@ -295,6 +295,80 @@ body {
 }
 
 
+/*basic style for single btn in btn groups*/
+@utility mott-btn-in-group {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+
+  border: 0;
+  cursor: pointer;
+
+  font-size: var(--text-md);
+  letter-spacing: var(--tracking-h4);
+  font-weight: var(--font-medium);
+
+  background-color: var(--mott-surface);
+  color: var(--mott-on);
+
+  transition-property: background-color, color;
+  transition-duration: 400ms;
+  transition-timing-function: var(--ease-morph);
+
+  &:focus-visible {
+    outline: none;
+    box-shadow:
+      0 0 0 2px var(--md-sys-color-primary),
+      0 0 0 4px var(--mott-surface);
+  }
+}
+
+/*styles for btn component and variants*/
+@utility mott-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.625rem;
+
+  background-color: var(--mott-surface);
+  color: var(--mott-on);
+
+  font-size: var(--text-md);
+  letter-spacing: var(--tracking-h4);
+  font-weight: var(--font-medium);
+
+  transition: all 150ms;
+
+  &:hover {
+    background-color: var(--mott-hover);
+  }
+
+  &:active {
+    transform: scale(0.97);
+  }
+
+  &:focus-visible {
+    outline: none;
+    box-shadow:
+      0 0 0 2px var(--md-sys-color-primary),
+      0 0 0 4px var(--mott-surface);
+  }
+
+  &:disabled {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  &:disabled:active {
+    transform: scale(1);
+  }
+}
+
+
+
+
+
 /*responsive breakpoints*/
 @media (min-width: 640px)  { }
 @media (min-width: 768px)  { }

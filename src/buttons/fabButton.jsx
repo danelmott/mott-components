@@ -24,11 +24,7 @@ export default function FabButton({
     verifyTypesIconButton('FabButton', { icon, color, iconColor, size, type });
 
     const dimensions = FAB_SIZE[size] ?? FAB_SIZE.md;
-    // A name we know resolves to a role pair; anything else is taken as a literal CSS colour the
-    // caller chose. That fallback is white and not a role on purpose: the caller's colour does not
-    // move with the theme, so a foreground that did would lose its contrast in the other mode.
     const tint = controlTint(color) ?? customTint(color, iconColor ?? '#ffffff');
-    // `iconColor` overrides the pair's foreground without disturbing its surface
     const resolved = iconColor ? { ...tint, on: iconColor } : tint;
     
     return (

@@ -14,11 +14,6 @@ const SIZE = {
 export default function Badge({ children, color = 'neutral', solid = false, size = 'sm', icon, dot = false, style, ...props }) {
     verifyTypesBadge({ color, solid, size, icon, dot });
     const scale = SIZE[size] ?? SIZE.sm;
-
-    // A status name resolves to a role pair - `solid` fills with the family, plain uses its quieter
-    // container step. Anything else is taken as a literal CSS colour the caller chose; that fallback
-    // foreground is white and not a role on purpose, since the caller's colour does not move with
-    // the theme and a foreground that did would lose its contrast in the other mode.
     const tint = badgeTint(color, solid) ?? customTint(color, '#ffffff');
 
     return (

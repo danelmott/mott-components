@@ -88,6 +88,29 @@ export const CONTROL_NAMES = Object.keys(CONTROL_VARIANTS);
 //variant apart from a bare CSS colour a caller passed in.
 export const controlTint = (name) => CONTROL_VARIANTS[name] ?? null;
 
+//What a SELECTED item looks like. It is the container step and never the full fill, because a fill
+//inverts the relationship the rest of the group has with the page: in a dark theme `primary` is a
+//light colour carrying dark text, so a filled selection ends up brighter than everything around it
+//and reads as a hole rather than as a choice. The container step stays in the same value range as
+//its neighbours and only changes the tint — which is the role M3 gives it, and what Navbar already
+//uses for its selected item.
+//
+//`primary` is asked for explicitly and honoured, but it is NOT the fallback, and the reason is worth
+//knowing: the `content` recipe sets `primary-container` to the seed itself, so on the black theme it
+//is pure `#000000` and a selection painted with it disappears into a near-black panel. Every case
+//that has no family of its own falls back to `secondary`, whose container is a derived tonal step
+//and therefore always lands a readable distance from the surface.
+const SELECTION_FAMILY = {
+    primary: 'primary',
+    secondary: 'secondary',
+    danger: 'danger',
+    // neither is a colour family; they borrow the neutral-safe one rather than the seed's own
+    outline: 'secondary',
+    ghost: 'secondary',
+};
+
+export const selectionTint = (name) => tonal(SELECTION_FAMILY[name] ?? 'secondary');
+
 //A caller's own colour, dressed as a tint so it flows through the same code path. Its state layer
 //has to be built from the foreground, since there is no `on` role to ask.
 export const customTint = (surface, on) => ({

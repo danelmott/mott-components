@@ -29,7 +29,10 @@ export const VARIANTS = {
 };
 
 export const DEFAULT_VARIANT = 'content';
-export const DEFAULT_SEED = '#005eeb';
+// Black is the theme an app starts on, so it is also what `scripts/generateTheme.js` bakes into
+// globals.css. Keeping the two in step is what stops the first paint from flashing another palette
+// before ThemeProvider mounts.
+export const DEFAULT_SEED = '#000000';
 
 // Pinned on purpose. The library's own default is '2025', a newer colour spec that shifts every
 // value; leaving it unpinned would mean a routine dependency bump silently repaints the whole app.
@@ -60,6 +63,36 @@ const ROLES = [
     'surfaceContainerHigh', 'surfaceContainerHighest',
 ];
 
+// The roles M3 deliberately keeps near-grey: pages, cards, body text, edges. The accent families are
+// absent because they already carry the seed's hue at full strength.
+const TINTED_ROLES = new Set([
+    'background', 'onBackground',
+    'surface', 'onSurface', 'surfaceVariant', 'onSurfaceVariant',
+    'surfaceContainerLowest', 'surfaceContainerLow', 'surfaceContainer',
+    'surfaceContainerHigh', 'surfaceContainerHighest',
+    'outline', 'outlineVariant',
+    'inverseSurface', 'inverseOnSurface',
+]);
+
+// How colourful those neutrals are allowed to get. `content` derives it from the seed's own chroma
+// divided by eight, which lands around 9 even for a seed as saturated as the blue — technically a
+// tint, visually nothing.
+export const DEFAULT_TINT = 16;
+
+// Below this the seed has no hue worth spreading. Pushing chroma onto a grey means pushing it onto
+// whatever arbitrary hue HCT reports back, which is precisely what turned an earlier grey green and
+// an earlier black wine-red. The neutral themes fall under it and come out untouched.
+const MIN_SEED_CHROMA = 8;
+
+//Raises a role's colourfulness to the accent's hue while holding its TONE exactly where the scheme
+//put it. That last part is the whole reason this is safe: in HCT every contrast ratio is a function
+//of tone alone, so tinting at constant tone cannot move a single pair closer to failing. It is what
+//lets body text take the accent without becoming harder to read.
+const pushTint = (argb, hue, chroma) => {
+    const hct = Hct.fromInt(argb);
+    return Hct.from(hue, Math.max(hct.chroma, chroma), hct.tone).toInt();
+};
+
 // `primaryContainer` -> `primary-container`. Splitting on the lower->upper boundary rather than on
 // every capital keeps a run of digits attached to the word it belongs to.
 // `toLowerCase` and never `toLocaleLowerCase`: the locale-aware one maps `I` to a dotless `ı` under
@@ -72,16 +105,26 @@ const kebab = (role) => role.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase(
 //changes. A token added here shows up in both without further work.
 //
 //Returns a flat `{ '--md-sys-color-primary': '#0048b8', … }` map for one mode.
-export function buildPalette(seedHex, mode, variant = DEFAULT_VARIANT) {
+export function buildPalette(seedHex, mode, variant = DEFAULT_VARIANT, tint = DEFAULT_TINT) {
     const argb = argbFromHex(seedHex);
+    const seed = Hct.fromInt(argb);
     const Scheme = VARIANTS[variant] ?? VARIANTS[DEFAULT_VARIANT];
     // the third argument is the contrast level: 0 is standard, and the only one exposed for now
-    const scheme = new Scheme(Hct.fromInt(argb), mode === 'dark', 0, SPEC_VERSION);
+    const scheme = new Scheme(seed, mode === 'dark', 0, SPEC_VERSION);
+
+    // A grey has no hue to spread, so the neutral themes opt out here and keep the palette the
+    // scheme produced. This guard is what stops the tint from reintroducing an invented colour.
+    const tintChroma = seed.chroma < MIN_SEED_CHROMA ? 0 : tint;
 
     const tokens = {};
 
     for (const role of ROLES) {
-        tokens[`--md-sys-color-${kebab(role)}`] = hexFromArgb(MaterialDynamicColors[role].getArgb(scheme));
+        const value = MaterialDynamicColors[role].getArgb(scheme);
+        const tinted = tintChroma && TINTED_ROLES.has(role)
+            ? pushTint(value, seed.hue, tintChroma)
+            : value;
+
+        tokens[`--md-sys-color-${kebab(role)}`] = hexFromArgb(tinted);
     }
 
     for (const [name, seed] of [['success', SUCCESS_SEED], ['warning', WARNING_SEED]]) {
