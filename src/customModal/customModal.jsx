@@ -60,11 +60,11 @@ export default function CustomModal({ open, onClose, onCloseComplete, children, 
             <div
                 ref={overlayRef}
                 onClick={handleOverlayClick}
-                className="absolute inset-0 bg-[var(--overlay-backdrop)]"
+                className="absolute inset-0 bg-[color-mix(in_srgb,var(--md-sys-color-scrim)_32%,transparent)]"
             />
             <div
                 ref={panelRef}
-                className={twMerge('relative m-auto max-w-[92vw] rounded-[var(--radius-modal)] bg-[var(--modal-surface)] p-[var(--pad-card)]', className)}
+                className={twMerge('relative m-auto max-w-[92vw] rounded-[var(--radius-modal)] bg-[var(--md-sys-color-surface-container-high)] p-[var(--pad-card)]', className)}
                 style={style}
             >
                 <div ref={contentRef}>

@@ -19,6 +19,7 @@ export default function Icon({
     grade = 200,
     opticalSize = 24,
     className,
+    style,
 }) {
     verifyTypesIcon({ name, size, filled, weight, grade, opticalSize });
 
@@ -33,6 +34,9 @@ export default function Icon({
             style={{
                 fontSize: iconSize,
                 fontVariationSettings: `'FILL' ${filled ? 1 : 0}, 'wght' ${weight}, 'GRAD' ${grade}, 'opsz' ${opticalSize}`,
+                // spread last so a caller can tint or resize the glyph without losing the variation
+                // settings above, which are what make the font render at the right weight
+                ...style,
             }}
         >
             {name}

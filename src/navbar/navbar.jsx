@@ -11,8 +11,8 @@ const DESKTOP_ALIGN = {
     top: 'top-8',
 };
 
-/*The navbar is deliberately neutral and has no `color` prop: its palette comes from the theme
-  (--nav-item-* in globals.css), not from the caller. Selection reads as a morph - circle to
+/*The navbar is deliberately neutral and has no `color` prop: its palette comes from the M3 surface
+  and secondary-container roles, not from the caller. Selection reads as a morph - circle to
   squircle, scaled up - plus one step up the grey ramp, the same in light and dark.
   The split between the two animation systems is deliberate. COLOUR is transitioned by CSS because
   GSAP writes what it animates into the element's inline style: tweening backgroundColor would bake a
@@ -26,11 +26,11 @@ const DESKTOP_ALIGN = {
 const ITEM_BASE =
     'inline-flex items-center justify-center gap-2 border-0 cursor-pointer p-0' +
     ' text-[length:var(--text-md)] tracking-[var(--tracking-h4)] font-[number:var(--font-medium)]' +
-    ' bg-[var(--nav-item-surface)] text-[var(--nav-item-text)]' +
+    ' bg-[var(--md-sys-color-surface-container)] text-[var(--md-sys-color-on-surface-variant)]' +
     ' transition-[background-color,color] duration-400 ease-[var(--ease-morph)]' +
-    ' focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--color-action)]';
+    ' focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--md-sys-color-primary)]';
 
-const ITEM_SELECTED = 'bg-[var(--nav-item-surface-selected)] text-[var(--nav-item-text-selected)]';
+const ITEM_SELECTED = 'bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)]';
 
 const MORPH = { duration: 0.4, ease: 'power3.out' };
 const CIRCLE = '50%';
@@ -172,7 +172,7 @@ export default function Navbar({
                 style={style}
             >
                 <div
-                    className="flex items-center gap-1 rounded-[var(--radius-full)] bg-[var(--nav-surface)] p-1"
+                    className="flex items-center gap-1 rounded-[var(--radius-full)] bg-[var(--md-sys-color-surface)] p-1"
                     style={{ boxShadow: 'var(--shadow-floating)' }}
                 >
                     <NavItems items={items} selectedItem={selectedItem} onSelect={handleSelect} vertical={false} />

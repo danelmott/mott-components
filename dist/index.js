@@ -3,6 +3,119 @@ import { forwardRef } from "react";
 import { cva } from "class-variance-authority";
 import { twMerge } from "tailwind-merge";
 
+// src/theme/roles.js
+var family = (fill, on, container, onContainer) => ({
+  fill: `var(${fill})`,
+  on: `var(${on})`,
+  container: `var(${container})`,
+  onContainer: `var(${onContainer})`
+});
+var FAMILIES = {
+  primary: family(
+    "--md-sys-color-primary",
+    "--md-sys-color-on-primary",
+    "--md-sys-color-primary-container",
+    "--md-sys-color-on-primary-container"
+  ),
+  secondary: family(
+    "--md-sys-color-secondary",
+    "--md-sys-color-on-secondary",
+    "--md-sys-color-secondary-container",
+    "--md-sys-color-on-secondary-container"
+  ),
+  tertiary: family(
+    "--md-sys-color-tertiary",
+    "--md-sys-color-on-tertiary",
+    "--md-sys-color-tertiary-container",
+    "--md-sys-color-on-tertiary-container"
+  ),
+  danger: family(
+    "--md-sys-color-error",
+    "--md-sys-color-on-error",
+    "--md-sys-color-error-container",
+    "--md-sys-color-on-error-container"
+  ),
+  success: family(
+    "--md-custom-color-success",
+    "--md-custom-color-on-success",
+    "--md-custom-color-success-container",
+    "--md-custom-color-on-success-container"
+  ),
+  warning: family(
+    "--md-custom-color-warning",
+    "--md-custom-color-on-warning",
+    "--md-custom-color-warning-container",
+    "--md-custom-color-on-warning-container"
+  ),
+  // Neutral is a family like the others once you see what its high-emphasis fill is: inverting the
+  // page IS how a neutral thing shouts. Its container step is the ordinary raised surface.
+  neutral: family(
+    "--md-sys-color-inverse-surface",
+    "--md-sys-color-inverse-on-surface",
+    "--md-sys-color-surface-container",
+    "--md-sys-color-on-surface"
+  )
+};
+var TRANSPARENT = "transparent";
+var HOVER_OPACITY = 8;
+var stateLayer = (on, over, opacity = HOVER_OPACITY) => `color-mix(in srgb, ${on} ${opacity}%, ${over})`;
+var filled = (name) => {
+  const { fill, on } = FAMILIES[name];
+  return { surface: fill, on, hover: stateLayer(on, fill) };
+};
+var tonal = (name) => {
+  const { container, onContainer } = FAMILIES[name];
+  return { surface: container, on: onContainer, hover: stateLayer(onContainer, container) };
+};
+var text = (name) => {
+  const { fill } = FAMILIES[name];
+  return { surface: TRANSPARENT, on: fill, hover: stateLayer(fill, TRANSPARENT) };
+};
+var CONTROL_VARIANTS = {
+  primary: filled("primary"),
+  secondary: filled("secondary"),
+  danger: filled("danger"),
+  // Keeps the name for the sake of the prop, but it is a tonal button now: a soft neutral fill
+  // rather than a frame. A frame around every quiet control was what made a screen full of them
+  // look busy.
+  outline: tonal("neutral"),
+  ghost: text("primary")
+};
+var CONTROL_NAMES = Object.keys(CONTROL_VARIANTS);
+var controlTint = (name) => CONTROL_VARIANTS[name] ?? null;
+var customTint = (surface, on) => ({
+  surface,
+  on,
+  hover: stateLayer(on, surface)
+});
+var asCustomProperties = (tint) => ({
+  "--mott-surface": tint.surface,
+  "--mott-on": tint.on,
+  "--mott-hover": tint.hover
+});
+var BADGE_FAMILY = {
+  neutral: "neutral",
+  info: "primary",
+  success: "success",
+  warning: "warning",
+  danger: "danger"
+};
+var BADGE_NAMES = Object.keys(BADGE_FAMILY);
+function badgeTint(name, solid) {
+  const key = BADGE_FAMILY[name];
+  if (!key) return null;
+  const { fill, on, container, onContainer } = FAMILIES[key];
+  return solid ? { surface: fill, on } : { surface: container, on: onContainer };
+}
+var ACCENTS = {
+  primary: FAMILIES.primary.fill,
+  info: FAMILIES.primary.fill,
+  secondary: FAMILIES.secondary.fill,
+  success: FAMILIES.success.fill,
+  warning: FAMILIES.warning.fill,
+  danger: FAMILIES.danger.fill
+};
+
 // src/utils/verifyTypes.js
 var prefixLog = "[MOTT-COMPONENTS]";
 var show = (value) => typeof value === "string" ? `"${value}"` : String(value);
@@ -97,7 +210,7 @@ function verifyTypesSearch({ label, placeholder, delay, onSearch, onChange, valu
   return true;
 }
 function verifyTypesButton({ variant, shape, iconOnly, fullWidth, type } = {}) {
-  assertOneOf("Button", "variant", variant, ["primary", "secondary", "outline", "ghost", "danger"], "primary");
+  assertOneOf("Button", "variant", variant, CONTROL_NAMES, "primary");
   assertOneOf("Button", "shape", shape, ["rounded", "pill"], "rounded");
   assertOneOf("Button", "type", type, BUTTON_TYPES, "button");
   assertType("Button", "iconOnly", iconOnly, "boolean");
@@ -120,6 +233,7 @@ function verifyTypesButtonGroup({ buttons, vertical, color, allowDeselect, onCha
     if (!item) return;
     assertIconLike("ButtonGroup", `${path}.icon`, item.icon);
     assertType("ButtonGroup", `${path}.label`, item.label, "string");
+    assertType("ButtonGroup", `${path}.ariaLabel`, item.ariaLabel, "string");
     assertRef("ButtonGroup", `${path}.buttonRef`, item.buttonRef);
     if (item.icon === void 0 && item.label === void 0) {
       warn("ButtonGroup", `${path} has no \`icon\` or \`label\`: it will render empty.`);
@@ -141,10 +255,10 @@ function verifyTypesBadge({ color, solid, size, icon, dot } = {}) {
   assertOneOf("Badge", "size", size, CONTROL_SIZES, "sm");
   return true;
 }
-function verifyTypesIcon({ name, size, filled, weight, grade, opticalSize } = {}) {
+function verifyTypesIcon({ name, size, filled: filled2, weight, grade, opticalSize } = {}) {
   assertType("Icon", "name", name, "string");
   assertType("Icon", "size", size, "string");
-  assertType("Icon", "filled", filled, "boolean");
+  assertType("Icon", "filled", filled2, "boolean");
   assertRange("Icon", "weight", weight, 100, 700);
   assertRange("Icon", "grade", grade, -50, 200);
   assertRange("Icon", "opticalSize", opticalSize, 20, 48);
@@ -260,20 +374,60 @@ function verifyTypesToastProvider({ duration, dismissThreshold, max } = {}) {
   }
   return true;
 }
+var THEME_MODES = ["light", "dark", "system"];
+var THEME_VARIANTS = ["content", "monochrome", "neutral", "tonalSpot", "vibrant"];
+var HEX_COLOR = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
+var isThemeSeed = (value) => typeof value === "string" && HEX_COLOR.test(value);
+var isThemeMode = (value) => THEME_MODES.includes(value);
+var isThemeVariant = (value) => THEME_VARIANTS.includes(value);
+function verifyTypesThemeSeed(component, prop, value) {
+  if (isThemeSeed(value)) return true;
+  warn(component, `\`${prop}\` must be a hex colour like "#0066ff", received ${show(value)}. Ignoring it.`);
+  return false;
+}
+function verifyTypesThemeMode(component, prop, value) {
+  if (isThemeMode(value)) return true;
+  warn(component, `invalid \`${prop}\`: ${show(value)}. Valid values: ${THEME_MODES.join(", ")}. Ignoring it.`);
+  return false;
+}
+function verifyTypesThemeVariant(component, prop, value) {
+  if (isThemeVariant(value)) return true;
+  warn(component, `invalid \`${prop}\`: ${show(value)}. Valid values: ${THEME_VARIANTS.join(", ")}. Ignoring it.`);
+  return false;
+}
+function verifyTypesThemeModal({ open, onClose, triggerRef, title } = {}) {
+  assertType("ThemeModal", "open", open, "boolean");
+  assertType("ThemeModal", "onClose", onClose, "function");
+  assertType("ThemeModal", "title", title, "string");
+  assertRef("ThemeModal", "triggerRef", triggerRef);
+  return true;
+}
+function verifyTypesThemeProvider({ defaultSeed, defaultMode, themes } = {}) {
+  if (defaultSeed !== void 0 && defaultSeed !== null) {
+    verifyTypesThemeSeed("ThemeProvider", "defaultSeed", defaultSeed);
+  }
+  if (defaultMode !== void 0 && defaultMode !== null) {
+    verifyTypesThemeMode("ThemeProvider", "defaultMode", defaultMode);
+  }
+  assertArrayOf("ThemeProvider", "themes", themes, (item, path) => {
+    assertPlainObject("ThemeProvider", path, item);
+    if (!item) return;
+    assertRequired("ThemeProvider", `${path}.name`, item.name);
+    assertType("ThemeProvider", `${path}.name`, item.name, "string");
+    verifyTypesThemeSeed("ThemeProvider", `${path}.hex`, item.hex);
+    if (item.variant !== void 0 && item.variant !== null) {
+      verifyTypesThemeVariant("ThemeProvider", `${path}.variant`, item.variant);
+    }
+  });
+  return true;
+}
 
 // src/buttons/button.jsx
 import { jsx } from "react/jsx-runtime";
 var buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2.5 text-[length:var(--text-md)] tracking-[var(--tracking-h4)] font-[number:var(--font-medium)] transition-all duration-150 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-action)] focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none disabled:active:scale-100",
+  "inline-flex items-center justify-center gap-2.5 bg-[var(--mott-surface)] text-[var(--mott-on)] hover:bg-[var(--mott-hover)] text-[length:var(--text-md)] tracking-[var(--tracking-h4)] font-[number:var(--font-medium)] transition-all duration-150 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--md-sys-color-primary)] focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none disabled:active:scale-100",
   {
     variants: {
-      variant: {
-        primary: "bg-[var(--color-action)] text-[var(--text-on-action)] hover:bg-[var(--color-action-hover)]",
-        secondary: "bg-[var(--dark-navy-text)] text-[var(--white)] hover:bg-[var(--dark-slate-surface)]",
-        outline: "bg-[var(--light-gray-background)] text-[var(--dark-navy-text)] hover:bg-[var(--pale-gray-hover)]",
-        ghost: "bg-transparent text-[var(--dark-navy-text)] hover:bg-[var(--pale-gray-hover)]",
-        danger: "bg-[var(--color-danger)] text-[var(--text-on-danger)] hover:bg-[var(--color-danger-hover)]"
-      },
       shape: {
         rounded: "rounded-[var(--radius-lg)]",
         pill: "rounded-[var(--radius-full)]"
@@ -287,7 +441,6 @@ var buttonVariants = cva(
       }
     },
     defaultVariants: {
-      variant: "primary",
       shape: "rounded",
       iconOnly: false,
       fullWidth: false
@@ -296,23 +449,26 @@ var buttonVariants = cva(
 );
 var Button = forwardRef(function Button2({
   children,
-  variant,
+  variant = "primary",
   shape,
   iconOnly,
   fullWidth,
   className,
+  style,
   type = "button",
   onClick,
   ...props
 }, ref) {
   verifyTypesButton({ variant, shape, iconOnly, fullWidth, type });
+  const tint = controlTint(variant) ?? controlTint("primary");
   return /* @__PURE__ */ jsx(
     "button",
     {
       ref,
       type,
       onClick,
-      className: twMerge(buttonVariants({ variant, shape, iconOnly, fullWidth }), className),
+      className: twMerge(buttonVariants({ shape, iconOnly, fullWidth }), className),
+      style: { ...asCustomProperties(tint), ...style },
       ...props,
       children
     }
@@ -332,13 +488,14 @@ var SIZE_TOKEN = {
 function Icon({
   name,
   size = "md",
-  filled = true,
+  filled: filled2 = true,
   weight = 500,
   grade = 200,
   opticalSize = 24,
-  className
+  className,
+  style
 }) {
-  verifyTypesIcon({ name, size, filled, weight, grade, opticalSize });
+  verifyTypesIcon({ name, size, filled: filled2, weight, grade, opticalSize });
   if (!name) return null;
   const iconSize = SIZE_TOKEN[size] ?? size;
   return /* @__PURE__ */ jsx2(
@@ -348,7 +505,10 @@ function Icon({
       "aria-hidden": "true",
       style: {
         fontSize: iconSize,
-        fontVariationSettings: `'FILL' ${filled ? 1 : 0}, 'wght' ${weight}, 'GRAD' ${grade}, 'opsz' ${opticalSize}`
+        fontVariationSettings: `'FILL' ${filled2 ? 1 : 0}, 'wght' ${weight}, 'GRAD' ${grade}, 'opsz' ${opticalSize}`,
+        // spread last so a caller can tint or resize the glyph without losing the variation
+        // settings above, which are what make the font render at the right weight
+        ...style
       },
       children: name
     }
@@ -362,13 +522,6 @@ var FAB_SIZE = {
   md: { box: "var(--control-size-md)", icon: "var(--lg-icon)" },
   lg: { box: "var(--control-size-lg)", icon: "var(--xl-icon)" }
 };
-var COLOR_PRESETS = {
-  primary: { bg: "var(--color-action)", fg: "var(--text-on-action)" },
-  secondary: { bg: "var(--dark-navy-text)", fg: "var(--white)" },
-  outline: { bg: "var(--light-gray-background)", fg: "var(--dark-navy-text)" },
-  ghost: { bg: "transparent", fg: "var(--dark-navy-text)" },
-  danger: { bg: "var(--color-danger)", fg: "var(--text-on-danger)" }
-};
 function FabButton({
   color = "primary",
   iconColor,
@@ -381,22 +534,20 @@ function FabButton({
 }) {
   verifyTypesIconButton("FabButton", { icon, color, iconColor, size, type });
   const dimensions = FAB_SIZE[size] ?? FAB_SIZE.md;
-  const preset = COLOR_PRESETS[color];
-  const background = preset ? preset.bg : color;
-  const foreground = iconColor ?? (preset ? preset.fg : "var(--white)");
+  const tint = controlTint(color) ?? customTint(color, iconColor ?? "#ffffff");
+  const resolved = iconColor ? { ...tint, on: iconColor } : tint;
   return /* @__PURE__ */ jsx3(
     "button",
     {
       type,
       onClick,
-      className: "inline-flex items-center justify-center border-0 cursor-pointer transition-all duration-150 hover:brightness-90 active:brightness-95 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--color-action)] disabled:opacity-50 disabled:pointer-events-none disabled:active:scale-100",
+      className: "inline-flex items-center justify-center border-0 cursor-pointer transition-all duration-150 bg-[var(--mott-surface)] text-[var(--mott-on)] hover:bg-[var(--mott-hover)] active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--md-sys-color-primary)] disabled:opacity-50 disabled:pointer-events-none disabled:active:scale-100",
       style: {
         width: dimensions.box,
         height: dimensions.box,
         padding: 0,
         borderRadius: "var(--control-radius)",
-        backgroundColor: background,
-        color: foreground,
+        ...asCustomProperties(resolved),
         ...style
       },
       ...props,
@@ -412,13 +563,6 @@ var SIZE = {
   md: { box: "var(--control-size-md)", icon: "var(--lg-icon)" },
   lg: { box: "var(--control-size-lg)", icon: "var(--xl-icon)" }
 };
-var COLOR_PRESETS2 = {
-  primary: { bg: "var(--color-action)", fg: "var(--text-on-action)" },
-  secondary: { bg: "var(--dark-navy-text)", fg: "var(--white)" },
-  outline: { bg: "var(--light-gray-background)", fg: "var(--dark-navy-text)" },
-  ghost: { bg: "transparent", fg: "var(--dark-navy-text)" },
-  danger: { bg: "var(--color-danger)", fg: "var(--text-on-danger)" }
-};
 function ButtonFullRounded({
   icon,
   color = "primary",
@@ -431,21 +575,19 @@ function ButtonFullRounded({
 }) {
   verifyTypesIconButton("ButtonFullRounded", { icon, color, iconColor, size, type });
   const scale = SIZE[size] ?? SIZE.md;
-  const preset = COLOR_PRESETS2[color];
-  const background = preset ? preset.bg : color;
-  const foreground = iconColor ?? (preset ? preset.fg : "var(--white)");
+  const tint = controlTint(color) ?? customTint(color, iconColor ?? "#ffffff");
+  const resolved = iconColor ? { ...tint, on: iconColor } : tint;
   return /* @__PURE__ */ jsx4(
     "button",
     {
       type,
       onClick,
-      className: "inline-flex items-center justify-center border-0 cursor-pointer rounded-[var(--radius-full)] transition-all duration-150 hover:brightness-90 active:brightness-95 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--color-action)] disabled:opacity-50 disabled:pointer-events-none disabled:active:scale-100",
+      className: "inline-flex items-center justify-center border-0 cursor-pointer rounded-[var(--radius-full)] transition-all duration-150 bg-[var(--mott-surface)] text-[var(--mott-on)] hover:bg-[var(--mott-hover)] active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--md-sys-color-primary)] disabled:opacity-50 disabled:pointer-events-none disabled:active:scale-100",
       style: {
         width: scale.box,
         height: scale.box,
         padding: 0,
-        backgroundColor: background,
-        color: foreground,
+        ...asCustomProperties(resolved),
         ...style
       },
       ...props,
@@ -460,13 +602,6 @@ import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import { twMerge as twMerge3 } from "tailwind-merge";
 import { jsx as jsx5, jsxs } from "react/jsx-runtime";
-var COLOR_PRESETS3 = {
-  primary: { bg: "var(--color-action)", fg: "var(--text-on-action)" },
-  secondary: { bg: "var(--dark-navy-text)", fg: "var(--white)" },
-  outline: { bg: "var(--light-gray-background)", fg: "var(--dark-navy-text)" },
-  ghost: { bg: "transparent", fg: "var(--dark-navy-text)" },
-  danger: { bg: "var(--color-danger)", fg: "var(--text-on-danger)" }
-};
 function ButtonGroup({ buttons, vertical = true, color = "primary", defaultSelected = null, value, allowDeselect = true, onChange }) {
   verifyTypesButtonGroup({ buttons, vertical, color, allowDeselect, onChange, value, defaultSelected });
   const [internalSelected, setInternalSelected] = useState(defaultSelected);
@@ -474,7 +609,8 @@ function ButtonGroup({ buttons, vertical = true, color = "primary", defaultSelec
   const selectedButton = isControlled ? value : internalSelected;
   const itemRefs = useRef([]);
   const containerRef = useRef(null);
-  const preset = COLOR_PRESETS3[color] ?? COLOR_PRESETS3.primary;
+  const tint = controlTint(color) ?? controlTint("primary");
+  const resting = FAMILIES.neutral;
   const resolveColor = (value2) => {
     if (typeof value2 === "string" && value2.startsWith("var(")) {
       const token = value2.slice(4, -1).trim();
@@ -489,8 +625,8 @@ function ButtonGroup({ buttons, vertical = true, color = "primary", defaultSelec
       gsap.to(el, {
         borderRadius: isSelected ? "28%" : "50%",
         scale: isSelected ? 1.1 : 1,
-        backgroundColor: resolveColor(isSelected ? preset.bg : "var(--light-gray-background)"),
-        color: resolveColor(isSelected ? preset.fg : "var(--dark-navy-text)"),
+        backgroundColor: resolveColor(isSelected ? tint.surface : resting.container),
+        color: resolveColor(isSelected ? tint.on : resting.onContainer),
         duration: 0.4,
         ease: "power3.out"
       });
@@ -514,11 +650,13 @@ function ButtonGroup({ buttons, vertical = true, color = "primary", defaultSelec
         type: "button",
         onClick: () => handleSelect(i),
         "aria-pressed": selectedButton === i,
-        className: "inline-flex items-center justify-center gap-2 border-0 cursor-pointer text-[length:var(--text-md)] tracking-[var(--tracking-h4)] font-[number:var(--font-medium)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--color-action)]",
+        "aria-label": btn.ariaLabel,
+        title: btn.ariaLabel,
+        className: "inline-flex items-center justify-center gap-2 border-0 cursor-pointer text-[length:var(--text-md)] tracking-[var(--tracking-h4)] font-[number:var(--font-medium)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--md-sys-color-primary)]",
         style: {
           borderRadius: "50%",
-          backgroundColor: "var(--light-gray-background)",
-          color: "var(--dark-navy-text)",
+          backgroundColor: resting.container,
+          color: resting.onContainer,
           height: "var(--control-size-md)",
           ...iconOnly ? { width: "var(--control-size-md)", padding: 0 } : { padding: "0 20px" }
         },
@@ -534,13 +672,6 @@ function ButtonGroup({ buttons, vertical = true, color = "primary", defaultSelec
 
 // src/badge/badge.jsx
 import { jsx as jsx6, jsxs as jsxs2 } from "react/jsx-runtime";
-var COLOR_PRESETS4 = {
-  neutral: { bg: "var(--light-gray-background)", fg: "var(--dark-navy-text)", solidBg: "var(--dark-navy-text)", solidFg: "var(--white)" },
-  info: { bg: "var(--color-action-bg)", fg: "var(--color-action)", solidBg: "var(--color-action)", solidFg: "var(--text-on-action)" },
-  success: { bg: "var(--color-success-bg)", fg: "var(--color-success)", solidBg: "var(--color-success)", solidFg: "var(--text-on-success)" },
-  warning: { bg: "var(--color-warning-bg)", fg: "var(--color-warning)", solidBg: "var(--color-warning)", solidFg: "var(--text-on-warning)" },
-  danger: { bg: "var(--color-danger-bg)", fg: "var(--color-danger)", solidBg: "var(--color-danger)", solidFg: "var(--text-on-danger)" }
-};
 var SIZE2 = {
   sm: { pad: "var(--pad-badge-sm)", text: "var(--text-xs)", icon: "12px", dot: 5 },
   md: { pad: "var(--pad-badge-md)", text: "var(--text-sm)", icon: "14px", dot: 6 },
@@ -548,10 +679,8 @@ var SIZE2 = {
 };
 function Badge({ children, color = "neutral", solid = false, size = "sm", icon, dot = false, style, ...props }) {
   verifyTypesBadge({ color, solid, size, icon, dot });
-  const preset = COLOR_PRESETS4[color];
   const scale = SIZE2[size] ?? SIZE2.sm;
-  const background = preset ? solid ? preset.solidBg : preset.bg : color;
-  const foreground = preset ? solid ? preset.solidFg : preset.fg : "var(--white)";
+  const tint = badgeTint(color, solid) ?? customTint(color, "#ffffff");
   return /* @__PURE__ */ jsxs2(
     "span",
     {
@@ -559,13 +688,13 @@ function Badge({ children, color = "neutral", solid = false, size = "sm", icon, 
       style: {
         padding: scale.pad,
         fontSize: scale.text,
-        backgroundColor: background,
-        color: foreground,
+        backgroundColor: tint.surface,
+        color: tint.on,
         ...style
       },
       ...props,
       children: [
-        dot && /* @__PURE__ */ jsx6("span", { "aria-hidden": "true", style: { width: scale.dot, height: scale.dot, borderRadius: "50%", backgroundColor: foreground, flexShrink: 0 } }),
+        dot && /* @__PURE__ */ jsx6("span", { "aria-hidden": "true", style: { width: scale.dot, height: scale.dot, borderRadius: "50%", backgroundColor: tint.on, flexShrink: 0 } }),
         icon && /* @__PURE__ */ jsx6(Icon, { name: icon, size: scale.icon }),
         children
       ]
@@ -620,11 +749,11 @@ function getToastStack() {
 // src/toast/toast.jsx
 import { jsx as jsx7, jsxs as jsxs3 } from "react/jsx-runtime";
 gsap2.registerPlugin(Draggable, Flip);
-var VARIANTS = {
-  info: { iconClass: "text-[var(--color-action)]", icon: "info" },
-  success: { iconClass: "text-[var(--color-success)]", icon: "check_circle" },
-  warning: { iconClass: "text-[var(--color-warning)]", icon: "warning" },
-  danger: { iconClass: "text-[var(--color-danger)]", icon: "error" }
+var VARIANT_ICONS = {
+  info: "info",
+  success: "check_circle",
+  warning: "warning",
+  danger: "error"
 };
 var COUNTER_DRAG = 0.12;
 function Toast({
@@ -654,7 +783,8 @@ function Toast({
     (_a = onExitedRef.current) == null ? void 0 : _a.call(onExitedRef);
   };
   const dismissedRef = useRef2(false);
-  const preset = VARIANTS[variant] ?? VARIANTS.info;
+  const glyph = VARIANT_ICONS[variant] ?? VARIANT_ICONS.info;
+  const accent = ACCENTS[variant] ?? ACCENTS.info;
   useEffect(() => {
     if (open) {
       dismissedRef.current = false;
@@ -772,9 +902,10 @@ function Toast({
         className: "inline-flex items-center gap-3 rounded-[var(--radius-lg)] cursor-grab active:cursor-grabbing",
         style: {
           padding: "var(--pad-stat)",
-          // same neutral surface for all four variants. `--white` and not `--modal-surface`
-          // because that is what Dropdown and the Select panel already use for floating surfaces
-          backgroundColor: "var(--white)",
+          // same neutral surface for all four variants: the variant shows in the icon, not in
+          // the panel. `surface-container-high` is the step Dropdown and the Select panel also
+          // use, so everything that floats above the page sits at the same elevation.
+          backgroundColor: "var(--md-sys-color-surface-container-high)",
           boxShadow: "var(--shadow-floating)",
           // sized by its text, with no minimum: a short toast has no reason to drag empty space
           // around. The cap comes from the stack, which has a fixed width - that is where the
@@ -785,10 +916,10 @@ function Toast({
           pointerEvents: "auto"
         },
         children: [
-          /* @__PURE__ */ jsx7(Icon, { name: preset.icon, size: "xl", className: `${preset.iconClass} shrink-0` }),
+          /* @__PURE__ */ jsx7(Icon, { name: glyph, size: "xl", className: "shrink-0", style: { color: accent } }),
           /* @__PURE__ */ jsxs3("div", { className: "flex min-w-0 flex-col gap-0.5", children: [
-            title && /* @__PURE__ */ jsx7("span", { className: "text-[length:var(--text-sm)] font-[number:var(--font-medium)] text-[var(--dark-navy-text)]", children: title }),
-            /* @__PURE__ */ jsx7("span", { className: "text-[length:var(--text-sm)] text-[var(--slate-gray-text)]", children })
+            title && /* @__PURE__ */ jsx7("span", { className: "text-[length:var(--text-sm)] font-[number:var(--font-medium)] text-[var(--md-sys-color-on-surface)]", children: title }),
+            /* @__PURE__ */ jsx7("span", { className: "text-[length:var(--text-sm)] text-[var(--md-sys-color-on-surface-variant)]", children })
           ] })
         ]
       }
@@ -870,405 +1001,209 @@ function useToast() {
   return context;
 }
 
-// src/input/input.jsx
-import { useId } from "react";
-import { twMerge as twMerge4 } from "tailwind-merge";
-import { jsx as jsx9, jsxs as jsxs5 } from "react/jsx-runtime";
-function Input({
-  label,
-  type = "text",
-  id,
-  className,
-  style,
-  placeholder,
-  value,
-  onChange,
-  ...props
-}) {
-  const generatedId = useId();
-  const inputId = id ?? generatedId;
-  verifyTypesInput({ label, placeholder, type });
-  return /* @__PURE__ */ jsxs5("div", { className: "flex w-full flex-col gap-1", children: [
-    label && /* @__PURE__ */ jsx9(
-      "label",
-      {
-        htmlFor: inputId,
-        className: "text-[length:var(--text-sm)] leading-[var(--leading-tight)] tracking-[var(--tracking-body)] font-[number:var(--font-medium)] font-[family-name:var(--font-family)] text-[var(--slate-gray-text)]",
-        children: label
-      }
-    ),
-    /* @__PURE__ */ jsx9(
-      "input",
-      {
-        id: inputId,
-        type,
-        className: twMerge4(
-          "w-full rounded-[var(--radius-lg)] bg-[var(--light-gray-background)] text-[length:var(--text-base)] tracking-[var(--tracking-body)] font-[family-name:var(--font-family)] text-[var(--dark-navy-text)] placeholder:text-[var(--muted-gray-text)] outline-none transition-colors duration-150 focus:bg-[var(--pale-gray-hover)] disabled:opacity-50 disabled:cursor-not-allowed",
-          className
-        ),
-        value,
-        onChange: (e) => onChange == null ? void 0 : onChange(e.target.value),
-        style: { padding: "var(--pad-input)", ...style },
-        placeholder,
-        ...props
-      }
-    )
-  ] });
+// src/theme/themeContext.jsx
+import { createContext as createContext2, useCallback as useCallback2, useContext as useContext2, useEffect as useEffect2, useMemo as useMemo2, useState as useState4 } from "react";
+
+// src/theme/palette.js
+import {
+  Hct,
+  argbFromHex,
+  hexFromArgb,
+  customColor,
+  MaterialDynamicColors,
+  SchemeContent,
+  SchemeMonochrome,
+  SchemeNeutral,
+  SchemeTonalSpot,
+  SchemeVibrant
+} from "@material/material-color-utilities";
+var VARIANTS = {
+  // Keeps the source colour rather than reinterpreting it — the right default when the seed IS the
+  // accent someone picked, not a hint to be harmonised away.
+  content: SchemeContent,
+  // Ignores the seed's hue outright and builds a true greyscale. Any seed gives the same palette.
+  monochrome: SchemeMonochrome,
+  // Barely-there hue: a grey that leans warm or cool depending on the seed.
+  neutral: SchemeNeutral,
+  // The M3 default. Deliberately muted, so it harmonises at the cost of drifting off the seed.
+  tonalSpot: SchemeTonalSpot,
+  // Pushes chroma as far as the tone allows.
+  vibrant: SchemeVibrant
+};
+var DEFAULT_VARIANT = "content";
+var DEFAULT_SEED = "#005eeb";
+var SPEC_VERSION = "2021";
+var SUCCESS_SEED = "#16a34a";
+var WARNING_SEED = "#d97706";
+var ROLES = [
+  "primary",
+  "onPrimary",
+  "primaryContainer",
+  "onPrimaryContainer",
+  "secondary",
+  "onSecondary",
+  "secondaryContainer",
+  "onSecondaryContainer",
+  "tertiary",
+  "onTertiary",
+  "tertiaryContainer",
+  "onTertiaryContainer",
+  "error",
+  "onError",
+  "errorContainer",
+  "onErrorContainer",
+  "background",
+  "onBackground",
+  "surface",
+  "onSurface",
+  "surfaceVariant",
+  "onSurfaceVariant",
+  "outline",
+  "outlineVariant",
+  "shadow",
+  "scrim",
+  "inverseSurface",
+  "inverseOnSurface",
+  "inversePrimary",
+  "surfaceContainerLowest",
+  "surfaceContainerLow",
+  "surfaceContainer",
+  "surfaceContainerHigh",
+  "surfaceContainerHighest"
+];
+var kebab = (role) => role.replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase();
+function buildPalette(seedHex, mode, variant = DEFAULT_VARIANT) {
+  const argb = argbFromHex(seedHex);
+  const Scheme = VARIANTS[variant] ?? VARIANTS[DEFAULT_VARIANT];
+  const scheme = new Scheme(Hct.fromInt(argb), mode === "dark", 0, SPEC_VERSION);
+  const tokens = {};
+  for (const role of ROLES) {
+    tokens[`--md-sys-color-${kebab(role)}`] = hexFromArgb(MaterialDynamicColors[role].getArgb(scheme));
+  }
+  for (const [name, seed] of [["success", SUCCESS_SEED], ["warning", WARNING_SEED]]) {
+    const colors = customColor(argb, { name, value: argbFromHex(seed), blend: false })[mode];
+    tokens[`--md-custom-color-${name}`] = hexFromArgb(colors.color);
+    tokens[`--md-custom-color-on-${name}`] = hexFromArgb(colors.onColor);
+    tokens[`--md-custom-color-${name}-container`] = hexFromArgb(colors.colorContainer);
+    tokens[`--md-custom-color-on-${name}-container`] = hexFromArgb(colors.onColorContainer);
+  }
+  return tokens;
 }
 
-// src/textarea/textarea.jsx
-import { useId as useId2 } from "react";
-import { twMerge as twMerge5 } from "tailwind-merge";
-import { jsx as jsx10, jsxs as jsxs6 } from "react/jsx-runtime";
-function Textarea({
-  label,
-  id,
-  width = "100%",
-  height = "6rem",
-  className,
-  style,
-  placeholder,
-  ...props
+// src/theme/themeContext.jsx
+import { jsx as jsx9 } from "react/jsx-runtime";
+var ThemeContext = createContext2(null);
+var DEFAULT_MODE = "system";
+var STORAGE_SEED = "mott-theme-color";
+var STORAGE_MODE = "mott-theme-mode";
+var STORAGE_VARIANT = "mott-theme-variant";
+var THEMES_AVAILABLE = [
+  { name: "negro", hex: "#000000", variant: "content" },
+  { name: "gris", hex: "#8E8E93", variant: "content" },
+  { name: "rosa", hex: "#d97cb9", variant: "content" },
+  { name: "azul", hex: "#005eeb", variant: "content" }
+];
+var readStored = (key, isValid) => {
+  try {
+    const stored = localStorage.getItem(key);
+    return isValid(stored) ? stored : null;
+  } catch {
+    return null;
+  }
+};
+function ThemeProvider({
+  children,
+  defaultSeed = DEFAULT_SEED,
+  defaultMode = DEFAULT_MODE,
+  themes = THEMES_AVAILABLE
 }) {
-  const generatedId = useId2();
-  const textareaId = id ?? generatedId;
-  verifyTypesTextarea({ label, placeholder, width, height });
-  return /* @__PURE__ */ jsxs6("div", { className: "flex flex-col gap-1", style: { width }, children: [
-    label && /* @__PURE__ */ jsx10(
-      "label",
-      {
-        htmlFor: textareaId,
-        className: "text-[length:var(--text-sm)] leading-[var(--leading-tight)] tracking-[var(--tracking-body)] font-[number:var(--font-medium)] font-[family-name:var(--font-family)] text-[var(--slate-gray-text)]",
-        children: label
-      }
-    ),
-    /* @__PURE__ */ jsx10(
-      "textarea",
-      {
-        id: textareaId,
-        className: twMerge5(
-          "w-full rounded-[var(--radius-lg)] bg-[var(--light-gray-background)] text-[length:var(--text-base)] tracking-[var(--tracking-body)] font-[family-name:var(--font-family)] text-[var(--dark-navy-text)] placeholder:text-[var(--muted-gray-text)] outline-none transition-colors duration-150 focus:bg-[var(--pale-gray-hover)] disabled:opacity-50 disabled:cursor-not-allowed",
-          className
-        ),
-        style: {
-          padding: "var(--pad-input)",
-          height,
-          resize: "none",
-          overflow: "hidden",
-          ...style
-        },
-        placeholder
-      }
-    )
-  ] });
+  verifyTypesThemeProvider({ defaultSeed, defaultMode, themes });
+  const [colorSeedHex, setSeed] = useState4(() => isThemeSeed(defaultSeed) ? defaultSeed : DEFAULT_SEED);
+  const [mode, setModeState] = useState4(() => isThemeMode(defaultMode) ? defaultMode : DEFAULT_MODE);
+  const [variant, setVariantState] = useState4(DEFAULT_VARIANT);
+  const [systemDark, setSystemDark] = useState4(false);
+  const [hydrated, setHydrated] = useState4(false);
+  useEffect2(() => {
+    const storedSeed = readStored(STORAGE_SEED, isThemeSeed);
+    const storedMode = readStored(STORAGE_MODE, isThemeMode);
+    const storedVariant = readStored(STORAGE_VARIANT, isThemeVariant);
+    if (storedSeed) setSeed(storedSeed);
+    if (storedMode) setModeState(storedMode);
+    if (storedVariant) setVariantState(storedVariant);
+    setHydrated(true);
+  }, []);
+  useEffect2(() => {
+    const query = window.matchMedia("(prefers-color-scheme: dark)");
+    const sync = (event) => setSystemDark(event.matches);
+    setSystemDark(query.matches);
+    query.addEventListener("change", sync);
+    return () => query.removeEventListener("change", sync);
+  }, []);
+  const resolvedMode = mode === "system" ? systemDark ? "dark" : "light" : mode;
+  const tokens = useMemo2(() => buildPalette(colorSeedHex, resolvedMode, variant), [colorSeedHex, resolvedMode, variant]);
+  useEffect2(() => {
+    if (!hydrated) return;
+    const root = document.documentElement;
+    for (const [token, hex] of Object.entries(tokens)) {
+      root.style.setProperty(token, hex);
+    }
+    if (mode === "system") root.removeAttribute("data-theme");
+    else root.dataset.theme = mode;
+  }, [tokens, mode, hydrated]);
+  useEffect2(() => {
+    if (!hydrated) return;
+    try {
+      localStorage.setItem(STORAGE_SEED, colorSeedHex);
+      localStorage.setItem(STORAGE_MODE, mode);
+      localStorage.setItem(STORAGE_VARIANT, variant);
+    } catch {
+    }
+  }, [colorSeedHex, mode, variant, hydrated]);
+  const setColorSeedHex = useCallback2((next, nextVariant = DEFAULT_VARIANT) => {
+    if (!verifyTypesThemeSeed("useTheme", "setColorSeedHex", next)) return;
+    if (!verifyTypesThemeVariant("useTheme", "setColorSeedHex", nextVariant)) return;
+    setSeed(next);
+    setVariantState(nextVariant);
+  }, []);
+  const setMode = useCallback2((next) => {
+    if (verifyTypesThemeMode("useTheme", "setMode", next)) setModeState(next);
+  }, []);
+  const value = useMemo2(() => ({
+    colorSeedHex,
+    setColorSeedHex,
+    variant,
+    mode,
+    setMode,
+    // what `system` currently resolves to — the theme actually on screen. Use it to pick the
+    // icon on a toggle; `mode` is what the user chose, `resolvedMode` is what they see.
+    resolvedMode,
+    THEMES_AVAILABLE: themes
+  }), [colorSeedHex, setColorSeedHex, variant, mode, setMode, resolvedMode, themes]);
+  return /* @__PURE__ */ jsx9(ThemeContext.Provider, { value, children });
+}
+function useTheme() {
+  const context = useContext2(ThemeContext);
+  if (!context) {
+    throw new Error(
+      "[MOTT-COMPONENTS] useTheme() must be used inside a <ThemeProvider>. Wrap your app with <ThemeProvider> (e.g. in app/layout.jsx) before reading the theme."
+    );
+  }
+  return context;
 }
 
-// src/select/select.jsx
-import { useEffect as useEffect2, useId as useId3, useRef as useRef4, useState as useState4 } from "react";
-import { createPortal as createPortal2 } from "react-dom";
+// src/theme/themeModal.jsx
+import { useRef as useRef5 } from "react";
 import { useGSAP as useGSAP3 } from "@gsap/react";
-import gsap3 from "gsap";
-import { jsx as jsx11, jsxs as jsxs7 } from "react/jsx-runtime";
-function Select({ options = [], value, onChange, label, placeholder = "Seleccionar", disabled, id }) {
-  verifyTypesSelect({ options, onChange, label, placeholder, disabled });
-  const [open, setOpen] = useState4(false);
-  const [rendered, setRendered] = useState4(false);
-  const [anchor, setAnchor] = useState4(null);
-  const wrapperRef = useRef4(null);
-  const triggerRef = useRef4(null);
-  const panelRef = useRef4(null);
-  const generatedId = useId3();
-  const selectId = id ?? generatedId;
-  const selected = options.find((o) => o.value === value);
-  useEffect2(() => {
-    if (!open) return;
-    const syncAnchor = () => {
-      var _a;
-      const rect = (_a = triggerRef.current) == null ? void 0 : _a.getBoundingClientRect();
-      if (rect) setAnchor({ top: rect.bottom + 4, left: rect.left, width: rect.width });
-    };
-    syncAnchor();
-    setRendered(true);
-    window.addEventListener("scroll", syncAnchor, true);
-    window.addEventListener("resize", syncAnchor);
-    return () => {
-      window.removeEventListener("scroll", syncAnchor, true);
-      window.removeEventListener("resize", syncAnchor);
-    };
-  }, [open]);
-  useGSAP3(() => {
-    if (open && panelRef.current) {
-      const el = panelRef.current;
-      const targetHeight = el.scrollHeight;
-      gsap3.fromTo(
-        el,
-        { height: 0, opacity: 0 },
-        {
-          height: targetHeight,
-          opacity: 1,
-          duration: 0.35,
-          ease: "power3.out",
-          onComplete: () => gsap3.set(el, { height: "auto" })
-        }
-      );
-    }
-  }, { dependencies: [open, rendered] });
-  useEffect2(() => {
-    if (!open && rendered && panelRef.current) {
-      gsap3.to(panelRef.current, {
-        height: 0,
-        opacity: 0,
-        duration: 0.25,
-        ease: "power2.in",
-        onComplete: () => setRendered(false)
-      });
-    }
-  }, [open, rendered]);
-  useEffect2(() => {
-    if (!open) return;
-    const handleClick = (e) => {
-      var _a, _b;
-      if ((_a = wrapperRef.current) == null ? void 0 : _a.contains(e.target)) return;
-      if ((_b = panelRef.current) == null ? void 0 : _b.contains(e.target)) return;
-      setOpen(false);
-    };
-    const handleKey = (e) => {
-      if (e.key === "Escape") setOpen(false);
-    };
-    document.addEventListener("mousedown", handleClick);
-    document.addEventListener("keydown", handleKey);
-    return () => {
-      document.removeEventListener("mousedown", handleClick);
-      document.removeEventListener("keydown", handleKey);
-    };
-  }, [open]);
-  const handleSelect = (option) => {
-    onChange == null ? void 0 : onChange(option.value, option);
-    setOpen(false);
-  };
-  return /* @__PURE__ */ jsxs7("div", { ref: wrapperRef, className: "flex w-full flex-col gap-1", children: [
-    label && /* @__PURE__ */ jsx11(
-      "label",
-      {
-        htmlFor: selectId,
-        className: "text-[length:var(--text-sm)] leading-[var(--leading-tight)] tracking-[var(--tracking-body)] font-[number:var(--font-medium)] font-[family-name:var(--font-family)] text-[var(--slate-gray-text)]",
-        children: label
-      }
-    ),
-    /* @__PURE__ */ jsxs7(
-      "button",
-      {
-        ref: triggerRef,
-        id: selectId,
-        type: "button",
-        disabled,
-        onClick: () => setOpen((o) => !o),
-        className: "flex w-full items-center justify-between rounded-[var(--radius-lg)] bg-[var(--light-gray-background)] text-[length:var(--text-base)] tracking-[var(--tracking-body)] font-[family-name:var(--font-family)] text-[var(--dark-navy-text)] outline-none transition-colors duration-150 focus:bg-[var(--pale-gray-hover)] disabled:opacity-50 disabled:cursor-not-allowed",
-        style: { padding: "var(--pad-input)" },
-        children: [
-          /* @__PURE__ */ jsx11("span", { className: selected ? "" : "text-[var(--muted-gray-text)]", children: selected ? selected.label : placeholder }),
-          /* @__PURE__ */ jsx11(Icon, { name: "expand_more", size: "sm", className: `transition-transform duration-200 ${open ? "rotate-180" : ""}` })
-        ]
-      }
-    ),
-    rendered && anchor && createPortal2(
-      /* @__PURE__ */ jsx11(
-        "div",
-        {
-          ref: panelRef,
-          className: "fixed z-[var(--z-floating)] flex flex-col gap-[var(--gap-tight)] overflow-hidden rounded-[var(--radius-lg)] bg-[var(--white)] p-1 shadow-lg",
-          style: { top: anchor.top, left: anchor.left, width: anchor.width },
-          children: options.map((option) => {
-            const isSelected = option.value === value;
-            return /* @__PURE__ */ jsx11(
-              "button",
-              {
-                type: "button",
-                onClick: () => handleSelect(option),
-                className: "rounded-[var(--radius-sm)] px-3 py-2 text-left text-[length:var(--text-base)] font-[family-name:var(--font-family)] transition-colors duration-150",
-                style: {
-                  backgroundColor: isSelected ? "var(--color-action-bg)" : "transparent",
-                  color: isSelected ? "var(--color-action)" : "var(--dark-navy-text)"
-                },
-                onMouseEnter: (e) => {
-                  if (!isSelected) e.currentTarget.style.backgroundColor = "var(--pale-gray-hover)";
-                },
-                onMouseLeave: (e) => {
-                  if (!isSelected) e.currentTarget.style.backgroundColor = "transparent";
-                },
-                children: option.label
-              },
-              option.value
-            );
-          })
-        }
-      ),
-      document.body
-    )
-  ] });
-}
-
-// src/search/search.jsx
-import { useEffect as useEffect3, useId as useId4, useRef as useRef5, useState as useState5 } from "react";
-import { twMerge as twMerge6 } from "tailwind-merge";
-import { jsx as jsx12, jsxs as jsxs8 } from "react/jsx-runtime";
-function Search({
-  label,
-  id,
-  placeholder = "Buscar...",
-  defaultValue = "",
-  value: controlledValue,
-  onChange,
-  onSearch,
-  delay = 400,
-  className,
-  style,
-  ...props
-}) {
-  const [internalValue, setInternalValue] = useState5(defaultValue);
-  const isControlled = controlledValue !== void 0;
-  const value = isControlled ? controlledValue : internalValue;
-  const generatedId = useId4();
-  const searchId = id ?? generatedId;
-  const timeoutRef = useRef5(null);
-  verifyTypesSearch({ label, placeholder, delay, onSearch, onChange, value: controlledValue, defaultValue });
-  useEffect3(() => {
-    if (!onSearch) return;
-    clearTimeout(timeoutRef.current);
-    timeoutRef.current = setTimeout(() => onSearch(value), delay);
-    return () => clearTimeout(timeoutRef.current);
-  }, [value, delay, onSearch]);
-  const handleChange = (event) => {
-    const next = event.target.value;
-    if (!isControlled) setInternalValue(next);
-    onChange == null ? void 0 : onChange(next, event);
-  };
-  const handleClear = () => {
-    if (!isControlled) setInternalValue("");
-    onChange == null ? void 0 : onChange("");
-    onSearch == null ? void 0 : onSearch("");
-  };
-  return /* @__PURE__ */ jsxs8("div", { className: "flex w-full flex-col gap-1", children: [
-    label && /* @__PURE__ */ jsx12(
-      "label",
-      {
-        htmlFor: searchId,
-        className: "text-[length:var(--text-sm)] leading-[var(--leading-tight)] tracking-[var(--tracking-body)] font-[number:var(--font-medium)] font-[family-name:var(--font-family)] text-[var(--slate-gray-text)]",
-        children: label
-      }
-    ),
-    /* @__PURE__ */ jsxs8(
-      "div",
-      {
-        className: twMerge6(
-          "flex w-full items-center gap-2 rounded-[var(--radius-lg)] bg-[var(--light-gray-background)] transition-colors duration-150 focus-within:bg-[var(--pale-gray-hover)]",
-          className
-        ),
-        style: { padding: "var(--pad-input)", ...style },
-        children: [
-          /* @__PURE__ */ jsx12(Icon, { name: "search", size: "sm", className: "shrink-0 text-[var(--muted-gray-text)]" }),
-          /* @__PURE__ */ jsx12(
-            "input",
-            {
-              id: searchId,
-              type: "search",
-              value,
-              onChange: handleChange,
-              placeholder,
-              className: "w-full bg-transparent text-[length:var(--text-base)] tracking-[var(--tracking-body)] font-[family-name:var(--font-family)] text-[var(--dark-navy-text)] outline-none placeholder:text-[var(--muted-gray-text)] [&::-webkit-search-cancel-button]:appearance-none",
-              ...props
-            }
-          ),
-          value && /* @__PURE__ */ jsx12(
-            "button",
-            {
-              type: "button",
-              onClick: handleClear,
-              "aria-label": "Limpiar b\xFAsqueda",
-              className: "flex shrink-0 items-center justify-center border-0 bg-transparent cursor-pointer",
-              children: /* @__PURE__ */ jsx12(Icon, { name: "close", size: "sm", className: "text-[var(--muted-gray-text)]" })
-            }
-          )
-        ]
-      }
-    )
-  ] });
-}
-
-// src/dropdown/dropdown.jsx
-import { useEffect as useEffect4, useRef as useRef6, useState as useState6 } from "react";
-import { useGSAP as useGSAP4 } from "@gsap/react";
 import gsap4 from "gsap";
-import { twMerge as twMerge7 } from "tailwind-merge";
-import { jsx as jsx13 } from "react/jsx-runtime";
-function Dropdown({ open, onClose, children, width = "auto", height = "auto", triggerRef, className, style, ...props }) {
-  verifyTypesDropdown({ open, onClose, width, height, triggerRef });
-  const [rendered, setRendered] = useState6(open);
-  const panelRef = useRef6(null);
-  useEffect4(() => {
-    if (open) setRendered(true);
-  }, [open]);
-  useGSAP4(() => {
-    if (open && panelRef.current) {
-      gsap4.fromTo(
-        panelRef.current,
-        { opacity: 0, y: -8, scale: 0.96 },
-        { opacity: 1, y: 0, scale: 1, duration: 0.25, ease: "back.out(1.7)", transformOrigin: "top" }
-      );
-    }
-  }, { dependencies: [open, rendered] });
-  useEffect4(() => {
-    if (!open && rendered && panelRef.current) {
-      gsap4.to(panelRef.current, {
-        opacity: 0,
-        y: -8,
-        scale: 0.96,
-        duration: 0.18,
-        ease: "power2.in",
-        onComplete: () => setRendered(false)
-      });
-    }
-  }, [open, rendered]);
-  useEffect4(() => {
-    if (!open) return;
-    const handleClick = (e) => {
-      var _a, _b;
-      if ((_a = panelRef.current) == null ? void 0 : _a.contains(e.target)) return;
-      if ((_b = triggerRef == null ? void 0 : triggerRef.current) == null ? void 0 : _b.contains(e.target)) return;
-      onClose == null ? void 0 : onClose();
-    };
-    const handleKey = (e) => {
-      if (e.key === "Escape") onClose == null ? void 0 : onClose();
-    };
-    document.addEventListener("mousedown", handleClick);
-    document.addEventListener("keydown", handleKey);
-    return () => {
-      document.removeEventListener("mousedown", handleClick);
-      document.removeEventListener("keydown", handleKey);
-    };
-  }, [open, onClose, triggerRef]);
-  if (!rendered) return null;
-  return /* @__PURE__ */ jsx13(
-    "div",
-    {
-      ref: panelRef,
-      role: "menu",
-      className: twMerge7("z-[var(--z-floating)] rounded-[var(--radius-lg)] bg-[var(--white)] p-1 shadow-lg", className),
-      style: { width, height, ...style },
-      ...props,
-      children
-    }
-  );
-}
 
 // src/customModal/customModal.jsx
-import { useEffect as useEffect5, useRef as useRef7 } from "react";
-import { twMerge as twMerge8 } from "tailwind-merge";
+import { useEffect as useEffect3, useRef as useRef4 } from "react";
+import { twMerge as twMerge4 } from "tailwind-merge";
 
 // src/animations/modalAnimation.js
-import gsap5 from "gsap";
+import gsap3 from "gsap";
 import CustomEase from "gsap/CustomEase";
-gsap5.registerPlugin(CustomEase);
+gsap3.registerPlugin(CustomEase);
 var LIQUID_EASE = CustomEase.create("mottLiquid", "0.32, 0.72, 0, 1");
 var LIQUID_EASE_IN = CustomEase.create("mottLiquidIn", "1, 0, 0.68, 0.28");
 var MORPH_OPEN_DURATION = 0.8;
@@ -1370,7 +1305,7 @@ var ModalAnimation = class {
 };
 var FadeScaleAnimation = class extends ModalAnimation {
   open({ panel, overlay }) {
-    const tl = gsap5.timeline();
+    const tl = gsap3.timeline();
     this.fadeOverlay(tl, overlay, 1, 0.22);
     tl.fromTo(
       panel,
@@ -1380,7 +1315,7 @@ var FadeScaleAnimation = class extends ModalAnimation {
     );
   }
   close({ panel, overlay }, onDone) {
-    const tl = gsap5.timeline({ onComplete: () => onDone == null ? void 0 : onDone() });
+    const tl = gsap3.timeline({ onComplete: () => onDone == null ? void 0 : onDone() });
     this.fadeOverlay(tl, overlay, 0, 0.2);
     tl.to(panel, { opacity: 0, y: 12, scale: 0.94, duration: 0.25, ease: "power2.in" }, 0);
   }
@@ -1421,8 +1356,8 @@ var MorphAnimation = class extends ModalAnimation {
     const cs = getComputedStyle(panel);
     const pad = { top: parseFloat(cs.paddingTop) || 0, left: parseFloat(cs.paddingLeft) || 0 };
     const rect = panel.getBoundingClientRect();
-    const tx = Number(gsap5.getProperty(panel, "x")) || 0;
-    const ty = Number(gsap5.getProperty(panel, "y")) || 0;
+    const tx = Number(gsap3.getProperty(panel, "x")) || 0;
+    const ty = Number(gsap3.getProperty(panel, "y")) || 0;
     const panelRect = { left: rect.left - tx, top: rect.top - ty, width: rect.width, height: rect.height };
     const originRect = trigger.getBoundingClientRect();
     const panelBox = { ...panelRect, right: panelRect.left + panelRect.width, bottom: panelRect.top + panelRect.height };
@@ -1509,8 +1444,8 @@ var MorphAnimation = class extends ModalAnimation {
     removeTriggerGhost(dialog);
     panel.style.clipPath = "";
     panel[RUNNING_MORPH] = null;
-    gsap5.set(panel, { clearProps: `transform,backgroundColor,willChange${alsoClear ? `,${alsoClear}` : ""}` });
-    gsap5.set(content, { clearProps: "opacity,visibility" });
+    gsap3.set(panel, { clearProps: `transform,backgroundColor,willChange${alsoClear ? `,${alsoClear}` : ""}` });
+    gsap3.set(content, { clearProps: "opacity,visibility" });
   }
   // Panel starts disguised as the trigger, then one timeline runs the lot: it slides into place, its
   // colour crossfades, the clip opens up, the content fades in and the backdrop darkens - each on
@@ -1523,18 +1458,18 @@ var MorphAnimation = class extends ModalAnimation {
     const originColor = getComputedStyle(trigger).backgroundColor;
     const finalColor = getComputedStyle(panel).backgroundColor;
     const ghost = createTriggerGhost(dialog, trigger, originRect);
-    gsap5.set(panel, {
+    gsap3.set(panel, {
       x: buttonOffset.x,
       y: buttonOffset.y,
       backgroundColor: originColor,
       willChange: "transform, clip-path"
     });
-    gsap5.set(content, { autoAlpha: 0 });
+    gsap3.set(content, { autoAlpha: 0 });
     const d = this.openDuration;
     const { morph, color, overlay: ov, content: cont } = this.openBeats;
     const morphAt = d * morph.at;
     const morphSpan = d * morph.span;
-    const tl = gsap5.timeline({ onComplete: () => this.settle(dialog, panel, content) });
+    const tl = gsap3.timeline({ onComplete: () => this.settle(dialog, panel, content) });
     panel[RUNNING_MORPH] = tl;
     tl.to(panel, { x: 0, y: 0, duration: morphSpan, ease: this.openEase, force3D: true }, morphAt);
     tl.to(panel, {
@@ -1565,12 +1500,12 @@ var MorphAnimation = class extends ModalAnimation {
     const originColor = getComputedStyle(trigger).backgroundColor;
     const ghost = this.closeGhost ? createTriggerGhost(dialog, trigger, originRect) : null;
     if (ghost) ghost.style.opacity = "0";
-    gsap5.set(panel, { willChange: "transform, clip-path" });
+    gsap3.set(panel, { willChange: "transform, clip-path" });
     const d = this.closeDuration;
     const { morph, color, overlay: ov, content: cont } = this.closeBeats;
     const morphAt = d * morph.at;
     const morphSpan = d * morph.span;
-    const tl = gsap5.timeline({
+    const tl = gsap3.timeline({
       onComplete: () => {
         onDone == null ? void 0 : onDone();
         this.settle(dialog, panel, content, this.placedProps());
@@ -1641,7 +1576,7 @@ var AnchoredAnimation = class extends MorphAnimation {
       trigger.getBoundingClientRect(),
       panel.getBoundingClientRect()
     );
-    gsap5.set(panel, { position: "fixed", margin: 0, left, top });
+    gsap3.set(panel, { position: "fixed", margin: 0, left, top });
   }
   placedProps() {
     return "position,left,top,margin";
@@ -1681,15 +1616,15 @@ function unlockScroll() {
 }
 
 // src/customModal/customModal.jsx
-import { jsx as jsx14, jsxs as jsxs9 } from "react/jsx-runtime";
+import { jsx as jsx10, jsxs as jsxs5 } from "react/jsx-runtime";
 function CustomModal({ open, onClose, onCloseComplete, children, triggerRef, animation, className, style }) {
   verifyTypesCustomModal({ open, onClose, onCloseComplete, triggerRef, animation });
-  const modalRef = useRef7(null);
-  const overlayRef = useRef7(null);
-  const panelRef = useRef7(null);
-  const contentRef = useRef7(null);
+  const modalRef = useRef4(null);
+  const overlayRef = useRef4(null);
+  const panelRef = useRef4(null);
+  const contentRef = useRef4(null);
   const activeAnimation = animation ?? (triggerRef ? morphAnimation : fadeAnimation);
-  const lockedRef = useRef7(false);
+  const lockedRef = useRef4(false);
   const lock = () => {
     if (!lockedRef.current) {
       lockedRef.current = true;
@@ -1702,8 +1637,8 @@ function CustomModal({ open, onClose, onCloseComplete, children, triggerRef, ani
       unlockScroll();
     }
   };
-  useEffect5(() => unlock, []);
-  useEffect5(() => {
+  useEffect3(() => unlock, []);
+  useEffect3(() => {
     const modal = modalRef.current;
     const panel = panelRef.current;
     const overlay = overlayRef.current;
@@ -1727,28 +1662,28 @@ function CustomModal({ open, onClose, onCloseComplete, children, triggerRef, ani
     onClose == null ? void 0 : onClose();
   };
   const handleOverlayClick = () => onClose == null ? void 0 : onClose();
-  return /* @__PURE__ */ jsxs9(
+  return /* @__PURE__ */ jsxs5(
     "dialog",
     {
       ref: modalRef,
       onCancel: handleCancel,
       className: "default-modal",
       children: [
-        /* @__PURE__ */ jsx14(
+        /* @__PURE__ */ jsx10(
           "div",
           {
             ref: overlayRef,
             onClick: handleOverlayClick,
-            className: "absolute inset-0 bg-[var(--overlay-backdrop)]"
+            className: "absolute inset-0 bg-[color-mix(in_srgb,var(--md-sys-color-scrim)_32%,transparent)]"
           }
         ),
-        /* @__PURE__ */ jsx14(
+        /* @__PURE__ */ jsx10(
           "div",
           {
             ref: panelRef,
-            className: twMerge8("relative m-auto max-w-[92vw] rounded-[var(--radius-modal)] bg-[var(--modal-surface)] p-[var(--pad-card)]", className),
+            className: twMerge4("relative m-auto max-w-[92vw] rounded-[var(--radius-modal)] bg-[var(--md-sys-color-surface-container-high)] p-[var(--pad-card)]", className),
             style,
-            children: /* @__PURE__ */ jsx14("div", { ref: contentRef, children })
+            children: /* @__PURE__ */ jsx10("div", { ref: contentRef, children })
           }
         )
       ]
@@ -1756,18 +1691,493 @@ function CustomModal({ open, onClose, onCloseComplete, children, triggerRef, ani
   );
 }
 
-// src/loading/loading.jsx
-import { useRef as useRef8 } from "react";
+// src/theme/themeModal.jsx
+import { jsx as jsx11, jsxs as jsxs6 } from "react/jsx-runtime";
+var MODES = [
+  { value: "light", icon: "light_mode", label: "Claro" },
+  { value: "dark", icon: "dark_mode", label: "Oscuro" },
+  { value: "system", icon: "brightness_4", label: "Sistema" }
+];
+var MORPH = { duration: 0.4, ease: "power3.out" };
+var CIRCLE = "50%";
+var SWATCH = 56;
+var squircleRadius = () => getComputedStyle(document.documentElement).getPropertyValue("--control-radius").trim() || "28%";
+function Swatch({ theme, selected, onSelect }) {
+  const ref = useRef5(null);
+  useGSAP3(() => {
+    gsap4.to(ref.current, {
+      borderRadius: selected ? squircleRadius() : CIRCLE,
+      scale: selected ? 1.1 : 1,
+      ...MORPH
+    });
+  }, { dependencies: [selected] });
+  return /* @__PURE__ */ jsx11(
+    "button",
+    {
+      ref,
+      type: "button",
+      onClick: onSelect,
+      "aria-pressed": selected,
+      "aria-label": theme.name,
+      title: theme.name,
+      className: "cursor-pointer border-0 p-0 transition-shadow duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--md-sys-color-primary)]",
+      style: {
+        width: SWATCH,
+        height: SWATCH,
+        borderRadius: CIRCLE,
+        background: theme.hex,
+        // offset ring rather than a border: it never eats into the colour, and it is the one
+        // marker that stays visible on a swatch as dark as the neutral one
+        boxShadow: selected ? "0 0 0 2px var(--md-sys-color-surface-container-high), 0 0 0 4px var(--md-sys-color-primary)" : "none"
+      }
+    }
+  );
+}
+function ThemeModal({ open, onClose, triggerRef, title = "Apariencia" }) {
+  verifyTypesThemeModal({ open, onClose, triggerRef, title });
+  const { colorSeedHex, variant, setColorSeedHex, mode, setMode, THEMES_AVAILABLE: THEMES_AVAILABLE2 } = useTheme();
+  const isActive = (theme) => theme.hex.toLowerCase() === colorSeedHex.toLowerCase() && (theme.variant ?? variant) === variant;
+  const modeIndex = MODES.findIndex((m) => m.value === mode);
+  return /* @__PURE__ */ jsx11(CustomModal, { open, onClose, triggerRef, className: "w-[360px]", children: /* @__PURE__ */ jsxs6("div", { className: "flex flex-col gap-[var(--gap-page)]", children: [
+    /* @__PURE__ */ jsxs6("div", { className: "flex items-center gap-[var(--gap-group)]", children: [
+      /* @__PURE__ */ jsx11(Icon, { name: "palette", size: "lg" }),
+      /* @__PURE__ */ jsx11(
+        "h2",
+        {
+          className: "font-[number:var(--font-medium)] tracking-[var(--tracking-h3)]",
+          style: { fontSize: "var(--text-xl)", color: "var(--md-sys-color-on-surface)" },
+          children: title
+        }
+      )
+    ] }),
+    /* @__PURE__ */ jsx11("div", { className: "flex flex-wrap gap-[var(--gap-group)]", children: THEMES_AVAILABLE2.map((theme) => /* @__PURE__ */ jsx11(
+      Swatch,
+      {
+        theme,
+        selected: isActive(theme),
+        onSelect: () => setColorSeedHex(theme.hex, theme.variant)
+      },
+      theme.name
+    )) }),
+    /* @__PURE__ */ jsxs6("div", { className: "flex flex-col gap-[var(--gap-section)]", children: [
+      /* @__PURE__ */ jsx11(
+        "p",
+        {
+          className: "tracking-[var(--tracking-label)]",
+          style: { fontSize: "var(--text-sm)", color: "var(--md-sys-color-on-surface-variant)" },
+          children: "Modo"
+        }
+      ),
+      /* @__PURE__ */ jsx11(
+        ButtonGroup,
+        {
+          vertical: false,
+          allowDeselect: false,
+          value: modeIndex,
+          onChange: (index) => setMode(MODES[index].value),
+          buttons: MODES.map((m) => ({ id: m.value, icon: m.icon, ariaLabel: m.label }))
+        }
+      )
+    ] })
+  ] }) });
+}
+
+// src/input/input.jsx
+import { useId } from "react";
+import { twMerge as twMerge5 } from "tailwind-merge";
+import { jsx as jsx12, jsxs as jsxs7 } from "react/jsx-runtime";
+function Input({
+  label,
+  type = "text",
+  id,
+  className,
+  style,
+  placeholder,
+  value,
+  onChange,
+  ...props
+}) {
+  const generatedId = useId();
+  const inputId = id ?? generatedId;
+  verifyTypesInput({ label, placeholder, type });
+  return /* @__PURE__ */ jsxs7("div", { className: "flex w-full flex-col gap-1", children: [
+    label && /* @__PURE__ */ jsx12(
+      "label",
+      {
+        htmlFor: inputId,
+        className: "text-[length:var(--text-sm)] leading-[var(--leading-tight)] tracking-[var(--tracking-body)] font-[number:var(--font-medium)] font-[family-name:var(--font-family)] text-[var(--md-sys-color-on-surface-variant)]",
+        children: label
+      }
+    ),
+    /* @__PURE__ */ jsx12(
+      "input",
+      {
+        id: inputId,
+        type,
+        className: twMerge5(
+          "w-full rounded-[var(--radius-lg)] bg-[var(--md-sys-color-surface-container)] text-[length:var(--text-base)] tracking-[var(--tracking-body)] font-[family-name:var(--font-family)] text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)] outline-none transition-colors duration-150 focus:bg-[color-mix(in_srgb,var(--md-sys-color-on-surface)_8%,var(--md-sys-color-surface-container))] disabled:opacity-50 disabled:cursor-not-allowed",
+          className
+        ),
+        value,
+        onChange: (e) => onChange == null ? void 0 : onChange(e.target.value),
+        style: { padding: "var(--pad-input)", ...style },
+        placeholder,
+        ...props
+      }
+    )
+  ] });
+}
+
+// src/textarea/textarea.jsx
+import { useId as useId2 } from "react";
+import { twMerge as twMerge6 } from "tailwind-merge";
+import { jsx as jsx13, jsxs as jsxs8 } from "react/jsx-runtime";
+function Textarea({
+  label,
+  id,
+  width = "100%",
+  height = "6rem",
+  className,
+  style,
+  placeholder,
+  ...props
+}) {
+  const generatedId = useId2();
+  const textareaId = id ?? generatedId;
+  verifyTypesTextarea({ label, placeholder, width, height });
+  return /* @__PURE__ */ jsxs8("div", { className: "flex flex-col gap-1", style: { width }, children: [
+    label && /* @__PURE__ */ jsx13(
+      "label",
+      {
+        htmlFor: textareaId,
+        className: "text-[length:var(--text-sm)] leading-[var(--leading-tight)] tracking-[var(--tracking-body)] font-[number:var(--font-medium)] font-[family-name:var(--font-family)] text-[var(--md-sys-color-on-surface-variant)]",
+        children: label
+      }
+    ),
+    /* @__PURE__ */ jsx13(
+      "textarea",
+      {
+        id: textareaId,
+        className: twMerge6(
+          "w-full rounded-[var(--radius-lg)] bg-[var(--md-sys-color-surface-container)] text-[length:var(--text-base)] tracking-[var(--tracking-body)] font-[family-name:var(--font-family)] text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)] outline-none transition-colors duration-150 focus:bg-[color-mix(in_srgb,var(--md-sys-color-on-surface)_8%,var(--md-sys-color-surface-container))] disabled:opacity-50 disabled:cursor-not-allowed",
+          className
+        ),
+        style: {
+          padding: "var(--pad-input)",
+          height,
+          resize: "none",
+          overflow: "hidden",
+          ...style
+        },
+        placeholder
+      }
+    )
+  ] });
+}
+
+// src/select/select.jsx
+import { useEffect as useEffect4, useId as useId3, useRef as useRef6, useState as useState5 } from "react";
+import { createPortal as createPortal2 } from "react-dom";
+import { useGSAP as useGSAP4 } from "@gsap/react";
+import gsap5 from "gsap";
+import { jsx as jsx14, jsxs as jsxs9 } from "react/jsx-runtime";
+function Select({ options = [], value, onChange, label, placeholder = "Seleccionar", disabled, id }) {
+  verifyTypesSelect({ options, onChange, label, placeholder, disabled });
+  const [open, setOpen] = useState5(false);
+  const [rendered, setRendered] = useState5(false);
+  const [anchor, setAnchor] = useState5(null);
+  const wrapperRef = useRef6(null);
+  const triggerRef = useRef6(null);
+  const panelRef = useRef6(null);
+  const generatedId = useId3();
+  const selectId = id ?? generatedId;
+  const selected = options.find((o) => o.value === value);
+  useEffect4(() => {
+    if (!open) return;
+    const syncAnchor = () => {
+      var _a;
+      const rect = (_a = triggerRef.current) == null ? void 0 : _a.getBoundingClientRect();
+      if (rect) setAnchor({ top: rect.bottom + 4, left: rect.left, width: rect.width });
+    };
+    syncAnchor();
+    setRendered(true);
+    window.addEventListener("scroll", syncAnchor, true);
+    window.addEventListener("resize", syncAnchor);
+    return () => {
+      window.removeEventListener("scroll", syncAnchor, true);
+      window.removeEventListener("resize", syncAnchor);
+    };
+  }, [open]);
+  useGSAP4(() => {
+    if (open && panelRef.current) {
+      const el = panelRef.current;
+      const targetHeight = el.scrollHeight;
+      gsap5.fromTo(
+        el,
+        { height: 0, opacity: 0 },
+        {
+          height: targetHeight,
+          opacity: 1,
+          duration: 0.35,
+          ease: "power3.out",
+          onComplete: () => gsap5.set(el, { height: "auto" })
+        }
+      );
+    }
+  }, { dependencies: [open, rendered] });
+  useEffect4(() => {
+    if (!open && rendered && panelRef.current) {
+      gsap5.to(panelRef.current, {
+        height: 0,
+        opacity: 0,
+        duration: 0.25,
+        ease: "power2.in",
+        onComplete: () => setRendered(false)
+      });
+    }
+  }, [open, rendered]);
+  useEffect4(() => {
+    if (!open) return;
+    const handleClick = (e) => {
+      var _a, _b;
+      if ((_a = wrapperRef.current) == null ? void 0 : _a.contains(e.target)) return;
+      if ((_b = panelRef.current) == null ? void 0 : _b.contains(e.target)) return;
+      setOpen(false);
+    };
+    const handleKey = (e) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("mousedown", handleClick);
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+      document.removeEventListener("keydown", handleKey);
+    };
+  }, [open]);
+  const handleSelect = (option) => {
+    onChange == null ? void 0 : onChange(option.value, option);
+    setOpen(false);
+  };
+  return /* @__PURE__ */ jsxs9("div", { ref: wrapperRef, className: "flex w-full flex-col gap-1", children: [
+    label && /* @__PURE__ */ jsx14(
+      "label",
+      {
+        htmlFor: selectId,
+        className: "text-[length:var(--text-sm)] leading-[var(--leading-tight)] tracking-[var(--tracking-body)] font-[number:var(--font-medium)] font-[family-name:var(--font-family)] text-[var(--md-sys-color-on-surface-variant)]",
+        children: label
+      }
+    ),
+    /* @__PURE__ */ jsxs9(
+      "button",
+      {
+        ref: triggerRef,
+        id: selectId,
+        type: "button",
+        disabled,
+        onClick: () => setOpen((o) => !o),
+        className: "flex w-full items-center justify-between rounded-[var(--radius-lg)] bg-[var(--md-sys-color-surface-container)] text-[length:var(--text-base)] tracking-[var(--tracking-body)] font-[family-name:var(--font-family)] text-[var(--md-sys-color-on-surface)] outline-none transition-colors duration-150 focus:bg-[color-mix(in_srgb,var(--md-sys-color-on-surface)_8%,var(--md-sys-color-surface-container))] disabled:opacity-50 disabled:cursor-not-allowed",
+        style: { padding: "var(--pad-input)" },
+        children: [
+          /* @__PURE__ */ jsx14("span", { className: selected ? "" : "text-[var(--md-sys-color-on-surface-variant)]", children: selected ? selected.label : placeholder }),
+          /* @__PURE__ */ jsx14(Icon, { name: "expand_more", size: "sm", className: `transition-transform duration-200 ${open ? "rotate-180" : ""}` })
+        ]
+      }
+    ),
+    rendered && anchor && createPortal2(
+      /* @__PURE__ */ jsx14(
+        "div",
+        {
+          ref: panelRef,
+          className: "fixed z-[var(--z-floating)] flex flex-col gap-[var(--gap-tight)] overflow-hidden rounded-[var(--radius-lg)] bg-[var(--md-sys-color-surface-container-high)] p-1 shadow-lg",
+          style: { top: anchor.top, left: anchor.left, width: anchor.width },
+          children: options.map((option) => {
+            const isSelected = option.value === value;
+            return /* @__PURE__ */ jsx14(
+              "button",
+              {
+                type: "button",
+                onClick: () => handleSelect(option),
+                className: "rounded-[var(--radius-sm)] px-3 py-2 text-left text-[length:var(--text-base)] font-[family-name:var(--font-family)] transition-colors duration-150",
+                style: {
+                  backgroundColor: isSelected ? "var(--md-sys-color-primary-container)" : "transparent",
+                  color: isSelected ? "var(--md-sys-color-primary)" : "var(--md-sys-color-on-surface)"
+                },
+                onMouseEnter: (e) => {
+                  if (!isSelected) e.currentTarget.style.backgroundColor = "color-mix(in srgb, var(--md-sys-color-on-surface) 8%, transparent)";
+                },
+                onMouseLeave: (e) => {
+                  if (!isSelected) e.currentTarget.style.backgroundColor = "transparent";
+                },
+                children: option.label
+              },
+              option.value
+            );
+          })
+        }
+      ),
+      document.body
+    )
+  ] });
+}
+
+// src/search/search.jsx
+import { useEffect as useEffect5, useId as useId4, useRef as useRef7, useState as useState6 } from "react";
+import { twMerge as twMerge7 } from "tailwind-merge";
+import { jsx as jsx15, jsxs as jsxs10 } from "react/jsx-runtime";
+function Search({
+  label,
+  id,
+  placeholder = "Buscar...",
+  defaultValue = "",
+  value: controlledValue,
+  onChange,
+  onSearch,
+  delay = 400,
+  className,
+  style,
+  ...props
+}) {
+  const [internalValue, setInternalValue] = useState6(defaultValue);
+  const isControlled = controlledValue !== void 0;
+  const value = isControlled ? controlledValue : internalValue;
+  const generatedId = useId4();
+  const searchId = id ?? generatedId;
+  const timeoutRef = useRef7(null);
+  verifyTypesSearch({ label, placeholder, delay, onSearch, onChange, value: controlledValue, defaultValue });
+  useEffect5(() => {
+    if (!onSearch) return;
+    clearTimeout(timeoutRef.current);
+    timeoutRef.current = setTimeout(() => onSearch(value), delay);
+    return () => clearTimeout(timeoutRef.current);
+  }, [value, delay, onSearch]);
+  const handleChange = (event) => {
+    const next = event.target.value;
+    if (!isControlled) setInternalValue(next);
+    onChange == null ? void 0 : onChange(next, event);
+  };
+  const handleClear = () => {
+    if (!isControlled) setInternalValue("");
+    onChange == null ? void 0 : onChange("");
+    onSearch == null ? void 0 : onSearch("");
+  };
+  return /* @__PURE__ */ jsxs10("div", { className: "flex w-full flex-col gap-1", children: [
+    label && /* @__PURE__ */ jsx15(
+      "label",
+      {
+        htmlFor: searchId,
+        className: "text-[length:var(--text-sm)] leading-[var(--leading-tight)] tracking-[var(--tracking-body)] font-[number:var(--font-medium)] font-[family-name:var(--font-family)] text-[var(--md-sys-color-on-surface-variant)]",
+        children: label
+      }
+    ),
+    /* @__PURE__ */ jsxs10(
+      "div",
+      {
+        className: twMerge7(
+          "flex w-full items-center gap-2 rounded-[var(--radius-lg)] bg-[var(--md-sys-color-surface-container)] transition-colors duration-150 focus-within:bg-[color-mix(in_srgb,var(--md-sys-color-on-surface)_8%,var(--md-sys-color-surface-container))]",
+          className
+        ),
+        style: { padding: "var(--pad-input)", ...style },
+        children: [
+          /* @__PURE__ */ jsx15(Icon, { name: "search", size: "sm", className: "shrink-0 text-[var(--md-sys-color-on-surface-variant)]" }),
+          /* @__PURE__ */ jsx15(
+            "input",
+            {
+              id: searchId,
+              type: "search",
+              value,
+              onChange: handleChange,
+              placeholder,
+              className: "w-full bg-transparent text-[length:var(--text-base)] tracking-[var(--tracking-body)] font-[family-name:var(--font-family)] text-[var(--md-sys-color-on-surface)] outline-none placeholder:text-[var(--md-sys-color-on-surface-variant)] [&::-webkit-search-cancel-button]:appearance-none",
+              ...props
+            }
+          ),
+          value && /* @__PURE__ */ jsx15(
+            "button",
+            {
+              type: "button",
+              onClick: handleClear,
+              "aria-label": "Limpiar b\xFAsqueda",
+              className: "flex shrink-0 items-center justify-center border-0 bg-transparent cursor-pointer",
+              children: /* @__PURE__ */ jsx15(Icon, { name: "close", size: "sm", className: "text-[var(--md-sys-color-on-surface-variant)]" })
+            }
+          )
+        ]
+      }
+    )
+  ] });
+}
+
+// src/dropdown/dropdown.jsx
+import { useEffect as useEffect6, useRef as useRef8, useState as useState7 } from "react";
 import { useGSAP as useGSAP5 } from "@gsap/react";
 import gsap6 from "gsap";
-import { jsx as jsx15 } from "react/jsx-runtime";
-var COLOR_PRESETS5 = {
-  primary: "var(--color-action)",
-  secondary: "var(--dark-navy-text)",
-  success: "var(--color-success)",
-  warning: "var(--color-warning)",
-  danger: "var(--color-danger)"
-};
+import { twMerge as twMerge8 } from "tailwind-merge";
+import { jsx as jsx16 } from "react/jsx-runtime";
+function Dropdown({ open, onClose, children, width = "auto", height = "auto", triggerRef, className, style, ...props }) {
+  verifyTypesDropdown({ open, onClose, width, height, triggerRef });
+  const [rendered, setRendered] = useState7(open);
+  const panelRef = useRef8(null);
+  useEffect6(() => {
+    if (open) setRendered(true);
+  }, [open]);
+  useGSAP5(() => {
+    if (open && panelRef.current) {
+      gsap6.fromTo(
+        panelRef.current,
+        { opacity: 0, y: -8, scale: 0.96 },
+        { opacity: 1, y: 0, scale: 1, duration: 0.25, ease: "back.out(1.7)", transformOrigin: "top" }
+      );
+    }
+  }, { dependencies: [open, rendered] });
+  useEffect6(() => {
+    if (!open && rendered && panelRef.current) {
+      gsap6.to(panelRef.current, {
+        opacity: 0,
+        y: -8,
+        scale: 0.96,
+        duration: 0.18,
+        ease: "power2.in",
+        onComplete: () => setRendered(false)
+      });
+    }
+  }, [open, rendered]);
+  useEffect6(() => {
+    if (!open) return;
+    const handleClick = (e) => {
+      var _a, _b;
+      if ((_a = panelRef.current) == null ? void 0 : _a.contains(e.target)) return;
+      if ((_b = triggerRef == null ? void 0 : triggerRef.current) == null ? void 0 : _b.contains(e.target)) return;
+      onClose == null ? void 0 : onClose();
+    };
+    const handleKey = (e) => {
+      if (e.key === "Escape") onClose == null ? void 0 : onClose();
+    };
+    document.addEventListener("mousedown", handleClick);
+    document.addEventListener("keydown", handleKey);
+    return () => {
+      document.removeEventListener("mousedown", handleClick);
+      document.removeEventListener("keydown", handleKey);
+    };
+  }, [open, onClose, triggerRef]);
+  if (!rendered) return null;
+  return /* @__PURE__ */ jsx16(
+    "div",
+    {
+      ref: panelRef,
+      role: "menu",
+      className: twMerge8("z-[var(--z-floating)] rounded-[var(--radius-lg)] bg-[var(--md-sys-color-surface-container-high)] p-1 shadow-lg", className),
+      style: { width, height, ...style },
+      ...props,
+      children
+    }
+  );
+}
+
+// src/loading/loading.jsx
+import { useRef as useRef9 } from "react";
+import { useGSAP as useGSAP6 } from "@gsap/react";
+import gsap7 from "gsap";
+import { jsx as jsx17 } from "react/jsx-runtime";
 var SHAPES = [
   "50% 50% 50% 50% / 50% 50% 50% 50%",
   // circle
@@ -1781,12 +2191,12 @@ var SHAPES = [
 var PENTAGON = "polygon(50% 0%, 97.55% 34.55%, 79.4% 90.45%, 20.6% 90.45%, 2.45% 34.55%)";
 function Loading({ size = "sm", color = "primary", className, style, ...props }) {
   verifyTypesLoading({ size, color });
-  const shapeRef = useRef8(null);
+  const shapeRef = useRef9(null);
   const box = `var(--control-size-${size})`;
-  const background = COLOR_PRESETS5[color] ?? color;
-  useGSAP5(() => {
+  const background = ACCENTS[color] ?? color;
+  useGSAP6(() => {
     const el = shapeRef.current;
-    const tl = gsap6.timeline({ repeat: -1 });
+    const tl = gsap7.timeline({ repeat: -1 });
     const morph = (shape) => {
       tl.to(el, { borderRadius: shape, scale: 1.12, duration: 0.5, ease: "power2.out" }, "+=0.05").to(el, { scale: 1, duration: 0.45, ease: "power2.in" });
     };
@@ -1795,9 +2205,9 @@ function Loading({ size = "sm", color = "primary", className, style, ...props })
     morph(SHAPES[3]);
     tl.to(el, { opacity: 0, scale: 0.85, duration: 0.2, ease: "power2.in" }, "+=0.05").set(el, { clipPath: PENTAGON }).to(el, { opacity: 1, scale: 1.12, duration: 0.3, ease: "power2.out" }).to(el, { scale: 1, duration: 0.45, ease: "power2.in" });
     tl.to(el, { opacity: 0, scale: 0.85, duration: 0.2, ease: "power2.in" }, "+=0.3").set(el, { clipPath: "none", borderRadius: SHAPES[0] }).to(el, { opacity: 1, scale: 1.12, duration: 0.3, ease: "power2.out" }).to(el, { scale: 1, duration: 0.45, ease: "power2.in" });
-    gsap6.to(el, { rotate: 360, duration: 5, repeat: -1, ease: "none" });
+    gsap7.to(el, { rotate: 360, duration: 5, repeat: -1, ease: "none" });
   }, []);
-  return /* @__PURE__ */ jsx15(
+  return /* @__PURE__ */ jsx17(
     "div",
     {
       ref: shapeRef,
@@ -1818,33 +2228,26 @@ function Loading({ size = "sm", color = "primary", className, style, ...props })
 }
 
 // src/loading/progress.jsx
-import { useRef as useRef9 } from "react";
-import { useGSAP as useGSAP6 } from "@gsap/react";
-import gsap7 from "gsap";
-import { jsx as jsx16 } from "react/jsx-runtime";
-var COLOR_PRESETS6 = {
-  primary: "var(--color-action)",
-  secondary: "var(--dark-navy-text)",
-  success: "var(--color-success)",
-  warning: "var(--color-warning)",
-  danger: "var(--color-danger)"
-};
+import { useRef as useRef10 } from "react";
+import { useGSAP as useGSAP7 } from "@gsap/react";
+import gsap8 from "gsap";
+import { jsx as jsx18 } from "react/jsx-runtime";
 function Progress({ value, color = "primary", className, style, ...props }) {
   verifyTypesProgress({ value, color });
-  const fillRef = useRef9(null);
-  const trackRef = useRef9(null);
-  const resolved = COLOR_PRESETS6[color] ?? color;
+  const fillRef = useRef10(null);
+  const trackRef = useRef10(null);
+  const resolved = ACCENTS[color] ?? color;
   const indeterminate = value === void 0 || value === null;
-  useGSAP6(() => {
+  useGSAP7(() => {
     if (indeterminate) {
-      gsap7.set(fillRef.current, { xPercent: -100 });
-      gsap7.to(fillRef.current, { xPercent: 200, duration: 1.2, repeat: -1, ease: "none" });
+      gsap8.set(fillRef.current, { xPercent: -100 });
+      gsap8.to(fillRef.current, { xPercent: 200, duration: 1.2, repeat: -1, ease: "none" });
     } else {
-      gsap7.killTweensOf(fillRef.current);
-      gsap7.to(fillRef.current, { width: `${Math.min(100, Math.max(0, value))}%`, duration: 0.4, ease: "power3.out" });
+      gsap8.killTweensOf(fillRef.current);
+      gsap8.to(fillRef.current, { width: `${Math.min(100, Math.max(0, value))}%`, duration: 0.4, ease: "power3.out" });
     }
   }, { dependencies: [indeterminate, value] });
-  return /* @__PURE__ */ jsx16(
+  return /* @__PURE__ */ jsx18(
     "div",
     {
       ref: trackRef,
@@ -1853,9 +2256,9 @@ function Progress({ value, color = "primary", className, style, ...props }) {
       "aria-valuemin": 0,
       "aria-valuemax": 100,
       className,
-      style: { width: "100%", height: 8, borderRadius: "var(--radius-full)", backgroundColor: "var(--light-gray-background)", overflow: "hidden", position: "relative", ...style },
+      style: { width: "100%", height: 8, borderRadius: "var(--radius-full)", backgroundColor: "var(--md-sys-color-surface-container)", overflow: "hidden", position: "relative", ...style },
       ...props,
-      children: /* @__PURE__ */ jsx16(
+      children: /* @__PURE__ */ jsx18(
         "div",
         {
           ref: fillRef,
@@ -1867,20 +2270,20 @@ function Progress({ value, color = "primary", className, style, ...props }) {
 }
 
 // src/navbar/navbar.jsx
-import { useRef as useRef10, useState as useState7 } from "react";
-import { useGSAP as useGSAP7 } from "@gsap/react";
-import gsap8 from "gsap";
+import { useRef as useRef11, useState as useState8 } from "react";
+import { useGSAP as useGSAP8 } from "@gsap/react";
+import gsap9 from "gsap";
 import { twMerge as twMerge9 } from "tailwind-merge";
-import { Fragment, jsx as jsx17, jsxs as jsxs10 } from "react/jsx-runtime";
+import { Fragment, jsx as jsx19, jsxs as jsxs11 } from "react/jsx-runtime";
 var DESKTOP_ALIGN = {
   center: "top-1/2 -translate-y-1/2",
   top: "top-8"
 };
-var ITEM_BASE = "inline-flex items-center justify-center gap-2 border-0 cursor-pointer p-0 text-[length:var(--text-md)] tracking-[var(--tracking-h4)] font-[number:var(--font-medium)] bg-[var(--nav-item-surface)] text-[var(--nav-item-text)] transition-[background-color,color] duration-400 ease-[var(--ease-morph)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--color-action)]";
-var ITEM_SELECTED = "bg-[var(--nav-item-surface-selected)] text-[var(--nav-item-text-selected)]";
-var MORPH = { duration: 0.4, ease: "power3.out" };
-var CIRCLE = "50%";
-var squircleRadius = () => getComputedStyle(document.documentElement).getPropertyValue("--control-radius").trim() || "28%";
+var ITEM_BASE = "inline-flex items-center justify-center gap-2 border-0 cursor-pointer p-0 text-[length:var(--text-md)] tracking-[var(--tracking-h4)] font-[number:var(--font-medium)] bg-[var(--md-sys-color-surface-container)] text-[var(--md-sys-color-on-surface-variant)] transition-[background-color,color] duration-400 ease-[var(--ease-morph)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--md-sys-color-primary)]";
+var ITEM_SELECTED = "bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)]";
+var MORPH2 = { duration: 0.4, ease: "power3.out" };
+var CIRCLE2 = "50%";
+var squircleRadius2 = () => getComputedStyle(document.documentElement).getPropertyValue("--control-radius").trim() || "28%";
 var attachRef = (node, store, i, forwarded) => {
   if (i === null) store.current = node;
   else store.current[i] = node;
@@ -1888,23 +2291,23 @@ var attachRef = (node, store, i, forwarded) => {
   else if (forwarded) forwarded.current = node;
 };
 function NavItems({ items, selectedItem, onSelect, vertical }) {
-  const itemRefs = useRef10([]);
-  const containerRef = useRef10(null);
-  useGSAP7(() => {
-    const squircle = squircleRadius();
+  const itemRefs = useRef11([]);
+  const containerRef = useRef11(null);
+  useGSAP8(() => {
+    const squircle = squircleRadius2();
     itemRefs.current.forEach((el, i) => {
       if (!el) return;
       const isSelected = i === selectedItem;
-      gsap8.to(el, {
-        borderRadius: isSelected ? squircle : CIRCLE,
+      gsap9.to(el, {
+        borderRadius: isSelected ? squircle : CIRCLE2,
         scale: isSelected ? 1.1 : 1,
-        ...MORPH
+        ...MORPH2
       });
     });
   }, { dependencies: [selectedItem, items.length], scope: containerRef });
-  return /* @__PURE__ */ jsx17("div", { ref: containerRef, className: twMerge9("inline-flex gap-[var(--gap-group)]", vertical && "flex-col"), children: items.map((item, i) => {
+  return /* @__PURE__ */ jsx19("div", { ref: containerRef, className: twMerge9("inline-flex gap-[var(--gap-group)]", vertical && "flex-col"), children: items.map((item, i) => {
     const iconOnly = !item.label;
-    return /* @__PURE__ */ jsxs10(
+    return /* @__PURE__ */ jsxs11(
       "button",
       {
         ref: (el) => attachRef(el, itemRefs, i, item.buttonRef),
@@ -1913,13 +2316,13 @@ function NavItems({ items, selectedItem, onSelect, vertical }) {
         "aria-pressed": selectedItem === i,
         className: twMerge9(ITEM_BASE, selectedItem === i && ITEM_SELECTED),
         style: {
-          borderRadius: CIRCLE,
+          borderRadius: CIRCLE2,
           height: "var(--control-size-md)",
           ...iconOnly ? { width: "var(--control-size-md)" } : { padding: "0 20px" }
         },
         children: [
-          item.icon && (typeof item.icon === "string" ? /* @__PURE__ */ jsx17(Icon, { name: item.icon }) : item.icon),
-          item.label && /* @__PURE__ */ jsx17("span", { children: item.label })
+          item.icon && (typeof item.icon === "string" ? /* @__PURE__ */ jsx19(Icon, { name: item.icon }) : item.icon),
+          item.label && /* @__PURE__ */ jsx19("span", { children: item.label })
         ]
       },
       item.id ?? i
@@ -1927,16 +2330,16 @@ function NavItems({ items, selectedItem, onSelect, vertical }) {
   }) });
 }
 function LogoButton({ logo }) {
-  const ref = useRef10(null);
-  useGSAP7(() => {
+  const ref = useRef11(null);
+  useGSAP8(() => {
     if (!ref.current) return;
-    gsap8.to(ref.current, {
-      borderRadius: logo.active ? squircleRadius() : CIRCLE,
+    gsap9.to(ref.current, {
+      borderRadius: logo.active ? squircleRadius2() : CIRCLE2,
       scale: logo.active ? 1.1 : 1,
-      ...MORPH
+      ...MORPH2
     });
   }, { dependencies: [logo.active] });
-  return /* @__PURE__ */ jsx17(
+  return /* @__PURE__ */ jsx19(
     "button",
     {
       ref: (el) => attachRef(el, ref, null, logo.buttonRef),
@@ -1948,9 +2351,9 @@ function LogoButton({ logo }) {
       style: {
         width: "var(--control-size-md)",
         height: "var(--control-size-md)",
-        borderRadius: CIRCLE
+        borderRadius: CIRCLE2
       },
-      children: typeof logo.icon === "string" ? /* @__PURE__ */ jsx17(Icon, { name: logo.icon }) : logo.icon
+      children: typeof logo.icon === "string" ? /* @__PURE__ */ jsx19(Icon, { name: logo.icon }) : logo.icon
     }
   );
 }
@@ -1965,15 +2368,15 @@ function Navbar({
   style
 }) {
   verifyTypesNavbar({ items, logo, selected, defaultSelected, onChange, align });
-  const [internalSelected, setInternalSelected] = useState7(defaultSelected);
+  const [internalSelected, setInternalSelected] = useState8(defaultSelected);
   const isControlled = selected !== void 0;
   const selectedItem = isControlled ? selected : internalSelected;
   const handleSelect = (i) => {
     if (!isControlled) setInternalSelected(i);
     onChange == null ? void 0 : onChange(i, items[i]);
   };
-  return /* @__PURE__ */ jsxs10(Fragment, { children: [
-    /* @__PURE__ */ jsxs10(
+  return /* @__PURE__ */ jsxs11(Fragment, { children: [
+    /* @__PURE__ */ jsxs11(
       "nav",
       {
         className: twMerge9(
@@ -1983,12 +2386,12 @@ function Navbar({
         ),
         style,
         children: [
-          logo && /* @__PURE__ */ jsx17(LogoButton, { logo }),
-          /* @__PURE__ */ jsx17(NavItems, { items, selectedItem, onSelect: handleSelect, vertical: true })
+          logo && /* @__PURE__ */ jsx19(LogoButton, { logo }),
+          /* @__PURE__ */ jsx19(NavItems, { items, selectedItem, onSelect: handleSelect, vertical: true })
         ]
       }
     ),
-    /* @__PURE__ */ jsx17(
+    /* @__PURE__ */ jsx19(
       "nav",
       {
         className: twMerge9(
@@ -1996,12 +2399,12 @@ function Navbar({
           className
         ),
         style,
-        children: /* @__PURE__ */ jsx17(
+        children: /* @__PURE__ */ jsx19(
           "div",
           {
-            className: "flex items-center gap-1 rounded-[var(--radius-full)] bg-[var(--nav-surface)] p-1",
+            className: "flex items-center gap-1 rounded-[var(--radius-full)] bg-[var(--md-sys-color-surface)] p-1",
             style: { boxShadow: "var(--shadow-floating)" },
-            children: /* @__PURE__ */ jsx17(NavItems, { items, selectedItem, onSelect: handleSelect, vertical: false })
+            children: /* @__PURE__ */ jsx19(NavItems, { items, selectedItem, onSelect: handleSelect, vertical: false })
           }
         )
       }
@@ -2010,17 +2413,17 @@ function Navbar({
 }
 
 // src/dragScroll/dragScroll.jsx
-import { useCallback as useCallback2, useEffect as useEffect6, useLayoutEffect, useRef as useRef11, useState as useState8 } from "react";
+import { useCallback as useCallback3, useEffect as useEffect7, useLayoutEffect, useRef as useRef12, useState as useState9 } from "react";
 import { twMerge as twMerge10 } from "tailwind-merge";
-import gsap9 from "gsap";
+import gsap10 from "gsap";
 import { Draggable as Draggable2 } from "gsap/Draggable";
 import { InertiaPlugin } from "gsap/InertiaPlugin";
-import { jsx as jsx18 } from "react/jsx-runtime";
-gsap9.registerPlugin(Draggable2, InertiaPlugin);
+import { jsx as jsx20 } from "react/jsx-runtime";
+gsap10.registerPlugin(Draggable2, InertiaPlugin);
 var DRAG_TYPE = { y: "scrollTop", x: "scrollLeft", both: "scroll" };
 var EDGE_RESISTANCE = 0.85;
 function useDragScroll(ref, { axis = "y", inertia = true, disabled = false } = {}) {
-  useEffect6(() => {
+  useEffect7(() => {
     if (disabled || !ref.current) return;
     if (typeof window !== "undefined" && !window.matchMedia("(pointer: fine)").matches) return;
     const el = ref.current;
@@ -2055,8 +2458,8 @@ function useDragScroll(ref, { axis = "y", inertia = true, disabled = false } = {
   }, [ref, axis, inertia, disabled]);
 }
 function useEdgeFade(ref, axis, size) {
-  const [edges, setEdges] = useState8([0, 0]);
-  const measure = useCallback2(() => {
+  const [edges, setEdges] = useState9([0, 0]);
+  const measure = useCallback3(() => {
     const el = ref.current;
     if (!el) return;
     const horizontal = axis === "x";
@@ -2093,12 +2496,12 @@ function DragScroll({
   ...props
 }) {
   verifyTypesDragScroll({ axis, inertia, disabled, fade, fadeSize });
-  const scrollRef = useRef11(null);
+  const scrollRef = useRef12(null);
   useDragScroll(scrollRef, { axis, inertia, disabled });
   const size = fadeSize ?? 32;
   const [fadeStart, fadeEnd] = useEdgeFade(scrollRef, axis, fade ? size : 0);
   const horizontal = axis === "x";
-  return /* @__PURE__ */ jsx18(
+  return /* @__PURE__ */ jsx20(
     "div",
     {
       ref: scrollRef,
@@ -2135,10 +2538,13 @@ export {
   Search,
   Select,
   Textarea,
+  ThemeModal,
+  ThemeProvider,
   Toast,
   ToastProvider,
   anchoredAnimation,
   morphAnimation,
   useDragScroll,
+  useTheme,
   useToast
 };

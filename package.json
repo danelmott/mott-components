@@ -20,6 +20,7 @@
   },
   "scripts": {
     "dev": "vite",
+    "theme": "esbuild scripts/generateTheme.js --bundle --platform=node --format=esm --outfile=node_modules/.cache/generateTheme.mjs && node node_modules/.cache/generateTheme.mjs",
     "build": "tsup && shx cp src/globals.css dist/globals.css",
     "postinstall": "node ./scripts/uploadCss.js"
   },

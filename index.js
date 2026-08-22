@@ -5,6 +5,8 @@ export { default as ButtonGroup } from './src/buttons/buttonGroup.jsx';
 export { default as Badge } from './src/badge/badge.jsx';
 export { default as Toast } from './src/toast/toast.jsx';
 export { ToastProvider, useToast } from './src/toast/toastContext.jsx';
+export { ThemeProvider, useTheme } from './src/theme/themeContext.jsx';
+export { default as ThemeModal } from './src/theme/themeModal.jsx';
 export { default as Input } from './src/input/input.jsx';
 export { default as Textarea } from './src/textarea/textarea.jsx';
 export { default as Select } from './src/select/select.jsx';

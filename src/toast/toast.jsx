@@ -7,17 +7,19 @@ import { Draggable } from 'gsap/Draggable';
 import { Flip } from 'gsap/Flip';
 import Icon from '../icon/icon.jsx';
 import { getToastStack } from './toastStack.js';
+import { ACCENTS } from '../theme/roles.js';
 import { verifyTypesToast } from '../utils/verifyTypes.js';
 
 gsap.registerPlugin(Draggable, Flip);
 
-// One surface for all four variants - only the icon differs. Pastel backgrounds tinted the whole
-// piece and cost it its sobriety.
-const VARIANTS = {
-    info: { iconClass: 'text-[var(--color-action)]', icon: 'info' },
-    success: { iconClass: 'text-[var(--color-success)]', icon: 'check_circle' },
-    warning: { iconClass: 'text-[var(--color-warning)]', icon: 'warning' },
-    danger: { iconClass: 'text-[var(--color-danger)]', icon: 'error' },
+// One surface for all four variants - only the icon differs, in glyph and in tint. Pastel
+// backgrounds tinted the whole piece and cost it its sobriety. The colour is not here: it comes from
+// ACCENTS, so this map is down to the one thing the palette cannot supply.
+const VARIANT_ICONS = {
+    info: 'info',
+    success: 'check_circle',
+    warning: 'warning',
+    danger: 'error',
 };
 
 // how far the toast can be dragged away from the dismiss edge, as a fraction of its width: just
@@ -64,7 +66,10 @@ export default function Toast({
     // its wind-up would drag it back into view for an instant.
     const dismissedRef = useRef(false);
 
-    const preset = VARIANTS[variant] ?? VARIANTS.info;
+    const glyph = VARIANT_ICONS[variant] ?? VARIANT_ICONS.info;
+    // the icon is the only thing the variant tints, so it takes the family fill directly rather
+    // than through a class - one fewer static string to keep in step with the palette
+    const accent = ACCENTS[variant] ?? ACCENTS.info;
 
     useEffect(() => {
         if (open) {
@@ -220,9 +225,10 @@ export default function Toast({
             className="inline-flex items-center gap-3 rounded-[var(--radius-lg)] cursor-grab active:cursor-grabbing"
             style={{
                 padding: 'var(--pad-stat)',
-                // same neutral surface for all four variants. `--white` and not `--modal-surface`
-                // because that is what Dropdown and the Select panel already use for floating surfaces
-                backgroundColor: 'var(--white)',
+                // same neutral surface for all four variants: the variant shows in the icon, not in
+                // the panel. `surface-container-high` is the step Dropdown and the Select panel also
+                // use, so everything that floats above the page sits at the same elevation.
+                backgroundColor: 'var(--md-sys-color-surface-container-high)',
                 boxShadow: 'var(--shadow-floating)',
                 // sized by its text, with no minimum: a short toast has no reason to drag empty space
                 // around. The cap comes from the stack, which has a fixed width - that is where the
@@ -233,16 +239,16 @@ export default function Toast({
                 pointerEvents: 'auto',
             }}
         >
-            <Icon name={preset.icon} size="xl" className={`${preset.iconClass} shrink-0`} />
+            <Icon name={glyph} size="xl" className="shrink-0" style={{ color: accent }} />
             {/* `min-w-0`: without it a flex item never shrinks below its min-content, and a long word
                 would overflow the cap instead of wrapping */}
             <div className="flex min-w-0 flex-col gap-0.5">
                 {title && (
-                    <span className="text-[length:var(--text-sm)] font-[number:var(--font-medium)] text-[var(--dark-navy-text)]">
+                    <span className="text-[length:var(--text-sm)] font-[number:var(--font-medium)] text-[var(--md-sys-color-on-surface)]">
                         {title}
                     </span>
                 )}
-                <span className="text-[length:var(--text-sm)] text-[var(--slate-gray-text)]">
+                <span className="text-[length:var(--text-sm)] text-[var(--md-sys-color-on-surface-variant)]">
                     {children}
                 </span>
             </div>

@@ -2,15 +2,9 @@
 import { useRef } from 'react';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
+import { ACCENTS } from '../theme/roles.js';
 import { verifyTypesLoading } from '../utils/verifyTypes.js';
 
-const COLOR_PRESETS = {
-    primary: 'var(--color-action)',
-    secondary: 'var(--dark-navy-text)',
-    success: 'var(--color-success)',
-    warning: 'var(--color-warning)',
-    danger: 'var(--color-danger)',
-};
 
 const SHAPES = [
     '50% 50% 50% 50% / 50% 50% 50% 50%',   // circle
@@ -27,7 +21,7 @@ export default function Loading({ size = 'sm', color = 'primary', className, sty
     verifyTypesLoading({ size, color });
     const shapeRef = useRef(null);
     const box = `var(--control-size-${size})`;
-    const background = COLOR_PRESETS[color] ?? color;
+    const background = ACCENTS[color] ?? color;
 
     useGSAP(() => {
         const el = shapeRef.current;

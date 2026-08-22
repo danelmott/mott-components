@@ -59,7 +59,7 @@ export default function Dropdown({ open, onClose, children, width = 'auto', heig
         <div
             ref={panelRef}
             role="menu"
-            className={twMerge('z-[var(--z-floating)] rounded-[var(--radius-lg)] bg-[var(--white)] p-1 shadow-lg', className)}
+            className={twMerge('z-[var(--z-floating)] rounded-[var(--radius-lg)] bg-[var(--md-sys-color-surface-container-high)] p-1 shadow-lg', className)}
             style={{ width, height, ...style }}
             {...props}
         >

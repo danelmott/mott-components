@@ -1,3 +1,5 @@
+import { CONTROL_NAMES } from '../theme/roles.js';
+
 const prefixLog = '[MOTT-COMPONENTS]';
 
 // Validators run in every environment on purpose — there is no `process.env.NODE_ENV` guard, so the
@@ -123,7 +125,7 @@ export function verifyTypesSearch({ label, placeholder, delay, onSearch, onChang
 }
 
 export function verifyTypesButton({ variant, shape, iconOnly, fullWidth, type } = {}) {
-    assertOneOf('Button', 'variant', variant, ['primary', 'secondary', 'outline', 'ghost', 'danger'], 'primary');
+    assertOneOf('Button', 'variant', variant, CONTROL_NAMES, 'primary');
     assertOneOf('Button', 'shape', shape, ['rounded', 'pill'], 'rounded');
     assertOneOf('Button', 'type', type, BUTTON_TYPES, 'button');
     assertType('Button', 'iconOnly', iconOnly, 'boolean');
@@ -149,6 +151,7 @@ export function verifyTypesButtonGroup({ buttons, vertical, color, allowDeselect
         if (!item) return;
         assertIconLike('ButtonGroup', `${path}.icon`, item.icon);
         assertType('ButtonGroup', `${path}.label`, item.label, 'string');
+        assertType('ButtonGroup', `${path}.ariaLabel`, item.ariaLabel, 'string');
         assertRef('ButtonGroup', `${path}.buttonRef`, item.buttonRef);
         if (item.icon === undefined && item.label === undefined) {
             warn('ButtonGroup', `${path} has no \`icon\` or \`label\`: it will render empty.`);
@@ -307,5 +310,72 @@ export function verifyTypesToastProvider({ duration, dismissThreshold, max } = {
             fail('ToastProvider', `\`dismissThreshold\` must be a number greater than 0 and at most 1, received ${show(dismissThreshold)}.`);
         }
     }
+    return true;
+}
+
+const THEME_MODES = ['light', 'dark', 'system'];
+// Kept as a literal instead of imported from palette.js, for the same reason modalAnimation.js is
+// not imported here: palette.js pulls in @material/material-color-utilities, and this module is
+// imported by every component in the library. `roles.js` is fair game because it is only strings.
+// Must stay in step with `VARIANTS` in src/theme/palette.js.
+const THEME_VARIANTS = ['content', 'monochrome', 'neutral', 'tonalSpot', 'vibrant'];
+// 3- and 6-digit forms only: `argbFromHex` parses fixed offsets, so an 8-digit #rrggbbaa would have
+// its alpha silently read as part of the colour
+const HEX_COLOR = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
+
+// Pure predicates, no logging. ThemeProvider needs to test a value read back from localStorage, and
+// a stale entry left by an older build is its own problem to drop — not something to scold the
+// consuming app about.
+export const isThemeSeed = (value) => typeof value === 'string' && HEX_COLOR.test(value);
+export const isThemeMode = (value) => THEME_MODES.includes(value);
+export const isThemeVariant = (value) => THEME_VARIANTS.includes(value);
+
+// A malformed seed is checked against a regex and not just `typeof`: `argbFromHex` does not throw on
+// a bad string, it returns the wrong colour, so the regex is the only thing between a typo and a
+// palette nobody can account for. `warn` and not `fail` because every caller falls back.
+export function verifyTypesThemeSeed(component, prop, value) {
+    if (isThemeSeed(value)) return true;
+    warn(component, `\`${prop}\` must be a hex colour like "#0066ff", received ${show(value)}. Ignoring it.`);
+    return false;
+}
+
+export function verifyTypesThemeMode(component, prop, value) {
+    if (isThemeMode(value)) return true;
+    warn(component, `invalid \`${prop}\`: ${show(value)}. Valid values: ${THEME_MODES.join(', ')}. Ignoring it.`);
+    return false;
+}
+
+export function verifyTypesThemeVariant(component, prop, value) {
+    if (isThemeVariant(value)) return true;
+    warn(component, `invalid \`${prop}\`: ${show(value)}. Valid values: ${THEME_VARIANTS.join(', ')}. Ignoring it.`);
+    return false;
+}
+
+export function verifyTypesThemeModal({ open, onClose, triggerRef, title } = {}) {
+    assertType('ThemeModal', 'open', open, 'boolean');
+    assertType('ThemeModal', 'onClose', onClose, 'function');
+    assertType('ThemeModal', 'title', title, 'string');
+    assertRef('ThemeModal', 'triggerRef', triggerRef);
+    return true;
+}
+
+export function verifyTypesThemeProvider({ defaultSeed, defaultMode, themes } = {}) {
+    if (defaultSeed !== undefined && defaultSeed !== null) {
+        verifyTypesThemeSeed('ThemeProvider', 'defaultSeed', defaultSeed);
+    }
+    if (defaultMode !== undefined && defaultMode !== null) {
+        verifyTypesThemeMode('ThemeProvider', 'defaultMode', defaultMode);
+    }
+    assertArrayOf('ThemeProvider', 'themes', themes, (item, path) => {
+        assertPlainObject('ThemeProvider', path, item);
+        if (!item) return;
+        assertRequired('ThemeProvider', `${path}.name`, item.name);
+        assertType('ThemeProvider', `${path}.name`, item.name, 'string');
+        verifyTypesThemeSeed('ThemeProvider', `${path}.hex`, item.hex);
+        // optional: an entry without one falls back to the default variant
+        if (item.variant !== undefined && item.variant !== null) {
+            verifyTypesThemeVariant('ThemeProvider', `${path}.variant`, item.variant);
+        }
+    });
     return true;
 }

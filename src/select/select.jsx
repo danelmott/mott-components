@@ -101,7 +101,7 @@ export default function Select({ options = [], value, onChange, label, placehold
             {label && (
                 <label
                     htmlFor={selectId}
-                    className="text-[length:var(--text-sm)] leading-[var(--leading-tight)] tracking-[var(--tracking-body)] font-[number:var(--font-medium)] font-[family-name:var(--font-family)] text-[var(--slate-gray-text)]"
+                    className="text-[length:var(--text-sm)] leading-[var(--leading-tight)] tracking-[var(--tracking-body)] font-[number:var(--font-medium)] font-[family-name:var(--font-family)] text-[var(--md-sys-color-on-surface-variant)]"
                 >
                     {label}
                 </label>
@@ -112,10 +112,10 @@ export default function Select({ options = [], value, onChange, label, placehold
                 type="button"
                 disabled={disabled}
                 onClick={() => setOpen((o) => !o)}
-                className="flex w-full items-center justify-between rounded-[var(--radius-lg)] bg-[var(--light-gray-background)] text-[length:var(--text-base)] tracking-[var(--tracking-body)] font-[family-name:var(--font-family)] text-[var(--dark-navy-text)] outline-none transition-colors duration-150 focus:bg-[var(--pale-gray-hover)] disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex w-full items-center justify-between rounded-[var(--radius-lg)] bg-[var(--md-sys-color-surface-container)] text-[length:var(--text-base)] tracking-[var(--tracking-body)] font-[family-name:var(--font-family)] text-[var(--md-sys-color-on-surface)] outline-none transition-colors duration-150 focus:bg-[color-mix(in_srgb,var(--md-sys-color-on-surface)_8%,var(--md-sys-color-surface-container))] disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ padding: 'var(--pad-input)' }}
             >
-                <span className={selected ? '' : 'text-[var(--muted-gray-text)]'}>
+                <span className={selected ? '' : 'text-[var(--md-sys-color-on-surface-variant)]'}>
                     {selected ? selected.label : placeholder}
                 </span>
                 <Icon name="expand_more" size="sm" className={`transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
@@ -124,7 +124,7 @@ export default function Select({ options = [], value, onChange, label, placehold
             {rendered && anchor && createPortal(
                 <div
                     ref={panelRef}
-                    className="fixed z-[var(--z-floating)] flex flex-col gap-[var(--gap-tight)] overflow-hidden rounded-[var(--radius-lg)] bg-[var(--white)] p-1 shadow-lg"
+                    className="fixed z-[var(--z-floating)] flex flex-col gap-[var(--gap-tight)] overflow-hidden rounded-[var(--radius-lg)] bg-[var(--md-sys-color-surface-container-high)] p-1 shadow-lg"
                     style={{ top: anchor.top, left: anchor.left, width: anchor.width }}
                 >
                     {options.map((option) => {
@@ -136,10 +136,10 @@ export default function Select({ options = [], value, onChange, label, placehold
                                 onClick={() => handleSelect(option)}
                                 className="rounded-[var(--radius-sm)] px-3 py-2 text-left text-[length:var(--text-base)] font-[family-name:var(--font-family)] transition-colors duration-150"
                                 style={{
-                                    backgroundColor: isSelected ? 'var(--color-action-bg)' : 'transparent',
-                                    color: isSelected ? 'var(--color-action)' : 'var(--dark-navy-text)',
+                                    backgroundColor: isSelected ? 'var(--md-sys-color-primary-container)' : 'transparent',
+                                    color: isSelected ? 'var(--md-sys-color-primary)' : 'var(--md-sys-color-on-surface)',
                                 }}
-                                onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.backgroundColor = 'var(--pale-gray-hover)'; }}
+                                onMouseEnter={(e) => { if (!isSelected) e.currentTarget.style.backgroundColor = 'color-mix(in srgb, var(--md-sys-color-on-surface) 8%, transparent)'; }}
                                 onMouseLeave={(e) => { if (!isSelected) e.currentTarget.style.backgroundColor = 'transparent'; }}
                             >
                                 {option.label}

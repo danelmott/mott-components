@@ -1,14 +1,8 @@
 'use client';
 import Icon from '../icon/icon.jsx';
+import { badgeTint, customTint } from '../theme/roles.js';
 import { verifyTypesBadge } from '../utils/verifyTypes.js';
 
-const COLOR_PRESETS = {
-    neutral: { bg: 'var(--light-gray-background)', fg: 'var(--dark-navy-text)', solidBg: 'var(--dark-navy-text)', solidFg: 'var(--white)' },
-    info: { bg: 'var(--color-action-bg)', fg: 'var(--color-action)', solidBg: 'var(--color-action)', solidFg: 'var(--text-on-action)' },
-    success: { bg: 'var(--color-success-bg)', fg: 'var(--color-success)', solidBg: 'var(--color-success)', solidFg: 'var(--text-on-success)' },
-    warning: { bg: 'var(--color-warning-bg)', fg: 'var(--color-warning)', solidBg: 'var(--color-warning)', solidFg: 'var(--text-on-warning)' },
-    danger: { bg: 'var(--color-danger-bg)', fg: 'var(--color-danger)', solidBg: 'var(--color-danger)', solidFg: 'var(--text-on-danger)' },
-};
 
 const SIZE = {
     sm: { pad: 'var(--pad-badge-sm)', text: 'var(--text-xs)', icon: '12px', dot: 5 },
@@ -19,12 +13,13 @@ const SIZE = {
 //component for badge in mott-design - native, does not depend on Button
 export default function Badge({ children, color = 'neutral', solid = false, size = 'sm', icon, dot = false, style, ...props }) {
     verifyTypesBadge({ color, solid, size, icon, dot });
-    const preset = COLOR_PRESETS[color];
     const scale = SIZE[size] ?? SIZE.sm;
 
-    // when `color` is not a preset variant it is used as-is, as a custom CSS colour (solid)
-    const background = preset ? (solid ? preset.solidBg : preset.bg) : color;
-    const foreground = preset ? (solid ? preset.solidFg : preset.fg) : 'var(--white)';
+    // A status name resolves to a role pair - `solid` fills with the family, plain uses its quieter
+    // container step. Anything else is taken as a literal CSS colour the caller chose; that fallback
+    // foreground is white and not a role on purpose, since the caller's colour does not move with
+    // the theme and a foreground that did would lose its contrast in the other mode.
+    const tint = badgeTint(color, solid) ?? customTint(color, '#ffffff');
 
     return (
         <span
@@ -32,13 +27,13 @@ export default function Badge({ children, color = 'neutral', solid = false, size
             style={{
                 padding: scale.pad,
                 fontSize: scale.text,
-                backgroundColor: background,
-                color: foreground,
+                backgroundColor: tint.surface,
+                color: tint.on,
                 ...style,
             }}
             {...props}
         >
-            {dot && <span aria-hidden="true" style={{ width: scale.dot, height: scale.dot, borderRadius: '50%', backgroundColor: foreground, flexShrink: 0 }} />}
+            {dot && <span aria-hidden="true" style={{ width: scale.dot, height: scale.dot, borderRadius: '50%', backgroundColor: tint.on, flexShrink: 0 }} />}
             {icon && <Icon name={icon} size={scale.icon} />}
             {children}
         </span>

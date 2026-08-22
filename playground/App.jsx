@@ -18,6 +18,8 @@ import CustomModal from '../src/customModal/customModal.jsx';
 import { anchoredAnimation } from '../src/animations/modalAnimation.js';
 import Navbar from '../src/navbar/navbar.jsx';
 import DragScroll from '../src/dragScroll/dragScroll.jsx';
+import { useTheme } from '../src/theme/themeContext.jsx';
+import ThemeModal from '../src/theme/themeModal.jsx';
 
 function Section({ title, wide, children }) {
   return (
@@ -25,7 +27,7 @@ function Section({ title, wide, children }) {
       style={{
         columnSpan: wide ? 'all' : undefined,
         breakInside: 'avoid',
-        backgroundColor: 'var(--surface-container-low)',
+        backgroundColor: 'var(--md-sys-color-surface-container-low)',
         borderRadius: 'var(--radius-lg)',
         padding: 'var(--pad-card)',
         display: 'flex',
@@ -38,7 +40,7 @@ function Section({ title, wide, children }) {
         style={{
           fontSize: 'var(--text-xs)',
           fontWeight: 600,
-          color: 'var(--muted-gray-text)',
+          color: 'var(--md-sys-color-on-surface-variant)',
           textTransform: 'uppercase',
           letterSpacing: 'var(--tracking-caps)',
         }}
@@ -106,22 +108,74 @@ function ToastApiDemo() {
   );
 }
 
-// Cycles the root's `data-theme` through dark -> light -> unset. The unset step matters: that is the
-// one that hands control back to `prefers-color-scheme`.
-function ThemeToggle() {
-  const [theme, setTheme] = useState(null);
+// Cycles `mode` through system -> dark -> light. The `system` step is the one that matters: it is
+// where ThemeProvider drops `data-theme` and hands control back to `prefers-color-scheme`.
+const MODE_CYCLE = { system: 'dark', dark: 'light', light: 'system' };
 
-  const cycle = () => {
-    const next = theme === null ? 'dark' : theme === 'dark' ? 'light' : null;
-    setTheme(next);
-    if (next === null) delete document.documentElement.dataset.theme;
-    else document.documentElement.dataset.theme = next;
-  };
+function ThemeToggle() {
+  const { mode, setMode, resolvedMode } = useTheme();
 
   return (
-    <Button id="theme-toggle" variant="outline" onClick={cycle}>
-      Tema: {theme ?? 'sistema (prefers-color-scheme)'}
+    <Button id="theme-toggle" variant="outline" onClick={() => setMode(MODE_CYCLE[mode])}>
+      Tema: {mode === 'system' ? `sistema (ahora ${resolvedMode})` : mode}
     </Button>
+  );
+}
+
+// Reads straight from the generated `--md-sys-color-*` custom properties, so it only shows colour
+// if the provider actually wrote them to the root.
+function Swatch({ role }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.25rem' }}>
+      <div
+        style={{
+          width: 56,
+          height: 56,
+          borderRadius: 'var(--radius-sm)',
+          background: `var(--md-sys-color-${role})`,
+          border: '1px solid var(--md-sys-color-outline-variant)',
+        }}
+      />
+      <span style={{ fontSize: 'var(--text-xs)', color: 'var(--md-sys-color-on-surface-variant)' }}>{role}</span>
+    </div>
+  );
+}
+
+function ThemeDemo() {
+  const { colorSeedHex, variant, mode, resolvedMode } = useTheme();
+  const triggerRef = useRef(null);
+  const [open, setOpen] = useState(false);
+
+  return (
+    <>
+      <p style={{ fontSize: 'var(--text-sm)', color: 'var(--md-sys-color-on-surface-variant)' }}>
+        El modal es el único sitio desde el que se elige tema. Cada swatch lleva su color y su
+        variante: el neutro usa <code>monochrome</code>, que descarta el tono de la semilla y da un
+        gris puro; rosa y azul usan <code>content</code>, que respeta el color de origen.
+      </p>
+
+      <Row>
+        <Button ref={triggerRef} variant="primary" onClick={() => setOpen(true)}>
+          Abrir apariencia
+        </Button>
+        <span style={{ fontSize: 'var(--text-sm)', color: 'var(--md-sys-color-on-surface-variant)' }}>
+          semilla <strong>{colorSeedHex}</strong> · variante <strong>{variant}</strong> · modo{' '}
+          <strong>{mode}</strong>{mode === 'system' && ` (${resolvedMode})`}
+        </span>
+      </Row>
+
+      <Row>
+        <Swatch role="primary" />
+        <Swatch role="primary-container" />
+        <Swatch role="secondary" />
+        <Swatch role="tertiary" />
+        <Swatch role="error" />
+        <Swatch role="surface" />
+        <Swatch role="outline" />
+      </Row>
+
+      <ThemeModal open={open} onClose={() => setOpen(false)} triggerRef={triggerRef} />
+    </>
   );
 }
 
@@ -134,7 +188,7 @@ function ScrollBox({ id, horizontal, dragScrollProps, children }) {
         height: horizontal ? 'auto' : 160,
         borderRadius: 'var(--radius-lg)',
         fontSize: 'var(--text-sm)',
-        color: 'var(--text-secondary)',
+        color: 'var(--md-sys-color-on-surface-variant)',
       }}
       {...dragScrollProps}
     >
@@ -187,7 +241,7 @@ export default function App() {
         style={{
           fontSize: 'var(--text-3xl)',
           fontWeight: 700,
-          color: 'var(--text-primary)',
+          color: 'var(--md-sys-color-on-surface)',
           marginBottom: '1.5rem',
         }}
       >
@@ -204,14 +258,18 @@ export default function App() {
           columnGap: '1rem',
         }}
       >
+        <Section title="ThemeProvider — paleta M3 + modo" wide>
+          <ThemeDemo />
+        </Section>
+
         <Section title="DragScroll — sin barra, se arrastra" wide>
-          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
+          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--md-sys-color-on-surface-variant)' }}>
             Las barras de scroll están ocultas en toda la app. Estas cajas se arrastran con el mouse y
             siguen de largo al soltar (inercia). La rueda y el teclado funcionan igual que siempre. El
             degradado en el borde avisa que hay más contenido y se apaga al llegar al tope.
           </p>
           <ScrollBox id="scroll-vertical">
-            <p style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>Vertical</p>
+            <p style={{ fontWeight: 600, color: 'var(--md-sys-color-on-surface)', marginBottom: '0.5rem' }}>Vertical</p>
             {Array.from({ length: 25 }, (_, i) => (
               <p key={i} style={{ marginBottom: '0.5rem' }}>{i + 1}. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation.</p>
             ))}
@@ -226,7 +284,7 @@ export default function App() {
           </ScrollBox>
 
           <ScrollBox id="scroll-no-inertia" dragScrollProps={{ inertia: false, fade: false }}>
-            <p style={{ fontWeight: 600, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
+            <p style={{ fontWeight: 600, color: 'var(--md-sys-color-on-surface)', marginBottom: '0.5rem' }}>
               inertia={'{false}'} fade={'{false}'} — se arrastra pero frena al soltar, y sin degradado
             </p>
             {Array.from({ length: 25 }, (_, i) => (
@@ -340,7 +398,7 @@ export default function App() {
             delay={400}
             onSearch={(query) => setSearchLog(query ? `Llamando a la API con: "${query}"` : '(nada buscado todavía)')}
           />
-          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>{searchLog}</p>
+          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--md-sys-color-on-surface-variant)' }}>{searchLog}</p>
         </Section>
 
         <Section title="Select">
@@ -369,11 +427,11 @@ export default function App() {
 
         <Section title="Progress">
           <div>
-            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Indeterminado</p>
+            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--md-sys-color-on-surface-variant)', marginBottom: '0.5rem' }}>Indeterminado</p>
             <Progress color="primary" />
           </div>
           <div>
-            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: '0.5rem' }}>Determinado ({progressValue}%)</p>
+            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--md-sys-color-on-surface-variant)', marginBottom: '0.5rem' }}>Determinado ({progressValue}%)</p>
             <Progress color="success" value={progressValue} />
             <Row>
               <Button variant="outline" onClick={() => setProgressValue((v) => Math.max(0, v - 10))}>-10</Button>
@@ -395,9 +453,9 @@ export default function App() {
               className="absolute top-full left-0 mt-1"
             >
               <div style={{ padding: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-primary)', padding: '0.5rem' }}>Opción 1</span>
-                <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-primary)', padding: '0.5rem' }}>Opción 2</span>
-                <span style={{ fontSize: 'var(--text-sm)', color: 'var(--text-primary)', padding: '0.5rem' }}>Opción 3</span>
+                <span style={{ fontSize: 'var(--text-sm)', color: 'var(--md-sys-color-on-surface)', padding: '0.5rem' }}>Opción 1</span>
+                <span style={{ fontSize: 'var(--text-sm)', color: 'var(--md-sys-color-on-surface)', padding: '0.5rem' }}>Opción 2</span>
+                <span style={{ fontSize: 'var(--text-sm)', color: 'var(--md-sys-color-on-surface)', padding: '0.5rem' }}>Opción 3</span>
               </div>
             </Dropdown>
           </div>
@@ -415,14 +473,14 @@ export default function App() {
           >
             {/* el ancho lo pone este div, no la modal: el panel se mide por su contenido */}
             <div className="w-[23rem]">
-              <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
+              <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--md-sys-color-on-surface)', marginBottom: '0.5rem' }}>
                 Modal personalizado
               </h3>
-              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--md-sys-color-on-surface-variant)', marginBottom: '1rem' }}>
                 Backdrop constante (igual en todas las modales), ancho puesto por el div de adentro, animación anclada junto al botón (AnchoredAnimation).
               </p>
               {Array.from({ length: 2 }, (_, i) => (
-                <p key={i} style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>
+                <p key={i} style={{ fontSize: 'var(--text-sm)', color: 'var(--md-sys-color-on-surface-variant)', marginBottom: '0.75rem' }}>
                   {i + 1}. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation.
                 </p>
               ))}
@@ -435,7 +493,7 @@ export default function App() {
           </Button>
           <CustomModal open={autoModalOpen} onClose={() => setAutoModalOpen(false)}>
             {/* sin div de ancho: el panel mide lo que miden estos hijos y nada más */}
-            <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.75rem' }}>
+            <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--md-sys-color-on-surface)', marginBottom: '0.75rem' }}>
               ¿Eliminar el elemento?
             </h3>
             <Row>
@@ -446,7 +504,7 @@ export default function App() {
         </Section>
 
         <Section title="Navbar — rail en desktop, barra inferior en mobile" wide>
-          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
+          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--md-sys-color-on-surface-variant)' }}>
             Achicá la ventana por debajo de ~768px para ver el cambio de rail a barra inferior. El activo está
             controlado (simula la ruta actual) — reclickear el mismo ítem no lo deselecciona. Los dos triggers
             muestran las dos variantes del morph: el <strong>logo</strong> abre un pop up que se apoya encima y lo
@@ -493,10 +551,10 @@ export default function App() {
             triggerRef={gearButtonRef}
           >
             <div className="w-[19rem]">
-              <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
+              <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--md-sys-color-on-surface)', marginBottom: '0.5rem' }}>
                 Modal centrada desde el nav
               </h3>
-              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--md-sys-color-on-surface-variant)', marginBottom: '1rem' }}>
                 El botón se transforma en la modal y viaja hasta el centro. Como queda a la vista, se ilumina
                 al clickearlo y vuelve al default recién cuando la modal termina de plegarse encima.
               </p>
@@ -515,10 +573,10 @@ export default function App() {
             animation={anchoredAnimation}
           >
             <div className="w-[15rem]">
-              <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '0.5rem' }}>
+              <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--md-sys-color-on-surface)', marginBottom: '0.5rem' }}>
                 Pop up desde el logo
               </h3>
-              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
+              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--md-sys-color-on-surface-variant)', marginBottom: '1rem' }}>
                 Se apoya encima del logo y lo tapa: el círculo se estira desde su propia esquina hasta
                 convertirse en este panel. Por eso el logo no cambia de estilo al clickearlo — no se vería.
               </p>
@@ -528,7 +586,7 @@ export default function App() {
         </Section>
 
         <Section title="Toast — API imperativa con useToast()" wide>
-          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
+          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--md-sys-color-on-surface-variant)' }}>
             La forma recomendada de usar toasts: <code>{'<ToastProvider>'}</code> envuelve la app (acá está en
             main.jsx) y <code>useToast()</code> devuelve la API. El provider mantiene una cola, así que varios
             toasts seguidos se apilan; <code>showToast()</code> devuelve un id para cerrarlo a mano.
@@ -537,7 +595,7 @@ export default function App() {
         </Section>
 
         <Section title="Toast — uso declarativo (open / onClose)" wide>
-          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--text-secondary)' }}>
+          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--md-sys-color-on-surface-variant)' }}>
             Los toasts se renderizan en un stack fijo arriba a la derecha, no donde se los declara. Se
             cierran solos a los 5s —el contador se pausa si les pasás el mouse por encima o los
             arrastrás— o arrastrándolos hacia la derecha más de la mitad de su ancho.

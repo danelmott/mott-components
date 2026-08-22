@@ -54,26 +54,26 @@ export default function Search({
             {label && (
                 <label
                     htmlFor={searchId}
-                    className="text-[length:var(--text-sm)] leading-[var(--leading-tight)] tracking-[var(--tracking-body)] font-[number:var(--font-medium)] font-[family-name:var(--font-family)] text-[var(--slate-gray-text)]"
+                    className="text-[length:var(--text-sm)] leading-[var(--leading-tight)] tracking-[var(--tracking-body)] font-[number:var(--font-medium)] font-[family-name:var(--font-family)] text-[var(--md-sys-color-on-surface-variant)]"
                 >
                     {label}
                 </label>
             )}
             <div
                 className={twMerge(
-                    'flex w-full items-center gap-2 rounded-[var(--radius-lg)] bg-[var(--light-gray-background)] transition-colors duration-150 focus-within:bg-[var(--pale-gray-hover)]',
+                    'flex w-full items-center gap-2 rounded-[var(--radius-lg)] bg-[var(--md-sys-color-surface-container)] transition-colors duration-150 focus-within:bg-[color-mix(in_srgb,var(--md-sys-color-on-surface)_8%,var(--md-sys-color-surface-container))]',
                     className
                 )}
                 style={{ padding: 'var(--pad-input)', ...style }}
             >
-                <Icon name="search" size="sm" className="shrink-0 text-[var(--muted-gray-text)]" />
+                <Icon name="search" size="sm" className="shrink-0 text-[var(--md-sys-color-on-surface-variant)]" />
                 <input
                     id={searchId}
                     type="search"
                     value={value}
                     onChange={handleChange}
                     placeholder={placeholder}
-                    className="w-full bg-transparent text-[length:var(--text-base)] tracking-[var(--tracking-body)] font-[family-name:var(--font-family)] text-[var(--dark-navy-text)] outline-none placeholder:text-[var(--muted-gray-text)] [&::-webkit-search-cancel-button]:appearance-none"
+                    className="w-full bg-transparent text-[length:var(--text-base)] tracking-[var(--tracking-body)] font-[family-name:var(--font-family)] text-[var(--md-sys-color-on-surface)] outline-none placeholder:text-[var(--md-sys-color-on-surface-variant)] [&::-webkit-search-cancel-button]:appearance-none"
                     {...props}
                 />
                 {value && (
@@ -83,7 +83,7 @@ export default function Search({
                         aria-label="Limpiar búsqueda"
                         className="flex shrink-0 items-center justify-center border-0 bg-transparent cursor-pointer"
                     >
-                        <Icon name="close" size="sm" className="text-[var(--muted-gray-text)]" />
+                        <Icon name="close" size="sm" className="text-[var(--md-sys-color-on-surface-variant)]" />
                     </button>
                 )}
             </div>

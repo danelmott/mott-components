@@ -2,22 +2,16 @@
 import { useRef } from 'react';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
+import { ACCENTS } from '../theme/roles.js';
 import { verifyTypesProgress } from '../utils/verifyTypes.js';
 
-const COLOR_PRESETS = {
-    primary: 'var(--color-action)',
-    secondary: 'var(--dark-navy-text)',
-    success: 'var(--color-success)',
-    warning: 'var(--color-warning)',
-    danger: 'var(--color-danger)',
-};
 
 //component for progress in mott-design - determinate (value) or indeterminate (travelling sheen), animated with GSAP
 export default function Progress({ value, color = 'primary', className, style, ...props }) {
     verifyTypesProgress({ value, color });
     const fillRef = useRef(null);
     const trackRef = useRef(null);
-    const resolved = COLOR_PRESETS[color] ?? color;
+    const resolved = ACCENTS[color] ?? color;
     const indeterminate = value === undefined || value === null;
 
     useGSAP(() => {
@@ -39,7 +33,7 @@ export default function Progress({ value, color = 'primary', className, style, .
             aria-valuemin={0}
             aria-valuemax={100}
             className={className}
-            style={{ width: '100%', height: 8, borderRadius: 'var(--radius-full)', backgroundColor: 'var(--light-gray-background)', overflow: 'hidden', position: 'relative', ...style }}
+            style={{ width: '100%', height: 8, borderRadius: 'var(--radius-full)', backgroundColor: 'var(--md-sys-color-surface-container)', overflow: 'hidden', position: 'relative', ...style }}
             {...props}
         >
             <div

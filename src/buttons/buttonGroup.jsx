@@ -4,15 +4,9 @@ import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
 import { twMerge } from 'tailwind-merge';
 import Icon from '../icon/icon.jsx';
+import { controlTint, FAMILIES } from '../theme/roles.js';
 import { verifyTypesButtonGroup } from '../utils/verifyTypes.js';
 
-const COLOR_PRESETS = {
-    primary: { bg: 'var(--color-action)', fg: 'var(--text-on-action)' },
-    secondary: { bg: 'var(--dark-navy-text)', fg: 'var(--white)' },
-    outline: { bg: 'var(--light-gray-background)', fg: 'var(--dark-navy-text)' },
-    ghost: { bg: 'transparent', fg: 'var(--dark-navy-text)' },
-    danger: { bg: 'var(--color-danger)', fg: 'var(--text-on-danger)' },
-};
 
 //component for buttonGroup in mott-design - single selection, morph animated with GSAP
 export default function ButtonGroup({ buttons, vertical = true, color = 'primary', defaultSelected = null, value, allowDeselect = true, onChange }) {
@@ -22,7 +16,9 @@ export default function ButtonGroup({ buttons, vertical = true, color = 'primary
     const selectedButton = isControlled ? value : internalSelected;
     const itemRefs = useRef([]);
     const containerRef = useRef(null);
-    const preset = COLOR_PRESETS[color] ?? COLOR_PRESETS.primary;
+    const tint = controlTint(color) ?? controlTint('primary');
+    // the resting state of every item: the neutral family's quiet step
+    const resting = FAMILIES.neutral;
 
     // GSAP cannot interpolate "var(--token)" as a colour - resolve it to its real value before animating
     const resolveColor = (value) => {
@@ -40,8 +36,8 @@ export default function ButtonGroup({ buttons, vertical = true, color = 'primary
             gsap.to(el, {
                 borderRadius: isSelected ? '28%' : '50%',
                 scale: isSelected ? 1.1 : 1,
-                backgroundColor: resolveColor(isSelected ? preset.bg : 'var(--light-gray-background)'),
-                color: resolveColor(isSelected ? preset.fg : 'var(--dark-navy-text)'),
+                backgroundColor: resolveColor(isSelected ? tint.surface : resting.container),
+                color: resolveColor(isSelected ? tint.on : resting.onContainer),
                 duration: 0.4,
                 ease: 'power3.out',
             });
@@ -58,6 +54,9 @@ export default function ButtonGroup({ buttons, vertical = true, color = 'primary
         <div ref={containerRef} className={twMerge('inline-flex gap-[var(--gap-group)]', vertical && 'flex-col')}>
             {buttons.map((btn, i) => {
                 const iconOnly = !btn.label;
+                // An icon-only item announces nothing on its own, because Icon is `aria-hidden`.
+                // Without `ariaLabel` such a button reaches a screen reader as an anonymous control,
+                // so it is passed straight through below (and doubles as the hover tooltip).
                 return (
                     <button
                         key={btn.id ?? i}
@@ -71,11 +70,13 @@ export default function ButtonGroup({ buttons, vertical = true, color = 'primary
                         type="button"
                         onClick={() => handleSelect(i)}
                         aria-pressed={selectedButton === i}
-                        className="inline-flex items-center justify-center gap-2 border-0 cursor-pointer text-[length:var(--text-md)] tracking-[var(--tracking-h4)] font-[number:var(--font-medium)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--color-action)]"
+                        aria-label={btn.ariaLabel}
+                        title={btn.ariaLabel}
+                        className="inline-flex items-center justify-center gap-2 border-0 cursor-pointer text-[length:var(--text-md)] tracking-[var(--tracking-h4)] font-[number:var(--font-medium)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--md-sys-color-primary)]"
                         style={{
                             borderRadius: '50%',
-                            backgroundColor: 'var(--light-gray-background)',
-                            color: 'var(--dark-navy-text)',
+                            backgroundColor: resting.container,
+                            color: resting.onContainer,
                             height: 'var(--control-size-md)',
                             ...(iconOnly
                                 ? { width: 'var(--control-size-md)', padding: 0 }
