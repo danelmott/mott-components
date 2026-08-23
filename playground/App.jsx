@@ -2,9 +2,7 @@ import { useRef, useState } from 'react';
 import Icon from '../src/icon/icon.jsx';
 import Button from '../src/buttons/button.jsx';
 import FabButton from '../src/buttons/fabButton.jsx';
-import ButtonFullRounded from '../src/buttons/buttonFullRounded.jsx';
 import ButtonGroup from '../src/buttons/buttonGroup.jsx';
-import Badge from '../src/badge/badge.jsx';
 import Input from '../src/input/input.jsx';
 import Textarea from '../src/textarea/textarea.jsx';
 import Toast from '../src/toast/toast.jsx';
@@ -60,22 +58,22 @@ function ToastApiDemo() {
   return (
     <>
       <Row>
-        <Button variant="outline" onClick={() => info({ title: 'Info', message: 'Un dato para tener en cuenta.' })}>
+        <Button variant="default" onClick={() => info({ title: 'Info', message: 'Un dato para tener en cuenta.' })}>
           info()
         </Button>
-        <Button variant="outline" onClick={() => success('Guardado')}>
+        <Button variant="default" onClick={() => success('Guardado')}>
           success() con string
         </Button>
-        <Button variant="outline" onClick={() => warning({ title: 'Atención', message: 'Revisá este dato.' })}>
+        <Button variant="default" onClick={() => warning({ title: 'Atención', message: 'Revisá este dato.' })}>
           warning()
         </Button>
-        <Button variant="outline" onClick={() => danger({ title: 'Error', message: 'Algo salió mal.' })}>
+        <Button variant="default" onClick={() => danger({ title: 'Error', message: 'Algo salió mal.' })}>
           danger()
         </Button>
       </Row>
       <Row>
         <Button
-          variant="secondary"
+          variant="support"
           onClick={() => {
             // four at once: they stack, and closing one makes the rest slide up via Flip
             info({ title: 'Uno', message: 'Primero de la tanda.' });
@@ -87,7 +85,7 @@ function ToastApiDemo() {
           Disparar 4 juntos
         </Button>
         <Button
-          variant="outline"
+          variant="default"
           onClick={() => {
             lastIdRef.current = showToast({
               variant: 'info',
@@ -99,7 +97,7 @@ function ToastApiDemo() {
         >
           duration: 15000
         </Button>
-        <Button variant="outline" onClick={() => lastIdRef.current && closeToast(lastIdRef.current)}>
+        <Button variant="default" onClick={() => lastIdRef.current && closeToast(lastIdRef.current)}>
           closeToast(id)
         </Button>
         <Button variant="ghost" onClick={closeAll}>closeAll()</Button>
@@ -116,7 +114,7 @@ function ThemeToggle() {
   const { mode, setMode, resolvedMode } = useTheme();
 
   return (
-    <Button id="theme-toggle" variant="outline" onClick={() => setMode(MODE_CYCLE[mode])}>
+    <Button id="theme-toggle" variant="default" onClick={() => setMode(MODE_CYCLE[mode])}>
       Tema: {mode === 'system' ? `sistema (ahora ${resolvedMode})` : mode}
     </Button>
   );
@@ -155,7 +153,7 @@ function ThemeDemo() {
       </p>
 
       <Row>
-        <Button ref={triggerRef} variant="primary" onClick={() => setOpen(true)}>
+        <Button ref={triggerRef} variant="action" onClick={() => setOpen(true)}>
           Abrir apariencia
         </Button>
         <span style={{ fontSize: 'var(--text-sm)', color: 'var(--md-sys-color-on-surface-variant)' }}>
@@ -278,7 +276,19 @@ export default function App() {
           <ScrollBox id="scroll-horizontal" horizontal>
             <div style={{ display: 'flex', gap: '0.5rem', width: 'max-content', paddingBottom: '0.5rem' }}>
               {Array.from({ length: 40 }, (_, i) => (
-                <Badge key={i} color="info" size="md">Elemento {i + 1}</Badge>
+                <span
+                  key={i}
+                  style={{
+                    padding: 'var(--pad-badge-md)',
+                    borderRadius: 'var(--radius-full)',
+                    backgroundColor: 'var(--md-sys-color-secondary-container)',
+                    color: 'var(--md-sys-color-on-secondary-container)',
+                    fontSize: 'var(--text-sm)',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
+                  Elemento {i + 1}
+                </span>
               ))}
             </div>
           </ScrollBox>
@@ -293,26 +303,47 @@ export default function App() {
           </ScrollBox>
         </Section>
 
-        <Section title="Button — colores">
+        <Section title="Button — variantes semánticas">
           <Row>
-            <Button variant="primary">Iniciar sesión</Button>
-            <Button variant="secondary">Continuar</Button>
-            <Button variant="outline">Cancelar</Button>
-            <Button variant="ghost">Omitir</Button>
+            <Button>Cancelar</Button>
+            <Button variant="action">Enviar</Button>
+            <Button variant="support">Continuar</Button>
             <Button variant="danger">Eliminar</Button>
-            <Button variant="primary" disabled>Deshabilitado</Button>
+            <Button variant="success">Aprobar</Button>
+            <Button variant="warning">Archivar</Button>
+            <Button variant="ghost">Omitir</Button>
+            <Button variant="action" disabled>Deshabilitado</Button>
+          </Row>
+        </Section>
+
+        <Section title="Button — quiet (mismo significado, menos volumen)">
+          <Row>
+            <Button variant="action">Enviar</Button>
+            <Button variant="action" quiet>Enviar</Button>
+          </Row>
+          <Row>
+            <Button variant="danger">Eliminar</Button>
+            <Button variant="danger" quiet>Eliminar</Button>
+          </Row>
+          <Row>
+            <Button variant="success">Aprobar</Button>
+            <Button variant="success" quiet>Aprobar</Button>
+          </Row>
+          <Row>
+            <Button variant="warning">Archivar</Button>
+            <Button variant="warning" quiet>Archivar</Button>
           </Row>
         </Section>
 
         <Section title="Button — ícono, ancho completo, shape">
           <Row>
-            <Button variant="outline">
+            <Button variant="default">
               <Icon name="favorite" size="sm" />
               Con ícono
             </Button>
-            <Button variant="primary" shape="pill">Shape pill</Button>
+            <Button variant="action" shape="pill">Shape pill</Button>
           </Row>
-          <Button variant="secondary" fullWidth>Ancho completo</Button>
+          <Button variant="support" fullWidth>Ancho completo</Button>
         </Section>
 
         <Section title="Button — iconOnly (sm / md / lg)">
@@ -320,10 +351,10 @@ export default function App() {
             <Button variant="ghost" iconOnly aria-label="Editar" >
               <Icon name="edit" size="sm" />
             </Button>
-            <Button variant="outline" iconOnly aria-label="Editar">
+            <Button variant="default" iconOnly aria-label="Editar">
               <Icon name="edit" size="md" />
             </Button>
-            <Button variant="primary" iconOnly aria-label="Editar">
+            <Button variant="action" iconOnly aria-label="Editar">
               <Icon name="edit" size="lg" />
             </Button>
           </Row>
@@ -331,25 +362,17 @@ export default function App() {
 
         <Section title="FabButton">
           <Row>
-            <FabButton color="primary" icon="add" size="sm" aria-label="Nuevo (sm)" />
-            <FabButton color="secondary" icon="edit" size="md" aria-label="Editar (md)" />
-            <FabButton color="danger" icon="delete" size="lg" aria-label="Eliminar (lg)" />
-            <FabButton color="#7c3aed" icon="star" size="md" aria-label="Color custom" />
-          </Row>
-        </Section>
-
-        <Section title="ButtonFullRounded">
-          <Row>
-            <ButtonFullRounded color="primary" icon="add" size="sm" aria-label="Nuevo" />
-            <ButtonFullRounded color="secondary" icon="edit" size="md" aria-label="Editar" />
-            <ButtonFullRounded color="danger" icon="delete" size="lg" aria-label="Eliminar" />
-            <ButtonFullRounded color="#7c3aed" icon="star" size="md" aria-label="Color custom" />
+            <FabButton variant="action" icon="add" size="sm" aria-label="Nuevo (sm)" />
+            <FabButton variant="support" icon="edit" size="md" aria-label="Editar (md)" />
+            <FabButton variant="danger" icon="delete" size="lg" aria-label="Eliminar (lg)" />
+            <FabButton variant="success" icon="check" size="md" aria-label="Aprobar" />
+            <FabButton variant="danger" quiet icon="delete" size="md" aria-label="Eliminar (quiet)" />
           </Row>
         </Section>
 
         <Section title="ButtonGroup">
           <ButtonGroup
-            color="secondary"
+            variant="support"
             buttons={[
               { icon: 'bluetooth' },
               { icon: 'alarm' },
@@ -360,26 +383,6 @@ export default function App() {
           />
         </Section>
 
-        <Section title="Badge" wide>
-          <Row>
-            <Badge color="neutral">Neutral</Badge>
-            <Badge color="info">Info</Badge>
-            <Badge color="success">Success</Badge>
-            <Badge color="warning">Warning</Badge>
-            <Badge color="danger">Danger</Badge>
-            <Badge color="neutral" solid>Neutral</Badge>
-            <Badge color="info" solid>Info</Badge>
-            <Badge color="success" solid>Success</Badge>
-            <Badge color="warning" solid>Warning</Badge>
-            <Badge color="danger" solid>Danger</Badge>
-            <Badge color="success" dot>Activo</Badge>
-            <Badge color="warning" icon="warning">Atención</Badge>
-            <Badge color="#7c3aed">Color custom</Badge>
-            <Badge color="info" size="sm">Small</Badge>
-            <Badge color="info" size="md">Medium</Badge>
-            <Badge color="info" size="lg">Large</Badge>
-          </Row>
-        </Section>
 
         <Section title="Input">
           <Input label="Correo" type="text" placeholder="Escribe tu correo" />
@@ -434,23 +437,22 @@ export default function App() {
             <p style={{ fontSize: 'var(--text-sm)', color: 'var(--md-sys-color-on-surface-variant)', marginBottom: '0.5rem' }}>Determinado ({progressValue}%)</p>
             <Progress color="success" value={progressValue} />
             <Row>
-              <Button variant="outline" onClick={() => setProgressValue((v) => Math.max(0, v - 10))}>-10</Button>
-              <Button variant="outline" onClick={() => setProgressValue((v) => Math.min(100, v + 10))}>+10</Button>
+              <Button variant="default" onClick={() => setProgressValue((v) => Math.max(0, v - 10))}>-10</Button>
+              <Button variant="default" onClick={() => setProgressValue((v) => Math.min(100, v + 10))}>+10</Button>
             </Row>
           </div>
         </Section>
 
         <Section title="Dropdown — sin backdrop">
           <div style={{ position: 'relative', display: 'inline-block' }}>
-            <Button ref={dropdownTriggerRef} variant="outline" onClick={() => setDropdownOpen((o) => !o)}>
+            <Button ref={dropdownTriggerRef} variant="default" onClick={() => setDropdownOpen((o) => !o)}>
               Abrir dropdown
             </Button>
             <Dropdown
               open={dropdownOpen}
               onClose={() => setDropdownOpen(false)}
               triggerRef={dropdownTriggerRef}
-              width="220px"
-              className="absolute top-full left-0 mt-1"
+              className="absolute top-full left-0 mt-1 w-[220px]"
             >
               <div style={{ padding: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
                 <span style={{ fontSize: 'var(--text-sm)', color: 'var(--md-sys-color-on-surface)', padding: '0.5rem' }}>Opción 1</span>
@@ -462,7 +464,7 @@ export default function App() {
         </Section>
 
         <Section title="CustomModal — anclada al botón">
-          <Button ref={customModalTriggerRef} variant="primary" onClick={() => setCustomModalOpen(true)}>
+          <Button ref={customModalTriggerRef} variant="action" onClick={() => setCustomModalOpen(true)}>
             Abrir CustomModal
           </Button>
           <CustomModal
@@ -484,11 +486,11 @@ export default function App() {
                   {i + 1}. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation.
                 </p>
               ))}
-              <Button variant="outline" onClick={() => setCustomModalOpen(false)}>Cerrar</Button>
+              <Button variant="default" onClick={() => setCustomModalOpen(false)}>Cerrar</Button>
             </div>
           </CustomModal>
 
-          <Button id="abrir-auto" variant="outline" onClick={() => setAutoModalOpen(true)}>
+          <Button id="abrir-auto" variant="default" onClick={() => setAutoModalOpen(true)}>
             Sin div — se adapta al contenido
           </Button>
           <CustomModal open={autoModalOpen} onClose={() => setAutoModalOpen(false)}>
@@ -558,7 +560,7 @@ export default function App() {
                 El botón se transforma en la modal y viaja hasta el centro. Como queda a la vista, se ilumina
                 al clickearlo y vuelve al default recién cuando la modal termina de plegarse encima.
               </p>
-              <Button variant="outline" onClick={() => setGearModalOpen(false)}>
+              <Button variant="default" onClick={() => setGearModalOpen(false)}>
                 Cerrar
               </Button>
             </div>
@@ -580,7 +582,7 @@ export default function App() {
                 Se apoya encima del logo y lo tapa: el círculo se estira desde su propia esquina hasta
                 convertirse en este panel. Por eso el logo no cambia de estilo al clickearlo — no se vería.
               </p>
-              <Button variant="outline" onClick={() => setLogoPopoverOpen(false)}>Cerrar</Button>
+              <Button variant="default" onClick={() => setLogoPopoverOpen(false)}>Cerrar</Button>
             </div>
           </CustomModal>
         </Section>
@@ -601,10 +603,10 @@ export default function App() {
             arrastrás— o arrastrándolos hacia la derecha más de la mitad de su ancho.
           </p>
           <Row>
-            <Button variant="outline" onClick={() => toggleToast('info')}>Toggle info</Button>
-            <Button variant="outline" onClick={() => toggleToast('success')}>Toggle success</Button>
-            <Button variant="outline" onClick={() => toggleToast('warning')}>Toggle warning</Button>
-            <Button variant="outline" onClick={() => toggleToast('danger')}>Toggle danger</Button>
+            <Button variant="default" onClick={() => toggleToast('info')}>Toggle info</Button>
+            <Button variant="default" onClick={() => toggleToast('success')}>Toggle success</Button>
+            <Button variant="default" onClick={() => toggleToast('warning')}>Toggle warning</Button>
+            <Button variant="default" onClick={() => toggleToast('danger')}>Toggle danger</Button>
           </Row>
           <Toast variant="info" title="Info" open={toasts.info} onClose={() => toggleToast('info')}>
             Arrastrame hacia la derecha para descartarme.

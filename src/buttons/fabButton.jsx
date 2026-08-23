@@ -1,6 +1,6 @@
 'use client';
 import Icon from '../icon/icon.jsx';
-import { controlTint, customTint, asCustomProperties } from '../theme/roles.js';
+import { controlTint } from '../theme/roles.js';
 import { verifyTypesIconButton } from '../utils/verifyTypes.js';
 
 const FAB_SIZE = {
@@ -12,8 +12,8 @@ const FAB_SIZE = {
 
 //component for fabButton in mott-design - native, does not depend on Button
 export default function FabButton({
-    color = 'primary',
-    iconColor,
+    variant = 'action',
+    quiet = false,
     icon,
     size = 'md',
     type = 'button',
@@ -21,23 +21,24 @@ export default function FabButton({
     style,
     ...props
 }) {
-    verifyTypesIconButton('FabButton', { icon, color, iconColor, size, type });
+    verifyTypesIconButton('FabButton', { icon, variant, quiet, size, type });
 
     const dimensions = FAB_SIZE[size] ?? FAB_SIZE.md;
-    const tint = controlTint(color) ?? customTint(color, iconColor ?? '#ffffff');
-    const resolved = iconColor ? { ...tint, on: iconColor } : tint;
-    
+    // a FAB is the one thing the screen is for, hence `action` rather than `default` as the fallback
+    const tint = controlTint(variant, quiet) ?? controlTint('action', quiet);
+
     return (
         <button
             type={type}
             onClick={onClick}
-            className="inline-flex items-center justify-center border-0 cursor-pointer transition-all duration-150 bg-[var(--mott-surface)] text-[var(--mott-on)] hover:bg-[var(--mott-hover)] active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--md-sys-color-primary)] disabled:opacity-50 disabled:pointer-events-none disabled:active:scale-100"
+            className="mott-btn"
             style={{
                 width: dimensions.box,
                 height: dimensions.box,
                 padding: 0,
                 borderRadius: 'var(--control-radius)',
-                ...asCustomProperties(resolved),
+                backgroundColor: tint.surface,
+                color: tint.on,
                 ...style,
             }}
             {...props}

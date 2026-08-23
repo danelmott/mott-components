@@ -21,6 +21,7 @@ export default function CustomModal({ open, onClose, onCloseComplete, children, 
     
     useEffect(() => unlock, []);
     
+    //effect for verify click inside modal and manage state for open o close modal
     useEffect(() => {
         const modal = modalRef.current;
         const panel = panelRef.current;

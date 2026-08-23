@@ -6,8 +6,8 @@ import { twMerge } from 'tailwind-merge';
 import { verifyTypesDropdown } from '../utils/verifyTypes.js';
 
 //component for dropdown in mott-design - no backdrop, closes on Escape or an outside click
-export default function Dropdown({ open, onClose, children, width = 'auto', height = 'auto', triggerRef, className, style, ...props }) {
-    verifyTypesDropdown({ open, onClose, width, height, triggerRef });
+export default function Dropdown({ open, onClose, children, triggerRef, className, style, ...props }) {
+    verifyTypesDropdown({ open, onClose, triggerRef });
     const [rendered, setRendered] = useState(open);
     const panelRef = useRef(null);
     
@@ -15,6 +15,8 @@ export default function Dropdown({ open, onClose, children, width = 'auto', heig
         if (open) setRendered(true);
     }, [open]);
     
+    
+    //hook for animate open for dropdown
     useGSAP(() => {
         if (open && panelRef.current) {
             gsap.fromTo(panelRef.current,
@@ -24,6 +26,7 @@ export default function Dropdown({ open, onClose, children, width = 'auto', heig
         }
     }, { dependencies: [open, rendered] });
     
+    //effect for animate close for dropdown
     useEffect(() => {
         if (!open && rendered && panelRef.current) {
             gsap.to(panelRef.current, {
@@ -37,6 +40,7 @@ export default function Dropdown({ open, onClose, children, width = 'auto', heig
         }
     }, [open, rendered]);
     
+    //effect for close on click back to dropdown or when user clicks espace
     useEffect(() => {
         if (!open) return;
         const handleClick = (e) => {
@@ -60,7 +64,7 @@ export default function Dropdown({ open, onClose, children, width = 'auto', heig
             ref={panelRef}
             role="menu"
             className={twMerge('z-[var(--z-floating)] rounded-[var(--radius-lg)] bg-[var(--md-sys-color-surface-container-high)] p-1 shadow-lg', className)}
-            style={{ width, height, ...style }}
+            style={{...style }}
             {...props}
         >
             {children}

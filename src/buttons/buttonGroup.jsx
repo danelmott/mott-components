@@ -13,14 +13,14 @@ const CIRCLE = '50%';
 const SQUIRCLE = '28%';
 
 
-export default function ButtonGroup({ buttons, vertical = true, color = 'secondary', defaultSelected = null, value, allowDeselect = true, onChange }) {
-    verifyTypesButtonGroup({ buttons, vertical, color, allowDeselect, onChange, value, defaultSelected });
+export default function ButtonGroup({ buttons, vertical = true, variant = 'support', defaultSelected = null, value, allowDeselect = true, onChange }) {
+    verifyTypesButtonGroup({ buttons, vertical, variant, allowDeselect, onChange, value, defaultSelected });
     const [internalSelected, setInternalSelected] = useState(defaultSelected);
     const isControlled = value !== undefined;
     const selectedButton = isControlled ? value : internalSelected;
     const itemRefs = useRef([]);
     const containerRef = useRef(null);
-    const selected = selectionTint(color);
+    const selected = selectionTint(variant);
     const resting = FAMILIES.neutral;
 
     useGSAP(() => {
@@ -60,8 +60,8 @@ export default function ButtonGroup({ buttons, vertical = true, color = 'seconda
                         title={btn.ariaLabel}
                         className='mott-btn-in-group'
                         style={{
-                            '--mott-surface': i === selectedButton ? selected.surface : resting.container,
-                            '--mott-on': i === selectedButton ? selected.on : resting.onContainer,
+                            backgroundColor: i === selectedButton ? selected.surface : resting.container,
+                            color: i === selectedButton ? selected.on : resting.onContainer,
                             borderRadius: CIRCLE,
                             height: 'var(--control-size-md)',
                             ...(iconOnly

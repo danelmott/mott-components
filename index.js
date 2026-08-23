@@ -1,7 +1,6 @@
 export { default as Button } from './src/buttons/button.jsx';
 export { default as FabButton } from './src/buttons/fabButton.jsx';
 export { default as ButtonGroup } from './src/buttons/buttonGroup.jsx';
-export { default as Badge } from './src/badge/badge.jsx';
 export { default as Toast } from './src/toast/toast.jsx';
 export { ToastProvider, useToast } from './src/toast/toastContext.jsx';
 export { ThemeProvider, useTheme } from './src/theme/themeContext.jsx';

@@ -117,6 +117,13 @@ export function ThemeProvider({
 
         const root = document.documentElement;
 
+        // A theme change is a state change, not an animation. Every colour token sits behind some
+        // component's `transition` (the button group crossfades background and colour for 400ms), so
+        // writing a new palette would start that fade on every element at once and the new accent
+        // would arrive late instead of being simply true. The attribute switches those transitions
+        // off for exactly one frame; see the rule in globals.css.
+        root.setAttribute('data-theme-switching', '');
+
         for (const [token, hex] of Object.entries(tokens)) {
             root.style.setProperty(token, hex);
         }
@@ -126,6 +133,11 @@ export function ThemeProvider({
         // resolved value would silence that query and freeze the app on whatever the OS said once.
         if (mode === 'system') root.removeAttribute('data-theme');
         else root.dataset.theme = mode;
+
+        // Forces the recalculation while the transitions are still off. Deferring this to a rAF
+        // would NOT work: the two style changes would coalesce into one and the fade would run.
+        void root.offsetHeight;
+        root.removeAttribute('data-theme-switching');
     }, [tokens, mode, hydrated]);
 
     useEffect(() => {

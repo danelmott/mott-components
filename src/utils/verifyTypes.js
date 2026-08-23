@@ -2,14 +2,6 @@ import { CONTROL_NAMES } from '../theme/roles.js';
 
 const prefixLog = '[MOTT-COMPONENTS]';
 
-// Validators run in every environment on purpose — there is no `process.env.NODE_ENV` guard, so the
-// library never depends on the environment being declared. Invalid props are a bug in the consuming
-// code and it is the consumer's job to fix them before shipping.
-//
-// Severity is what keeps that safe:
-// - `fail` (throw) when the value would break anyway: wrong type, missing required prop.
-// - `warn` (console.error) when the component already falls back (`PRESETS[x] ?? PRESETS.y`) — a
-//   misspelled variant should not take down an end user's screen.
 
 const show = (value) => (typeof value === 'string' ? `"${value}"` : String(value));
 
@@ -124,27 +116,28 @@ export function verifyTypesSearch({ label, placeholder, delay, onSearch, onChang
     return true;
 }
 
-export function verifyTypesButton({ variant, shape, iconOnly, fullWidth, type } = {}) {
-    assertOneOf('Button', 'variant', variant, CONTROL_NAMES, 'primary');
+export function verifyTypesButton({ variant, quiet, shape, iconOnly, fullWidth, type } = {}) {
+    assertOneOf('Button', 'variant', variant, CONTROL_NAMES, 'default');
     assertOneOf('Button', 'shape', shape, ['rounded', 'pill'], 'rounded');
     assertOneOf('Button', 'type', type, BUTTON_TYPES, 'button');
+    assertType('Button', 'quiet', quiet, 'boolean');
     assertType('Button', 'iconOnly', iconOnly, 'boolean');
     assertType('Button', 'fullWidth', fullWidth, 'boolean');
     return true;
 }
 
-// shared by FabButton and ButtonFullRounded — same prop surface
-export function verifyTypesIconButton(component, { icon, color, iconColor, size, type } = {}) {
+export function verifyTypesIconButton(component, { icon, variant, quiet, size, type } = {}) {
     assertRequired(component, 'icon', icon);
     assertType(component, 'icon', icon, 'string');
-    assertType(component, 'color', color, 'string');
-    assertType(component, 'iconColor', iconColor, 'string');
+    // an intent from the palette, never a colour: there is no way to hand this component one
+    assertOneOf(component, 'variant', variant, CONTROL_NAMES, 'action');
     assertOneOf(component, 'size', size, CONTROL_SIZES, 'md');
     assertOneOf(component, 'type', type, BUTTON_TYPES, 'button');
+    assertType(component, 'quiet', quiet, 'boolean');
     return true;
 }
 
-export function verifyTypesButtonGroup({ buttons, vertical, color, allowDeselect, onChange, value, defaultSelected } = {}) {
+export function verifyTypesButtonGroup({ buttons, vertical, variant, allowDeselect, onChange, value, defaultSelected } = {}) {
     assertRequired('ButtonGroup', 'buttons', buttons);
     assertArrayOf('ButtonGroup', 'buttons', buttons, (item, path) => {
         assertPlainObject('ButtonGroup', path, item);
@@ -159,19 +152,10 @@ export function verifyTypesButtonGroup({ buttons, vertical, color, allowDeselect
     });
     assertType('ButtonGroup', 'vertical', vertical, 'boolean');
     assertType('ButtonGroup', 'allowDeselect', allowDeselect, 'boolean');
-    assertType('ButtonGroup', 'color', color, 'string');
+    assertOneOf('ButtonGroup', 'variant', variant, CONTROL_NAMES, 'support');
     assertType('ButtonGroup', 'onChange', onChange, 'function');
     assertType('ButtonGroup', 'value', value, 'number');
     assertType('ButtonGroup', 'defaultSelected', defaultSelected, 'number');
-    return true;
-}
-
-export function verifyTypesBadge({ color, solid, size, icon, dot } = {}) {
-    assertType('Badge', 'color', color, 'string');
-    assertType('Badge', 'icon', icon, 'string');
-    assertType('Badge', 'solid', solid, 'boolean');
-    assertType('Badge', 'dot', dot, 'boolean');
-    assertOneOf('Badge', 'size', size, CONTROL_SIZES, 'sm');
     return true;
 }
 
@@ -214,11 +198,9 @@ export function verifyTypesLoading({ size, color } = {}) {
     return true;
 }
 
-export function verifyTypesDropdown({ open, onClose, width, height, triggerRef } = {}) {
+export function verifyTypesDropdown({ open, onClose, triggerRef } = {}) {
     assertType('Dropdown', 'open', open, 'boolean');
     assertType('Dropdown', 'onClose', onClose, 'function');
-    assertType('Dropdown', 'width', width, 'string');
-    assertType('Dropdown', 'height', height, 'string');
     assertRef('Dropdown', 'triggerRef', triggerRef);
     return true;
 }
@@ -314,25 +296,13 @@ export function verifyTypesToastProvider({ duration, dismissThreshold, max } = {
 }
 
 const THEME_MODES = ['light', 'dark', 'system'];
-// Kept as a literal instead of imported from palette.js, for the same reason modalAnimation.js is
-// not imported here: palette.js pulls in @material/material-color-utilities, and this module is
-// imported by every component in the library. `roles.js` is fair game because it is only strings.
-// Must stay in step with `VARIANTS` in src/theme/palette.js.
 const THEME_VARIANTS = ['content', 'monochrome', 'neutral', 'tonalSpot', 'vibrant'];
-// 3- and 6-digit forms only: `argbFromHex` parses fixed offsets, so an 8-digit #rrggbbaa would have
-// its alpha silently read as part of the colour
 const HEX_COLOR = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
 
-// Pure predicates, no logging. ThemeProvider needs to test a value read back from localStorage, and
-// a stale entry left by an older build is its own problem to drop — not something to scold the
-// consuming app about.
 export const isThemeSeed = (value) => typeof value === 'string' && HEX_COLOR.test(value);
 export const isThemeMode = (value) => THEME_MODES.includes(value);
 export const isThemeVariant = (value) => THEME_VARIANTS.includes(value);
 
-// A malformed seed is checked against a regex and not just `typeof`: `argbFromHex` does not throw on
-// a bad string, it returns the wrong colour, so the regex is the only thing between a typo and a
-// palette nobody can account for. `warn` and not `fail` because every caller falls back.
 export function verifyTypesThemeSeed(component, prop, value) {
     if (isThemeSeed(value)) return true;
     warn(component, `\`${prop}\` must be a hex colour like "#0066ff", received ${show(value)}. Ignoring it.`);

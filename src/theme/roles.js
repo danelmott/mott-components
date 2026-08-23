@@ -1,9 +1,4 @@
-// The single place a Material Design 3 role name is written down.
-//
-// A COLOUR FAMILY is not a colour: it is the four roles that always travel together — the fill, what
-// goes ON the fill, the quiet container, and what goes on the container. Every tint in the library
-// is one of these seven, which is what lets a component say "primary" and derive its whole styling
-// instead of restating five hardcoded pairs of its own.
+
 const family = (fill, on, container, onContainer) => ({
     fill: `var(${fill})`,
     on: `var(${on})`,
@@ -30,8 +25,6 @@ export const FAMILIES = {
     warning: family(
         '--md-custom-color-warning', '--md-custom-color-on-warning',
         '--md-custom-color-warning-container', '--md-custom-color-on-warning-container'),
-    // Neutral is a family like the others once you see what its high-emphasis fill is: inverting the
-    // page IS how a neutral thing shouts. Its container step is the ordinary raised surface.
     neutral: family(
         '--md-sys-color-inverse-surface', '--md-sys-color-inverse-on-surface',
         '--md-sys-color-surface-container', '--md-sys-color-on-surface'),
@@ -39,119 +32,75 @@ export const FAMILIES = {
 
 export const TRANSPARENT = 'transparent';
 
-// M3 does not ship `-hover` or `-pressed` roles. It models them as a STATE LAYER: the `on` colour of
-// whatever you are touching, composited over that surface at a fixed opacity. Expressed as a
-// color-mix of two roles rather than stored as a third token, which is what makes every interactive
-// state follow the seed for free.
-export const HOVER_OPACITY = 8;
-export const PRESSED_OPACITY = 12;
 
-export const stateLayer = (on, over, opacity = HOVER_OPACITY) =>
-    `color-mix(in srgb, ${on} ${opacity}%, ${over})`;
-
-// The three emphases, loudest first. Nothing here draws a frame: a control is told apart from the
-// page by how much colour it carries, never by an edge around it.
-
-// Filled: the family's own fill, with its `on` colour riding on top.
+// A tint is only ever `{ surface, on }` - the two colours a control actually paints. There is no
+// `hover` here on purpose: the state layer is `currentColor` at 8% in the stylesheet, which is the
+// same thing the Material 3 spec asks for and needs no colour of its own to be computed in JS.
 const filled = (name) => {
     const { fill, on } = FAMILIES[name];
-    return { surface: fill, on, hover: stateLayer(on, fill) };
+    return { surface: fill, on };
 };
 
 // Tonal: the quiet step of the same family. Still a surface you can see, one notch above the page.
 const tonal = (name) => {
     const { container, onContainer } = FAMILIES[name];
-    return { surface: container, on: onContainer, hover: stateLayer(onContainer, container) };
+    return { surface: container, on: onContainer };
 };
 
-// Text: no surface at all, only a tinted label. Its state layer mixes into `transparent`, so
-// whatever it happens to be sitting on shows through instead of being painted over.
+// Text: no surface at all, only a tinted label. Because the state layer is `currentColor`, hovering
+// one of these tints whatever it happens to be sitting on instead of painting a box over it.
 const text = (name) => {
     const { fill } = FAMILIES[name];
-    return { surface: TRANSPARENT, on: fill, hover: stateLayer(fill, TRANSPARENT) };
+    return { surface: TRANSPARENT, on: fill };
 };
 
-const CONTROL_VARIANTS = {
-    primary: filled('primary'),
-    secondary: filled('secondary'),
-    danger: filled('danger'),
-    // Keeps the name for the sake of the prop, but it is a tonal button now: a soft neutral fill
-    // rather than a frame. A frame around every quiet control was what made a screen full of them
-    // look busy.
-    outline: tonal('neutral'),
-    ghost: text('primary'),
+// What a control MEANS, never how it is painted. Every intent maps to a family of the palette, so a
+// change of seed or of mode repaints all of them at once and none of them can drift out of the
+// system - which is the whole point of naming them this way instead of taking a colour from the dev.
+const CONTROL_FAMILY = {
+    default: 'neutral',    // carries no weight of its own - Cancel, Back
+    action: 'primary',     // the one thing the screen is for - Save, Send
+    support: 'secondary',  // helps the main action without competing with it
+    danger: 'danger',      // destructive - Delete, Revoke
+    success: 'success',    // confirms something that went right - Approve
+    warning: 'warning',    // caution that does not destroy - Archive, Suspend
 };
 
-export const CONTROL_NAMES = Object.keys(CONTROL_VARIANTS);
+// `ghost` is the one value that is emphasis rather than intent: no surface at all, just a label.
+export const CONTROL_NAMES = [...Object.keys(CONTROL_FAMILY), 'ghost'];
 
-//The raw tint, or null when the name is not one of ours — which is how the icon buttons tell a
-//variant apart from a bare CSS colour a caller passed in.
-export const controlTint = (name) => CONTROL_VARIANTS[name] ?? null;
+// `quiet` swaps the pair, not the family: `danger` goes from `error`/`on-error` to
+// `error-container`/`on-error-container`. Both pairs are the same red and both are contrast-checked
+// by Material, so a quiet button still reads as its own intent - it just stops shouting. That is
+// what lets a destructive action sit inside a menu without stealing the screen.
+export const controlTint = (name, quiet = false) => {
+    // no surface to soften, so `quiet` has nothing to do here
+    if (name === 'ghost') return text('primary');
 
-//What a SELECTED item looks like. It is the container step and never the full fill, because a fill
-//inverts the relationship the rest of the group has with the page: in a dark theme `primary` is a
-//light colour carrying dark text, so a filled selection ends up brighter than everything around it
-//and reads as a hole rather than as a choice. The container step stays in the same value range as
-//its neighbours and only changes the tint — which is the role M3 gives it, and what Navbar already
-//uses for its selected item.
-//
-//`primary` is asked for explicitly and honoured, but it is NOT the fallback, and the reason is worth
-//knowing: the `content` recipe sets `primary-container` to the seed itself, so on the black theme it
-//is pure `#000000` and a selection painted with it disappears into a near-black panel. Every case
-//that has no family of its own falls back to `secondary`, whose container is a derived tonal step
-//and therefore always lands a readable distance from the surface.
+    const key = CONTROL_FAMILY[name];
+    if (!key) return null;
+
+    // the neutral's filled step is the *inverted* surface - a dark chip on a light page. That is an
+    // emphasis of its own, not a resting button, so `default` stays tonal whether quiet or not.
+    if (key === 'neutral') return tonal('neutral');
+
+    return quiet ? tonal(key) : filled(key);
+};
+
+
 const SELECTION_FAMILY = {
-    primary: 'primary',
-    secondary: 'secondary',
+    default: 'secondary',
+    action: 'primary',
+    support: 'secondary',
     danger: 'danger',
-    // neither is a colour family; they borrow the neutral-safe one rather than the seed's own
-    outline: 'secondary',
+    success: 'success',
+    warning: 'warning',
     ghost: 'secondary',
 };
 
 export const selectionTint = (name) => tonal(SELECTION_FAMILY[name] ?? 'secondary');
 
-//A caller's own colour, dressed as a tint so it flows through the same code path. Its state layer
-//has to be built from the foreground, since there is no `on` role to ask.
-export const customTint = (surface, on) => ({
-    surface,
-    on,
-    hover: stateLayer(on, surface),
-});
 
-//Turns a tint into the CSS custom properties a component spreads into `style`. This indirection is
-//what keeps the Tailwind classes STATIC: Tailwind scans source text for literal class names, so a
-//class assembled by interpolation would never reach the stylesheet. The values move, the class list
-//does not.
-export const asCustomProperties = (tint) => ({
-    '--mott-surface': tint.surface,
-    '--mott-on': tint.on,
-    '--mott-hover': tint.hover,
-});
-
-//Badge speaks in status names rather than family names, and has two emphases: `solid` fills with the
-//family, plain uses the container step. Both pairs come straight off the family, so a badge can
-//never end up with a foreground that was not designed to sit on its background.
-const BADGE_FAMILY = {
-    neutral: 'neutral',
-    info: 'primary',
-    success: 'success',
-    warning: 'warning',
-    danger: 'danger',
-};
-
-export const BADGE_NAMES = Object.keys(BADGE_FAMILY);
-
-export function badgeTint(name, solid) {
-    const key = BADGE_FAMILY[name];
-    if (!key) return null;
-
-    const { fill, on, container, onContainer } = FAMILIES[key];
-    return solid ? { surface: fill, on } : { surface: container, on: onContainer };
-}
-
-//Where only one colour is needed - a spinner, a progress fill, a toast icon - it is always the
-//family's fill. `info` is Toast's and Badge's name for the same thing Button calls `primary`.
 export const ACCENTS = {
     primary: FAMILIES.primary.fill,
     info: FAMILIES.primary.fill,

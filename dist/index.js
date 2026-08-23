@@ -47,8 +47,6 @@ var FAMILIES = {
     "--md-custom-color-warning-container",
     "--md-custom-color-on-warning-container"
   ),
-  // Neutral is a family like the others once you see what its high-emphasis fill is: inverting the
-  // page IS how a neutral thing shouts. Its container step is the ordinary raised surface.
   neutral: family(
     "--md-sys-color-inverse-surface",
     "--md-sys-color-inverse-on-surface",
@@ -57,56 +55,50 @@ var FAMILIES = {
   )
 };
 var TRANSPARENT = "transparent";
-var HOVER_OPACITY = 8;
-var stateLayer = (on, over, opacity = HOVER_OPACITY) => `color-mix(in srgb, ${on} ${opacity}%, ${over})`;
 var filled = (name) => {
   const { fill, on } = FAMILIES[name];
-  return { surface: fill, on, hover: stateLayer(on, fill) };
+  return { surface: fill, on };
 };
 var tonal = (name) => {
   const { container, onContainer } = FAMILIES[name];
-  return { surface: container, on: onContainer, hover: stateLayer(onContainer, container) };
+  return { surface: container, on: onContainer };
 };
 var text = (name) => {
   const { fill } = FAMILIES[name];
-  return { surface: TRANSPARENT, on: fill, hover: stateLayer(fill, TRANSPARENT) };
+  return { surface: TRANSPARENT, on: fill };
 };
-var CONTROL_VARIANTS = {
-  primary: filled("primary"),
-  secondary: filled("secondary"),
-  danger: filled("danger"),
-  // Keeps the name for the sake of the prop, but it is a tonal button now: a soft neutral fill
-  // rather than a frame. A frame around every quiet control was what made a screen full of them
-  // look busy.
-  outline: tonal("neutral"),
-  ghost: text("primary")
+var CONTROL_FAMILY = {
+  default: "neutral",
+  // carries no weight of its own - Cancel, Back
+  action: "primary",
+  // the one thing the screen is for - Save, Send
+  support: "secondary",
+  // helps the main action without competing with it
+  danger: "danger",
+  // destructive - Delete, Revoke
+  success: "success",
+  // confirms something that went right - Approve
+  warning: "warning"
+  // caution that does not destroy - Archive, Suspend
 };
-var CONTROL_NAMES = Object.keys(CONTROL_VARIANTS);
-var controlTint = (name) => CONTROL_VARIANTS[name] ?? null;
-var customTint = (surface, on) => ({
-  surface,
-  on,
-  hover: stateLayer(on, surface)
-});
-var asCustomProperties = (tint) => ({
-  "--mott-surface": tint.surface,
-  "--mott-on": tint.on,
-  "--mott-hover": tint.hover
-});
-var BADGE_FAMILY = {
-  neutral: "neutral",
-  info: "primary",
+var CONTROL_NAMES = [...Object.keys(CONTROL_FAMILY), "ghost"];
+var controlTint = (name, quiet = false) => {
+  if (name === "ghost") return text("primary");
+  const key = CONTROL_FAMILY[name];
+  if (!key) return null;
+  if (key === "neutral") return tonal("neutral");
+  return quiet ? tonal(key) : filled(key);
+};
+var SELECTION_FAMILY = {
+  default: "secondary",
+  action: "primary",
+  support: "secondary",
+  danger: "danger",
   success: "success",
   warning: "warning",
-  danger: "danger"
+  ghost: "secondary"
 };
-var BADGE_NAMES = Object.keys(BADGE_FAMILY);
-function badgeTint(name, solid) {
-  const key = BADGE_FAMILY[name];
-  if (!key) return null;
-  const { fill, on, container, onContainer } = FAMILIES[key];
-  return solid ? { surface: fill, on } : { surface: container, on: onContainer };
-}
+var selectionTint = (name) => tonal(SELECTION_FAMILY[name] ?? "secondary");
 var ACCENTS = {
   primary: FAMILIES.primary.fill,
   info: FAMILIES.primary.fill,
@@ -209,24 +201,25 @@ function verifyTypesSearch({ label, placeholder, delay, onSearch, onChange, valu
   assertRange("Search", "delay", delay, 0, 6e4);
   return true;
 }
-function verifyTypesButton({ variant, shape, iconOnly, fullWidth, type } = {}) {
-  assertOneOf("Button", "variant", variant, CONTROL_NAMES, "primary");
+function verifyTypesButton({ variant, quiet, shape, iconOnly, fullWidth, type } = {}) {
+  assertOneOf("Button", "variant", variant, CONTROL_NAMES, "default");
   assertOneOf("Button", "shape", shape, ["rounded", "pill"], "rounded");
   assertOneOf("Button", "type", type, BUTTON_TYPES, "button");
+  assertType("Button", "quiet", quiet, "boolean");
   assertType("Button", "iconOnly", iconOnly, "boolean");
   assertType("Button", "fullWidth", fullWidth, "boolean");
   return true;
 }
-function verifyTypesIconButton(component, { icon, color, iconColor, size, type } = {}) {
+function verifyTypesIconButton(component, { icon, variant, quiet, size, type } = {}) {
   assertRequired(component, "icon", icon);
   assertType(component, "icon", icon, "string");
-  assertType(component, "color", color, "string");
-  assertType(component, "iconColor", iconColor, "string");
+  assertOneOf(component, "variant", variant, CONTROL_NAMES, "action");
   assertOneOf(component, "size", size, CONTROL_SIZES, "md");
   assertOneOf(component, "type", type, BUTTON_TYPES, "button");
+  assertType(component, "quiet", quiet, "boolean");
   return true;
 }
-function verifyTypesButtonGroup({ buttons, vertical, color, allowDeselect, onChange, value, defaultSelected } = {}) {
+function verifyTypesButtonGroup({ buttons, vertical, variant, allowDeselect, onChange, value, defaultSelected } = {}) {
   assertRequired("ButtonGroup", "buttons", buttons);
   assertArrayOf("ButtonGroup", "buttons", buttons, (item, path) => {
     assertPlainObject("ButtonGroup", path, item);
@@ -241,18 +234,10 @@ function verifyTypesButtonGroup({ buttons, vertical, color, allowDeselect, onCha
   });
   assertType("ButtonGroup", "vertical", vertical, "boolean");
   assertType("ButtonGroup", "allowDeselect", allowDeselect, "boolean");
-  assertType("ButtonGroup", "color", color, "string");
+  assertOneOf("ButtonGroup", "variant", variant, CONTROL_NAMES, "support");
   assertType("ButtonGroup", "onChange", onChange, "function");
   assertType("ButtonGroup", "value", value, "number");
   assertType("ButtonGroup", "defaultSelected", defaultSelected, "number");
-  return true;
-}
-function verifyTypesBadge({ color, solid, size, icon, dot } = {}) {
-  assertType("Badge", "color", color, "string");
-  assertType("Badge", "icon", icon, "string");
-  assertType("Badge", "solid", solid, "boolean");
-  assertType("Badge", "dot", dot, "boolean");
-  assertOneOf("Badge", "size", size, CONTROL_SIZES, "sm");
   return true;
 }
 function verifyTypesIcon({ name, size, filled: filled2, weight, grade, opticalSize } = {}) {
@@ -287,11 +272,9 @@ function verifyTypesLoading({ size, color } = {}) {
   assertType("Loading", "color", color, "string");
   return true;
 }
-function verifyTypesDropdown({ open, onClose, width, height, triggerRef } = {}) {
+function verifyTypesDropdown({ open, onClose, triggerRef } = {}) {
   assertType("Dropdown", "open", open, "boolean");
   assertType("Dropdown", "onClose", onClose, "function");
-  assertType("Dropdown", "width", width, "string");
-  assertType("Dropdown", "height", height, "string");
   assertRef("Dropdown", "triggerRef", triggerRef);
   return true;
 }
@@ -424,32 +407,30 @@ function verifyTypesThemeProvider({ defaultSeed, defaultMode, themes } = {}) {
 
 // src/buttons/button.jsx
 import { jsx } from "react/jsx-runtime";
-var buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2.5 bg-[var(--mott-surface)] text-[var(--mott-on)] hover:bg-[var(--mott-hover)] text-[length:var(--text-md)] tracking-[var(--tracking-h4)] font-[number:var(--font-medium)] transition-all duration-150 active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--md-sys-color-primary)] focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none disabled:active:scale-100",
-  {
-    variants: {
-      shape: {
-        rounded: "rounded-[var(--radius-lg)]",
-        pill: "rounded-[var(--radius-full)]"
-      },
-      iconOnly: {
-        true: "aspect-square p-[var(--pad-button-icon)]",
-        false: "p-[var(--pad-button)]"
-      },
-      fullWidth: {
-        true: "w-full"
-      }
+var buttonVariants = cva("mott-btn", {
+  variants: {
+    shape: {
+      rounded: "rounded-[var(--radius-lg)]",
+      pill: "rounded-[var(--radius-full)]"
     },
-    defaultVariants: {
-      shape: "rounded",
-      iconOnly: false,
-      fullWidth: false
+    iconOnly: {
+      true: "aspect-square p-[var(--pad-button-icon)]",
+      false: "p-[var(--pad-button)]"
+    },
+    fullWidth: {
+      true: "w-[100%]"
     }
+  },
+  defaultVariants: {
+    shape: "rounded",
+    iconOnly: false,
+    fullWidth: false
   }
-);
+});
 var Button = forwardRef(function Button2({
   children,
-  variant = "primary",
+  variant = "default",
+  quiet = false,
   shape,
   iconOnly,
   fullWidth,
@@ -459,8 +440,8 @@ var Button = forwardRef(function Button2({
   onClick,
   ...props
 }, ref) {
-  verifyTypesButton({ variant, shape, iconOnly, fullWidth, type });
-  const tint = controlTint(variant) ?? controlTint("primary");
+  verifyTypesButton({ variant, quiet, shape, iconOnly, fullWidth, type });
+  const tint = controlTint(variant, quiet) ?? controlTint("default", quiet);
   return /* @__PURE__ */ jsx(
     "button",
     {
@@ -468,7 +449,11 @@ var Button = forwardRef(function Button2({
       type,
       onClick,
       className: twMerge(buttonVariants({ shape, iconOnly, fullWidth }), className),
-      style: { ...asCustomProperties(tint), ...style },
+      style: {
+        backgroundColor: tint.surface,
+        color: tint.on,
+        ...style
+      },
       ...props,
       children
     }
@@ -506,8 +491,6 @@ function Icon({
       style: {
         fontSize: iconSize,
         fontVariationSettings: `'FILL' ${filled2 ? 1 : 0}, 'wght' ${weight}, 'GRAD' ${grade}, 'opsz' ${opticalSize}`,
-        // spread last so a caller can tint or resize the glyph without losing the variation
-        // settings above, which are what make the font render at the right weight
         ...style
       },
       children: name
@@ -523,8 +506,8 @@ var FAB_SIZE = {
   lg: { box: "var(--control-size-lg)", icon: "var(--xl-icon)" }
 };
 function FabButton({
-  color = "primary",
-  iconColor,
+  variant = "action",
+  quiet = false,
   icon,
   size = "md",
   type = "button",
@@ -532,66 +515,26 @@ function FabButton({
   style,
   ...props
 }) {
-  verifyTypesIconButton("FabButton", { icon, color, iconColor, size, type });
+  verifyTypesIconButton("FabButton", { icon, variant, quiet, size, type });
   const dimensions = FAB_SIZE[size] ?? FAB_SIZE.md;
-  const tint = controlTint(color) ?? customTint(color, iconColor ?? "#ffffff");
-  const resolved = iconColor ? { ...tint, on: iconColor } : tint;
+  const tint = controlTint(variant, quiet) ?? controlTint("action", quiet);
   return /* @__PURE__ */ jsx3(
     "button",
     {
       type,
       onClick,
-      className: "inline-flex items-center justify-center border-0 cursor-pointer transition-all duration-150 bg-[var(--mott-surface)] text-[var(--mott-on)] hover:bg-[var(--mott-hover)] active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--md-sys-color-primary)] disabled:opacity-50 disabled:pointer-events-none disabled:active:scale-100",
+      className: "mott-btn",
       style: {
         width: dimensions.box,
         height: dimensions.box,
         padding: 0,
         borderRadius: "var(--control-radius)",
-        ...asCustomProperties(resolved),
+        backgroundColor: tint.surface,
+        color: tint.on,
         ...style
       },
       ...props,
       children: /* @__PURE__ */ jsx3(Icon, { name: icon, size: dimensions.icon })
-    }
-  );
-}
-
-// src/buttons/buttonFullRounded.jsx
-import { jsx as jsx4 } from "react/jsx-runtime";
-var SIZE = {
-  sm: { box: "var(--control-size-sm)", icon: "var(--lg-icon)" },
-  md: { box: "var(--control-size-md)", icon: "var(--lg-icon)" },
-  lg: { box: "var(--control-size-lg)", icon: "var(--xl-icon)" }
-};
-function ButtonFullRounded({
-  icon,
-  color = "primary",
-  iconColor,
-  size = "md",
-  type = "button",
-  onClick,
-  style,
-  ...props
-}) {
-  verifyTypesIconButton("ButtonFullRounded", { icon, color, iconColor, size, type });
-  const scale = SIZE[size] ?? SIZE.md;
-  const tint = controlTint(color) ?? customTint(color, iconColor ?? "#ffffff");
-  const resolved = iconColor ? { ...tint, on: iconColor } : tint;
-  return /* @__PURE__ */ jsx4(
-    "button",
-    {
-      type,
-      onClick,
-      className: "inline-flex items-center justify-center border-0 cursor-pointer rounded-[var(--radius-full)] transition-all duration-150 bg-[var(--mott-surface)] text-[var(--mott-on)] hover:bg-[var(--mott-hover)] active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--md-sys-color-primary)] disabled:opacity-50 disabled:pointer-events-none disabled:active:scale-100",
-      style: {
-        width: scale.box,
-        height: scale.box,
-        padding: 0,
-        ...asCustomProperties(resolved),
-        ...style
-      },
-      ...props,
-      children: /* @__PURE__ */ jsx4(Icon, { name: icon, size: scale.icon })
     }
   );
 }
@@ -601,43 +544,35 @@ import { useRef, useState } from "react";
 import { useGSAP } from "@gsap/react";
 import gsap from "gsap";
 import { twMerge as twMerge3 } from "tailwind-merge";
-import { jsx as jsx5, jsxs } from "react/jsx-runtime";
-function ButtonGroup({ buttons, vertical = true, color = "primary", defaultSelected = null, value, allowDeselect = true, onChange }) {
-  verifyTypesButtonGroup({ buttons, vertical, color, allowDeselect, onChange, value, defaultSelected });
+import { jsx as jsx4, jsxs } from "react/jsx-runtime";
+var CIRCLE = "50%";
+var SQUIRCLE = "28%";
+function ButtonGroup({ buttons, vertical = true, variant = "support", defaultSelected = null, value, allowDeselect = true, onChange }) {
+  verifyTypesButtonGroup({ buttons, vertical, variant, allowDeselect, onChange, value, defaultSelected });
   const [internalSelected, setInternalSelected] = useState(defaultSelected);
   const isControlled = value !== void 0;
   const selectedButton = isControlled ? value : internalSelected;
   const itemRefs = useRef([]);
   const containerRef = useRef(null);
-  const tint = controlTint(color) ?? controlTint("primary");
+  const selected = selectionTint(variant);
   const resting = FAMILIES.neutral;
-  const resolveColor = (value2) => {
-    if (typeof value2 === "string" && value2.startsWith("var(")) {
-      const token = value2.slice(4, -1).trim();
-      return getComputedStyle(document.documentElement).getPropertyValue(token).trim();
-    }
-    return value2;
-  };
   useGSAP(() => {
     itemRefs.current.forEach((el, i) => {
       if (!el) return;
-      const isSelected = i === selectedButton;
       gsap.to(el, {
-        borderRadius: isSelected ? "28%" : "50%",
-        scale: isSelected ? 1.1 : 1,
-        backgroundColor: resolveColor(isSelected ? tint.surface : resting.container),
-        color: resolveColor(isSelected ? tint.on : resting.onContainer),
+        borderRadius: i === selectedButton ? SQUIRCLE : CIRCLE,
+        scale: i === selectedButton ? 1.1 : 1,
         duration: 0.4,
         ease: "power3.out"
       });
     });
-  }, { dependencies: [selectedButton, color], scope: containerRef });
+  }, { dependencies: [selectedButton], scope: containerRef });
   const handleSelect = (i) => {
     const next = allowDeselect && selectedButton === i ? null : i;
     if (!isControlled) setInternalSelected(next);
     onChange == null ? void 0 : onChange(next, next === null ? null : buttons[i]);
   };
-  return /* @__PURE__ */ jsx5("div", { ref: containerRef, className: twMerge3("inline-flex gap-[var(--gap-group)]", vertical && "flex-col"), children: buttons.map((btn, i) => {
+  return /* @__PURE__ */ jsx4("div", { ref: containerRef, className: twMerge3("inline-flex gap-[var(--gap-group)]", vertical && "flex-col"), children: buttons.map((btn, i) => {
     const iconOnly = !btn.label;
     return /* @__PURE__ */ jsxs(
       "button",
@@ -652,54 +587,22 @@ function ButtonGroup({ buttons, vertical = true, color = "primary", defaultSelec
         "aria-pressed": selectedButton === i,
         "aria-label": btn.ariaLabel,
         title: btn.ariaLabel,
-        className: "inline-flex items-center justify-center gap-2 border-0 cursor-pointer text-[length:var(--text-md)] tracking-[var(--tracking-h4)] font-[number:var(--font-medium)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--md-sys-color-primary)]",
+        className: "mott-btn-in-group",
         style: {
-          borderRadius: "50%",
-          backgroundColor: resting.container,
-          color: resting.onContainer,
+          backgroundColor: i === selectedButton ? selected.surface : resting.container,
+          color: i === selectedButton ? selected.on : resting.onContainer,
+          borderRadius: CIRCLE,
           height: "var(--control-size-md)",
           ...iconOnly ? { width: "var(--control-size-md)", padding: 0 } : { padding: "0 20px" }
         },
         children: [
-          btn.icon && (typeof btn.icon === "string" ? /* @__PURE__ */ jsx5(Icon, { name: btn.icon }) : btn.icon),
-          btn.label && /* @__PURE__ */ jsx5("span", { children: btn.label })
+          btn.icon && (typeof btn.icon === "string" ? /* @__PURE__ */ jsx4(Icon, { name: btn.icon }) : btn.icon),
+          btn.label && /* @__PURE__ */ jsx4("span", { children: btn.label })
         ]
       },
       btn.id ?? i
     );
   }) });
-}
-
-// src/badge/badge.jsx
-import { jsx as jsx6, jsxs as jsxs2 } from "react/jsx-runtime";
-var SIZE2 = {
-  sm: { pad: "var(--pad-badge-sm)", text: "var(--text-xs)", icon: "12px", dot: 5 },
-  md: { pad: "var(--pad-badge-md)", text: "var(--text-sm)", icon: "14px", dot: 6 },
-  lg: { pad: "var(--pad-badge-lg)", text: "var(--text-base)", icon: "16px", dot: 7 }
-};
-function Badge({ children, color = "neutral", solid = false, size = "sm", icon, dot = false, style, ...props }) {
-  verifyTypesBadge({ color, solid, size, icon, dot });
-  const scale = SIZE2[size] ?? SIZE2.sm;
-  const tint = badgeTint(color, solid) ?? customTint(color, "#ffffff");
-  return /* @__PURE__ */ jsxs2(
-    "span",
-    {
-      className: "inline-flex items-center gap-1 rounded-[var(--radius-full)] leading-[var(--leading-tight)] tracking-[var(--tracking-label)] font-[number:var(--font-medium)] whitespace-nowrap",
-      style: {
-        padding: scale.pad,
-        fontSize: scale.text,
-        backgroundColor: tint.surface,
-        color: tint.on,
-        ...style
-      },
-      ...props,
-      children: [
-        dot && /* @__PURE__ */ jsx6("span", { "aria-hidden": "true", style: { width: scale.dot, height: scale.dot, borderRadius: "50%", backgroundColor: tint.on, flexShrink: 0 } }),
-        icon && /* @__PURE__ */ jsx6(Icon, { name: icon, size: scale.icon }),
-        children
-      ]
-    }
-  );
 }
 
 // src/toast/toast.jsx
@@ -747,7 +650,7 @@ function getToastStack() {
 }
 
 // src/toast/toast.jsx
-import { jsx as jsx7, jsxs as jsxs3 } from "react/jsx-runtime";
+import { jsx as jsx5, jsxs as jsxs2 } from "react/jsx-runtime";
 gsap2.registerPlugin(Draggable, Flip);
 var VARIANT_ICONS = {
   info: "info",
@@ -892,7 +795,7 @@ function Toast({
   const stack2 = getToastStack();
   if (!stack2) return null;
   return createPortal(
-    /* @__PURE__ */ jsxs3(
+    /* @__PURE__ */ jsxs2(
       "div",
       {
         ref: toastRef,
@@ -916,10 +819,10 @@ function Toast({
           pointerEvents: "auto"
         },
         children: [
-          /* @__PURE__ */ jsx7(Icon, { name: glyph, size: "xl", className: "shrink-0", style: { color: accent } }),
-          /* @__PURE__ */ jsxs3("div", { className: "flex min-w-0 flex-col gap-0.5", children: [
-            title && /* @__PURE__ */ jsx7("span", { className: "text-[length:var(--text-sm)] font-[number:var(--font-medium)] text-[var(--md-sys-color-on-surface)]", children: title }),
-            /* @__PURE__ */ jsx7("span", { className: "text-[length:var(--text-sm)] text-[var(--md-sys-color-on-surface-variant)]", children })
+          /* @__PURE__ */ jsx5(Icon, { name: glyph, size: "xl", className: "shrink-0", style: { color: accent } }),
+          /* @__PURE__ */ jsxs2("div", { className: "flex min-w-0 flex-col gap-0.5", children: [
+            title && /* @__PURE__ */ jsx5("span", { className: "text-[length:var(--text-sm)] font-[number:var(--font-medium)] text-[var(--md-sys-color-on-surface)]", children: title }),
+            /* @__PURE__ */ jsx5("span", { className: "text-[length:var(--text-sm)] text-[var(--md-sys-color-on-surface-variant)]", children })
           ] })
         ]
       }
@@ -930,7 +833,7 @@ function Toast({
 
 // src/toast/toastContext.jsx
 import { createContext, useCallback, useContext, useMemo, useRef as useRef3, useState as useState3 } from "react";
-import { jsx as jsx8, jsxs as jsxs4 } from "react/jsx-runtime";
+import { jsx as jsx6, jsxs as jsxs3 } from "react/jsx-runtime";
 var ToastContext = createContext(null);
 var DEFAULT_DURATION = 5e3;
 var DEFAULT_DISMISS_THRESHOLD = 0.5;
@@ -973,9 +876,9 @@ function ToastProvider({
     warning: (options) => showToast({ ...normalize(options), variant: "warning" }),
     danger: (options) => showToast({ ...normalize(options), variant: "danger" })
   }), [showToast, closeToast, closeAll]);
-  return /* @__PURE__ */ jsxs4(ToastContext.Provider, { value: api, children: [
+  return /* @__PURE__ */ jsxs3(ToastContext.Provider, { value: api, children: [
     children,
-    toasts.map((toast) => /* @__PURE__ */ jsx8(
+    toasts.map((toast) => /* @__PURE__ */ jsx6(
       Toast,
       {
         open: toast.open,
@@ -1018,20 +921,14 @@ import {
   SchemeVibrant
 } from "@material/material-color-utilities";
 var VARIANTS = {
-  // Keeps the source colour rather than reinterpreting it — the right default when the seed IS the
-  // accent someone picked, not a hint to be harmonised away.
   content: SchemeContent,
-  // Ignores the seed's hue outright and builds a true greyscale. Any seed gives the same palette.
   monochrome: SchemeMonochrome,
-  // Barely-there hue: a grey that leans warm or cool depending on the seed.
   neutral: SchemeNeutral,
-  // The M3 default. Deliberately muted, so it harmonises at the cost of drifting off the seed.
   tonalSpot: SchemeTonalSpot,
-  // Pushes chroma as far as the tone allows.
   vibrant: SchemeVibrant
 };
 var DEFAULT_VARIANT = "content";
-var DEFAULT_SEED = "#005eeb";
+var DEFAULT_SEED = "#000000";
 var SPEC_VERSION = "2021";
 var SUCCESS_SEED = "#16a34a";
 var WARNING_SEED = "#d97706";
@@ -1071,17 +968,45 @@ var ROLES = [
   "surfaceContainerHigh",
   "surfaceContainerHighest"
 ];
+var TINTED_ROLES = /* @__PURE__ */ new Set([
+  "background",
+  "onBackground",
+  "surface",
+  "onSurface",
+  "surfaceVariant",
+  "onSurfaceVariant",
+  "surfaceContainerLowest",
+  "surfaceContainerLow",
+  "surfaceContainer",
+  "surfaceContainerHigh",
+  "surfaceContainerHighest",
+  "outline",
+  "outlineVariant",
+  "inverseSurface",
+  "inverseOnSurface"
+]);
+var DEFAULT_TINT = 16;
+var MIN_SEED_CHROMA = 8;
+var pushTint = (argb, hue, chroma) => {
+  const hct = Hct.fromInt(argb);
+  return Hct.from(hue, Math.max(hct.chroma, chroma), hct.tone).toInt();
+};
 var kebab = (role) => role.replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase();
-function buildPalette(seedHex, mode, variant = DEFAULT_VARIANT) {
+function buildPalette(seedHex, mode, variant = DEFAULT_VARIANT, tint = DEFAULT_TINT) {
   const argb = argbFromHex(seedHex);
+  const seed = Hct.fromInt(argb);
   const Scheme = VARIANTS[variant] ?? VARIANTS[DEFAULT_VARIANT];
-  const scheme = new Scheme(Hct.fromInt(argb), mode === "dark", 0, SPEC_VERSION);
+  const scheme = new Scheme(seed, mode === "dark", 0, SPEC_VERSION);
+  const hasHue = seed.chroma >= MIN_SEED_CHROMA;
+  const tintChroma = hasHue ? tint : 0;
   const tokens = {};
   for (const role of ROLES) {
-    tokens[`--md-sys-color-${kebab(role)}`] = hexFromArgb(MaterialDynamicColors[role].getArgb(scheme));
+    const value = MaterialDynamicColors[role].getArgb(scheme);
+    const tinted = tintChroma && TINTED_ROLES.has(role) ? pushTint(value, seed.hue, tintChroma) : value;
+    tokens[`--md-sys-color-${kebab(role)}`] = hexFromArgb(tinted);
   }
-  for (const [name, seed] of [["success", SUCCESS_SEED], ["warning", WARNING_SEED]]) {
-    const colors = customColor(argb, { name, value: argbFromHex(seed), blend: false })[mode];
+  for (const [name, seed2] of [["success", SUCCESS_SEED], ["warning", WARNING_SEED]]) {
+    const colors = customColor(argb, { name, value: argbFromHex(seed2), blend: hasHue })[mode];
     tokens[`--md-custom-color-${name}`] = hexFromArgb(colors.color);
     tokens[`--md-custom-color-on-${name}`] = hexFromArgb(colors.onColor);
     tokens[`--md-custom-color-${name}-container`] = hexFromArgb(colors.colorContainer);
@@ -1091,7 +1016,7 @@ function buildPalette(seedHex, mode, variant = DEFAULT_VARIANT) {
 }
 
 // src/theme/themeContext.jsx
-import { jsx as jsx9 } from "react/jsx-runtime";
+import { jsx as jsx7 } from "react/jsx-runtime";
 var ThemeContext = createContext2(null);
 var DEFAULT_MODE = "system";
 var STORAGE_SEED = "mott-theme-color";
@@ -1144,11 +1069,14 @@ function ThemeProvider({
   useEffect2(() => {
     if (!hydrated) return;
     const root = document.documentElement;
+    root.setAttribute("data-theme-switching", "");
     for (const [token, hex] of Object.entries(tokens)) {
       root.style.setProperty(token, hex);
     }
     if (mode === "system") root.removeAttribute("data-theme");
     else root.dataset.theme = mode;
+    void root.offsetHeight;
+    root.removeAttribute("data-theme-switching");
   }, [tokens, mode, hydrated]);
   useEffect2(() => {
     if (!hydrated) return;
@@ -1179,7 +1107,7 @@ function ThemeProvider({
     resolvedMode,
     THEMES_AVAILABLE: themes
   }), [colorSeedHex, setColorSeedHex, variant, mode, setMode, resolvedMode, themes]);
-  return /* @__PURE__ */ jsx9(ThemeContext.Provider, { value, children });
+  return /* @__PURE__ */ jsx7(ThemeContext.Provider, { value, children });
 }
 function useTheme() {
   const context = useContext2(ThemeContext);
@@ -1616,7 +1544,7 @@ function unlockScroll() {
 }
 
 // src/customModal/customModal.jsx
-import { jsx as jsx10, jsxs as jsxs5 } from "react/jsx-runtime";
+import { jsx as jsx8, jsxs as jsxs4 } from "react/jsx-runtime";
 function CustomModal({ open, onClose, onCloseComplete, children, triggerRef, animation, className, style }) {
   verifyTypesCustomModal({ open, onClose, onCloseComplete, triggerRef, animation });
   const modalRef = useRef4(null);
@@ -1662,14 +1590,14 @@ function CustomModal({ open, onClose, onCloseComplete, children, triggerRef, ani
     onClose == null ? void 0 : onClose();
   };
   const handleOverlayClick = () => onClose == null ? void 0 : onClose();
-  return /* @__PURE__ */ jsxs5(
+  return /* @__PURE__ */ jsxs4(
     "dialog",
     {
       ref: modalRef,
       onCancel: handleCancel,
       className: "default-modal",
       children: [
-        /* @__PURE__ */ jsx10(
+        /* @__PURE__ */ jsx8(
           "div",
           {
             ref: overlayRef,
@@ -1677,13 +1605,13 @@ function CustomModal({ open, onClose, onCloseComplete, children, triggerRef, ani
             className: "absolute inset-0 bg-[color-mix(in_srgb,var(--md-sys-color-scrim)_32%,transparent)]"
           }
         ),
-        /* @__PURE__ */ jsx10(
+        /* @__PURE__ */ jsx8(
           "div",
           {
             ref: panelRef,
             className: twMerge4("relative m-auto max-w-[92vw] rounded-[var(--radius-modal)] bg-[var(--md-sys-color-surface-container-high)] p-[var(--pad-card)]", className),
             style,
-            children: /* @__PURE__ */ jsx10("div", { ref: contentRef, children })
+            children: /* @__PURE__ */ jsx8("div", { ref: contentRef, children })
           }
         )
       ]
@@ -1692,26 +1620,26 @@ function CustomModal({ open, onClose, onCloseComplete, children, triggerRef, ani
 }
 
 // src/theme/themeModal.jsx
-import { jsx as jsx11, jsxs as jsxs6 } from "react/jsx-runtime";
+import { jsx as jsx9, jsxs as jsxs5 } from "react/jsx-runtime";
 var MODES = [
   { value: "light", icon: "light_mode", label: "Claro" },
   { value: "dark", icon: "dark_mode", label: "Oscuro" },
   { value: "system", icon: "brightness_4", label: "Sistema" }
 ];
 var MORPH = { duration: 0.4, ease: "power3.out" };
-var CIRCLE = "50%";
+var CIRCLE2 = "50%";
 var SWATCH = 56;
 var squircleRadius = () => getComputedStyle(document.documentElement).getPropertyValue("--control-radius").trim() || "28%";
 function Swatch({ theme, selected, onSelect }) {
   const ref = useRef5(null);
   useGSAP3(() => {
     gsap4.to(ref.current, {
-      borderRadius: selected ? squircleRadius() : CIRCLE,
+      borderRadius: selected ? squircleRadius() : CIRCLE2,
       scale: selected ? 1.1 : 1,
       ...MORPH
     });
   }, { dependencies: [selected] });
-  return /* @__PURE__ */ jsx11(
+  return /* @__PURE__ */ jsx9(
     "button",
     {
       ref,
@@ -1724,11 +1652,14 @@ function Swatch({ theme, selected, onSelect }) {
       style: {
         width: SWATCH,
         height: SWATCH,
-        borderRadius: CIRCLE,
+        borderRadius: CIRCLE2,
         background: theme.hex,
-        // offset ring rather than a border: it never eats into the colour, and it is the one
-        // marker that stays visible on a swatch as dark as the neutral one
-        boxShadow: selected ? "0 0 0 2px var(--md-sys-color-surface-container-high), 0 0 0 4px var(--md-sys-color-primary)" : "none"
+        // Offset ring rather than a border: it never eats into the colour. The outer stroke
+        // is `on-surface` and deliberately NOT `primary` — the ring lives on the panel, and
+        // `on-surface` is the role guaranteed to read there. `primary` was the bug: in the
+        // neutral themes it is near-black or near-white, the very colours it had to stand
+        // out from, so the marker disappeared against the swatch or against the panel.
+        boxShadow: selected ? "0 0 0 2px var(--md-sys-color-surface-container-high), 0 0 0 4px var(--md-sys-color-on-surface)" : "none"
       }
     }
   );
@@ -1738,10 +1669,10 @@ function ThemeModal({ open, onClose, triggerRef, title = "Apariencia" }) {
   const { colorSeedHex, variant, setColorSeedHex, mode, setMode, THEMES_AVAILABLE: THEMES_AVAILABLE2 } = useTheme();
   const isActive = (theme) => theme.hex.toLowerCase() === colorSeedHex.toLowerCase() && (theme.variant ?? variant) === variant;
   const modeIndex = MODES.findIndex((m) => m.value === mode);
-  return /* @__PURE__ */ jsx11(CustomModal, { open, onClose, triggerRef, className: "w-[360px]", children: /* @__PURE__ */ jsxs6("div", { className: "flex flex-col gap-[var(--gap-page)]", children: [
-    /* @__PURE__ */ jsxs6("div", { className: "flex items-center gap-[var(--gap-group)]", children: [
-      /* @__PURE__ */ jsx11(Icon, { name: "palette", size: "lg" }),
-      /* @__PURE__ */ jsx11(
+  return /* @__PURE__ */ jsx9(CustomModal, { open, onClose, triggerRef, className: "w-[360px]", children: /* @__PURE__ */ jsxs5("div", { className: "flex flex-col gap-[var(--gap-page)]", children: [
+    /* @__PURE__ */ jsxs5("div", { className: "flex items-center gap-[var(--gap-group)]", children: [
+      /* @__PURE__ */ jsx9(Icon, { name: "palette", size: "lg", style: { color: "var(--md-sys-color-primary)" } }),
+      /* @__PURE__ */ jsx9(
         "h2",
         {
           className: "font-[number:var(--font-medium)] tracking-[var(--tracking-h3)]",
@@ -1750,7 +1681,7 @@ function ThemeModal({ open, onClose, triggerRef, title = "Apariencia" }) {
         }
       )
     ] }),
-    /* @__PURE__ */ jsx11("div", { className: "flex flex-wrap gap-[var(--gap-group)]", children: THEMES_AVAILABLE2.map((theme) => /* @__PURE__ */ jsx11(
+    /* @__PURE__ */ jsx9("div", { className: "flex flex-wrap gap-[var(--gap-group)]", children: THEMES_AVAILABLE2.map((theme) => /* @__PURE__ */ jsx9(
       Swatch,
       {
         theme,
@@ -1759,8 +1690,8 @@ function ThemeModal({ open, onClose, triggerRef, title = "Apariencia" }) {
       },
       theme.name
     )) }),
-    /* @__PURE__ */ jsxs6("div", { className: "flex flex-col gap-[var(--gap-section)]", children: [
-      /* @__PURE__ */ jsx11(
+    /* @__PURE__ */ jsxs5("div", { className: "flex flex-col gap-[var(--gap-section)]", children: [
+      /* @__PURE__ */ jsx9(
         "p",
         {
           className: "tracking-[var(--tracking-label)]",
@@ -1768,7 +1699,7 @@ function ThemeModal({ open, onClose, triggerRef, title = "Apariencia" }) {
           children: "Modo"
         }
       ),
-      /* @__PURE__ */ jsx11(
+      /* @__PURE__ */ jsx9(
         ButtonGroup,
         {
           vertical: false,
@@ -1785,7 +1716,7 @@ function ThemeModal({ open, onClose, triggerRef, title = "Apariencia" }) {
 // src/input/input.jsx
 import { useId } from "react";
 import { twMerge as twMerge5 } from "tailwind-merge";
-import { jsx as jsx12, jsxs as jsxs7 } from "react/jsx-runtime";
+import { jsx as jsx10, jsxs as jsxs6 } from "react/jsx-runtime";
 function Input({
   label,
   type = "text",
@@ -1800,8 +1731,8 @@ function Input({
   const generatedId = useId();
   const inputId = id ?? generatedId;
   verifyTypesInput({ label, placeholder, type });
-  return /* @__PURE__ */ jsxs7("div", { className: "flex w-full flex-col gap-1", children: [
-    label && /* @__PURE__ */ jsx12(
+  return /* @__PURE__ */ jsxs6("div", { className: "flex w-full flex-col gap-1", children: [
+    label && /* @__PURE__ */ jsx10(
       "label",
       {
         htmlFor: inputId,
@@ -1809,7 +1740,7 @@ function Input({
         children: label
       }
     ),
-    /* @__PURE__ */ jsx12(
+    /* @__PURE__ */ jsx10(
       "input",
       {
         id: inputId,
@@ -1831,7 +1762,7 @@ function Input({
 // src/textarea/textarea.jsx
 import { useId as useId2 } from "react";
 import { twMerge as twMerge6 } from "tailwind-merge";
-import { jsx as jsx13, jsxs as jsxs8 } from "react/jsx-runtime";
+import { jsx as jsx11, jsxs as jsxs7 } from "react/jsx-runtime";
 function Textarea({
   label,
   id,
@@ -1845,8 +1776,8 @@ function Textarea({
   const generatedId = useId2();
   const textareaId = id ?? generatedId;
   verifyTypesTextarea({ label, placeholder, width, height });
-  return /* @__PURE__ */ jsxs8("div", { className: "flex flex-col gap-1", style: { width }, children: [
-    label && /* @__PURE__ */ jsx13(
+  return /* @__PURE__ */ jsxs7("div", { className: "flex flex-col gap-1", style: { width }, children: [
+    label && /* @__PURE__ */ jsx11(
       "label",
       {
         htmlFor: textareaId,
@@ -1854,7 +1785,7 @@ function Textarea({
         children: label
       }
     ),
-    /* @__PURE__ */ jsx13(
+    /* @__PURE__ */ jsx11(
       "textarea",
       {
         id: textareaId,
@@ -1880,7 +1811,7 @@ import { useEffect as useEffect4, useId as useId3, useRef as useRef6, useState a
 import { createPortal as createPortal2 } from "react-dom";
 import { useGSAP as useGSAP4 } from "@gsap/react";
 import gsap5 from "gsap";
-import { jsx as jsx14, jsxs as jsxs9 } from "react/jsx-runtime";
+import { jsx as jsx12, jsxs as jsxs8 } from "react/jsx-runtime";
 function Select({ options = [], value, onChange, label, placeholder = "Seleccionar", disabled, id }) {
   verifyTypesSelect({ options, onChange, label, placeholder, disabled });
   const [open, setOpen] = useState5(false);
@@ -1958,8 +1889,8 @@ function Select({ options = [], value, onChange, label, placeholder = "Seleccion
     onChange == null ? void 0 : onChange(option.value, option);
     setOpen(false);
   };
-  return /* @__PURE__ */ jsxs9("div", { ref: wrapperRef, className: "flex w-full flex-col gap-1", children: [
-    label && /* @__PURE__ */ jsx14(
+  return /* @__PURE__ */ jsxs8("div", { ref: wrapperRef, className: "flex w-full flex-col gap-1", children: [
+    label && /* @__PURE__ */ jsx12(
       "label",
       {
         htmlFor: selectId,
@@ -1967,7 +1898,7 @@ function Select({ options = [], value, onChange, label, placeholder = "Seleccion
         children: label
       }
     ),
-    /* @__PURE__ */ jsxs9(
+    /* @__PURE__ */ jsxs8(
       "button",
       {
         ref: triggerRef,
@@ -1978,13 +1909,13 @@ function Select({ options = [], value, onChange, label, placeholder = "Seleccion
         className: "flex w-full items-center justify-between rounded-[var(--radius-lg)] bg-[var(--md-sys-color-surface-container)] text-[length:var(--text-base)] tracking-[var(--tracking-body)] font-[family-name:var(--font-family)] text-[var(--md-sys-color-on-surface)] outline-none transition-colors duration-150 focus:bg-[color-mix(in_srgb,var(--md-sys-color-on-surface)_8%,var(--md-sys-color-surface-container))] disabled:opacity-50 disabled:cursor-not-allowed",
         style: { padding: "var(--pad-input)" },
         children: [
-          /* @__PURE__ */ jsx14("span", { className: selected ? "" : "text-[var(--md-sys-color-on-surface-variant)]", children: selected ? selected.label : placeholder }),
-          /* @__PURE__ */ jsx14(Icon, { name: "expand_more", size: "sm", className: `transition-transform duration-200 ${open ? "rotate-180" : ""}` })
+          /* @__PURE__ */ jsx12("span", { className: selected ? "" : "text-[var(--md-sys-color-on-surface-variant)]", children: selected ? selected.label : placeholder }),
+          /* @__PURE__ */ jsx12(Icon, { name: "expand_more", size: "sm", className: `transition-transform duration-200 ${open ? "rotate-180" : ""}` })
         ]
       }
     ),
     rendered && anchor && createPortal2(
-      /* @__PURE__ */ jsx14(
+      /* @__PURE__ */ jsx12(
         "div",
         {
           ref: panelRef,
@@ -1992,7 +1923,7 @@ function Select({ options = [], value, onChange, label, placeholder = "Seleccion
           style: { top: anchor.top, left: anchor.left, width: anchor.width },
           children: options.map((option) => {
             const isSelected = option.value === value;
-            return /* @__PURE__ */ jsx14(
+            return /* @__PURE__ */ jsx12(
               "button",
               {
                 type: "button",
@@ -2023,7 +1954,7 @@ function Select({ options = [], value, onChange, label, placeholder = "Seleccion
 // src/search/search.jsx
 import { useEffect as useEffect5, useId as useId4, useRef as useRef7, useState as useState6 } from "react";
 import { twMerge as twMerge7 } from "tailwind-merge";
-import { jsx as jsx15, jsxs as jsxs10 } from "react/jsx-runtime";
+import { jsx as jsx13, jsxs as jsxs9 } from "react/jsx-runtime";
 function Search({
   label,
   id,
@@ -2060,8 +1991,8 @@ function Search({
     onChange == null ? void 0 : onChange("");
     onSearch == null ? void 0 : onSearch("");
   };
-  return /* @__PURE__ */ jsxs10("div", { className: "flex w-full flex-col gap-1", children: [
-    label && /* @__PURE__ */ jsx15(
+  return /* @__PURE__ */ jsxs9("div", { className: "flex w-full flex-col gap-1", children: [
+    label && /* @__PURE__ */ jsx13(
       "label",
       {
         htmlFor: searchId,
@@ -2069,7 +2000,7 @@ function Search({
         children: label
       }
     ),
-    /* @__PURE__ */ jsxs10(
+    /* @__PURE__ */ jsxs9(
       "div",
       {
         className: twMerge7(
@@ -2078,8 +2009,8 @@ function Search({
         ),
         style: { padding: "var(--pad-input)", ...style },
         children: [
-          /* @__PURE__ */ jsx15(Icon, { name: "search", size: "sm", className: "shrink-0 text-[var(--md-sys-color-on-surface-variant)]" }),
-          /* @__PURE__ */ jsx15(
+          /* @__PURE__ */ jsx13(Icon, { name: "search", size: "sm", className: "shrink-0 text-[var(--md-sys-color-on-surface-variant)]" }),
+          /* @__PURE__ */ jsx13(
             "input",
             {
               id: searchId,
@@ -2091,14 +2022,14 @@ function Search({
               ...props
             }
           ),
-          value && /* @__PURE__ */ jsx15(
+          value && /* @__PURE__ */ jsx13(
             "button",
             {
               type: "button",
               onClick: handleClear,
               "aria-label": "Limpiar b\xFAsqueda",
               className: "flex shrink-0 items-center justify-center border-0 bg-transparent cursor-pointer",
-              children: /* @__PURE__ */ jsx15(Icon, { name: "close", size: "sm", className: "text-[var(--md-sys-color-on-surface-variant)]" })
+              children: /* @__PURE__ */ jsx13(Icon, { name: "close", size: "sm", className: "text-[var(--md-sys-color-on-surface-variant)]" })
             }
           )
         ]
@@ -2112,9 +2043,9 @@ import { useEffect as useEffect6, useRef as useRef8, useState as useState7 } fro
 import { useGSAP as useGSAP5 } from "@gsap/react";
 import gsap6 from "gsap";
 import { twMerge as twMerge8 } from "tailwind-merge";
-import { jsx as jsx16 } from "react/jsx-runtime";
-function Dropdown({ open, onClose, children, width = "auto", height = "auto", triggerRef, className, style, ...props }) {
-  verifyTypesDropdown({ open, onClose, width, height, triggerRef });
+import { jsx as jsx14 } from "react/jsx-runtime";
+function Dropdown({ open, onClose, children, triggerRef, className, style, ...props }) {
+  verifyTypesDropdown({ open, onClose, triggerRef });
   const [rendered, setRendered] = useState7(open);
   const panelRef = useRef8(null);
   useEffect6(() => {
@@ -2160,13 +2091,13 @@ function Dropdown({ open, onClose, children, width = "auto", height = "auto", tr
     };
   }, [open, onClose, triggerRef]);
   if (!rendered) return null;
-  return /* @__PURE__ */ jsx16(
+  return /* @__PURE__ */ jsx14(
     "div",
     {
       ref: panelRef,
       role: "menu",
       className: twMerge8("z-[var(--z-floating)] rounded-[var(--radius-lg)] bg-[var(--md-sys-color-surface-container-high)] p-1 shadow-lg", className),
-      style: { width, height, ...style },
+      style: { ...style },
       ...props,
       children
     }
@@ -2177,7 +2108,7 @@ function Dropdown({ open, onClose, children, width = "auto", height = "auto", tr
 import { useRef as useRef9 } from "react";
 import { useGSAP as useGSAP6 } from "@gsap/react";
 import gsap7 from "gsap";
-import { jsx as jsx17 } from "react/jsx-runtime";
+import { jsx as jsx15 } from "react/jsx-runtime";
 var SHAPES = [
   "50% 50% 50% 50% / 50% 50% 50% 50%",
   // circle
@@ -2207,7 +2138,7 @@ function Loading({ size = "sm", color = "primary", className, style, ...props })
     tl.to(el, { opacity: 0, scale: 0.85, duration: 0.2, ease: "power2.in" }, "+=0.3").set(el, { clipPath: "none", borderRadius: SHAPES[0] }).to(el, { opacity: 1, scale: 1.12, duration: 0.3, ease: "power2.out" }).to(el, { scale: 1, duration: 0.45, ease: "power2.in" });
     gsap7.to(el, { rotate: 360, duration: 5, repeat: -1, ease: "none" });
   }, []);
-  return /* @__PURE__ */ jsx17(
+  return /* @__PURE__ */ jsx15(
     "div",
     {
       ref: shapeRef,
@@ -2231,7 +2162,7 @@ function Loading({ size = "sm", color = "primary", className, style, ...props })
 import { useRef as useRef10 } from "react";
 import { useGSAP as useGSAP7 } from "@gsap/react";
 import gsap8 from "gsap";
-import { jsx as jsx18 } from "react/jsx-runtime";
+import { jsx as jsx16 } from "react/jsx-runtime";
 function Progress({ value, color = "primary", className, style, ...props }) {
   verifyTypesProgress({ value, color });
   const fillRef = useRef10(null);
@@ -2247,7 +2178,7 @@ function Progress({ value, color = "primary", className, style, ...props }) {
       gsap8.to(fillRef.current, { width: `${Math.min(100, Math.max(0, value))}%`, duration: 0.4, ease: "power3.out" });
     }
   }, { dependencies: [indeterminate, value] });
-  return /* @__PURE__ */ jsx18(
+  return /* @__PURE__ */ jsx16(
     "div",
     {
       ref: trackRef,
@@ -2258,7 +2189,7 @@ function Progress({ value, color = "primary", className, style, ...props }) {
       className,
       style: { width: "100%", height: 8, borderRadius: "var(--radius-full)", backgroundColor: "var(--md-sys-color-surface-container)", overflow: "hidden", position: "relative", ...style },
       ...props,
-      children: /* @__PURE__ */ jsx18(
+      children: /* @__PURE__ */ jsx16(
         "div",
         {
           ref: fillRef,
@@ -2274,7 +2205,7 @@ import { useRef as useRef11, useState as useState8 } from "react";
 import { useGSAP as useGSAP8 } from "@gsap/react";
 import gsap9 from "gsap";
 import { twMerge as twMerge9 } from "tailwind-merge";
-import { Fragment, jsx as jsx19, jsxs as jsxs11 } from "react/jsx-runtime";
+import { Fragment, jsx as jsx17, jsxs as jsxs10 } from "react/jsx-runtime";
 var DESKTOP_ALIGN = {
   center: "top-1/2 -translate-y-1/2",
   top: "top-8"
@@ -2282,7 +2213,7 @@ var DESKTOP_ALIGN = {
 var ITEM_BASE = "inline-flex items-center justify-center gap-2 border-0 cursor-pointer p-0 text-[length:var(--text-md)] tracking-[var(--tracking-h4)] font-[number:var(--font-medium)] bg-[var(--md-sys-color-surface-container)] text-[var(--md-sys-color-on-surface-variant)] transition-[background-color,color] duration-400 ease-[var(--ease-morph)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--md-sys-color-primary)]";
 var ITEM_SELECTED = "bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)]";
 var MORPH2 = { duration: 0.4, ease: "power3.out" };
-var CIRCLE2 = "50%";
+var CIRCLE3 = "50%";
 var squircleRadius2 = () => getComputedStyle(document.documentElement).getPropertyValue("--control-radius").trim() || "28%";
 var attachRef = (node, store, i, forwarded) => {
   if (i === null) store.current = node;
@@ -2299,15 +2230,15 @@ function NavItems({ items, selectedItem, onSelect, vertical }) {
       if (!el) return;
       const isSelected = i === selectedItem;
       gsap9.to(el, {
-        borderRadius: isSelected ? squircle : CIRCLE2,
+        borderRadius: isSelected ? squircle : CIRCLE3,
         scale: isSelected ? 1.1 : 1,
         ...MORPH2
       });
     });
   }, { dependencies: [selectedItem, items.length], scope: containerRef });
-  return /* @__PURE__ */ jsx19("div", { ref: containerRef, className: twMerge9("inline-flex gap-[var(--gap-group)]", vertical && "flex-col"), children: items.map((item, i) => {
+  return /* @__PURE__ */ jsx17("div", { ref: containerRef, className: twMerge9("inline-flex gap-[var(--gap-group)]", vertical && "flex-col"), children: items.map((item, i) => {
     const iconOnly = !item.label;
-    return /* @__PURE__ */ jsxs11(
+    return /* @__PURE__ */ jsxs10(
       "button",
       {
         ref: (el) => attachRef(el, itemRefs, i, item.buttonRef),
@@ -2316,13 +2247,13 @@ function NavItems({ items, selectedItem, onSelect, vertical }) {
         "aria-pressed": selectedItem === i,
         className: twMerge9(ITEM_BASE, selectedItem === i && ITEM_SELECTED),
         style: {
-          borderRadius: CIRCLE2,
+          borderRadius: CIRCLE3,
           height: "var(--control-size-md)",
           ...iconOnly ? { width: "var(--control-size-md)" } : { padding: "0 20px" }
         },
         children: [
-          item.icon && (typeof item.icon === "string" ? /* @__PURE__ */ jsx19(Icon, { name: item.icon }) : item.icon),
-          item.label && /* @__PURE__ */ jsx19("span", { children: item.label })
+          item.icon && (typeof item.icon === "string" ? /* @__PURE__ */ jsx17(Icon, { name: item.icon }) : item.icon),
+          item.label && /* @__PURE__ */ jsx17("span", { children: item.label })
         ]
       },
       item.id ?? i
@@ -2334,12 +2265,12 @@ function LogoButton({ logo }) {
   useGSAP8(() => {
     if (!ref.current) return;
     gsap9.to(ref.current, {
-      borderRadius: logo.active ? squircleRadius2() : CIRCLE2,
+      borderRadius: logo.active ? squircleRadius2() : CIRCLE3,
       scale: logo.active ? 1.1 : 1,
       ...MORPH2
     });
   }, { dependencies: [logo.active] });
-  return /* @__PURE__ */ jsx19(
+  return /* @__PURE__ */ jsx17(
     "button",
     {
       ref: (el) => attachRef(el, ref, null, logo.buttonRef),
@@ -2351,9 +2282,9 @@ function LogoButton({ logo }) {
       style: {
         width: "var(--control-size-md)",
         height: "var(--control-size-md)",
-        borderRadius: CIRCLE2
+        borderRadius: CIRCLE3
       },
-      children: typeof logo.icon === "string" ? /* @__PURE__ */ jsx19(Icon, { name: logo.icon }) : logo.icon
+      children: typeof logo.icon === "string" ? /* @__PURE__ */ jsx17(Icon, { name: logo.icon }) : logo.icon
     }
   );
 }
@@ -2375,8 +2306,8 @@ function Navbar({
     if (!isControlled) setInternalSelected(i);
     onChange == null ? void 0 : onChange(i, items[i]);
   };
-  return /* @__PURE__ */ jsxs11(Fragment, { children: [
-    /* @__PURE__ */ jsxs11(
+  return /* @__PURE__ */ jsxs10(Fragment, { children: [
+    /* @__PURE__ */ jsxs10(
       "nav",
       {
         className: twMerge9(
@@ -2386,12 +2317,12 @@ function Navbar({
         ),
         style,
         children: [
-          logo && /* @__PURE__ */ jsx19(LogoButton, { logo }),
-          /* @__PURE__ */ jsx19(NavItems, { items, selectedItem, onSelect: handleSelect, vertical: true })
+          logo && /* @__PURE__ */ jsx17(LogoButton, { logo }),
+          /* @__PURE__ */ jsx17(NavItems, { items, selectedItem, onSelect: handleSelect, vertical: true })
         ]
       }
     ),
-    /* @__PURE__ */ jsx19(
+    /* @__PURE__ */ jsx17(
       "nav",
       {
         className: twMerge9(
@@ -2399,12 +2330,12 @@ function Navbar({
           className
         ),
         style,
-        children: /* @__PURE__ */ jsx19(
+        children: /* @__PURE__ */ jsx17(
           "div",
           {
             className: "flex items-center gap-1 rounded-[var(--radius-full)] bg-[var(--md-sys-color-surface)] p-1",
             style: { boxShadow: "var(--shadow-floating)" },
-            children: /* @__PURE__ */ jsx19(NavItems, { items, selectedItem, onSelect: handleSelect, vertical: false })
+            children: /* @__PURE__ */ jsx17(NavItems, { items, selectedItem, onSelect: handleSelect, vertical: false })
           }
         )
       }
@@ -2418,7 +2349,7 @@ import { twMerge as twMerge10 } from "tailwind-merge";
 import gsap10 from "gsap";
 import { Draggable as Draggable2 } from "gsap/Draggable";
 import { InertiaPlugin } from "gsap/InertiaPlugin";
-import { jsx as jsx20 } from "react/jsx-runtime";
+import { jsx as jsx18 } from "react/jsx-runtime";
 gsap10.registerPlugin(Draggable2, InertiaPlugin);
 var DRAG_TYPE = { y: "scrollTop", x: "scrollLeft", both: "scroll" };
 var EDGE_RESISTANCE = 0.85;
@@ -2501,7 +2432,7 @@ function DragScroll({
   const size = fadeSize ?? 32;
   const [fadeStart, fadeEnd] = useEdgeFade(scrollRef, axis, fade ? size : 0);
   const horizontal = axis === "x";
-  return /* @__PURE__ */ jsx20(
+  return /* @__PURE__ */ jsx18(
     "div",
     {
       ref: scrollRef,
@@ -2520,9 +2451,7 @@ function DragScroll({
 }
 export {
   AnchoredAnimation,
-  Badge,
   button_default as Button,
-  ButtonFullRounded,
   ButtonGroup,
   CustomModal,
   DragScroll,
