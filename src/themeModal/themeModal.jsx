@@ -5,7 +5,8 @@ import gsap from 'gsap';
 import CustomModal from '../customModal/customModal.jsx';
 import ButtonGroup from '../buttons/buttonGroup.jsx';
 import Icon from '../icon/icon.jsx';
-import { useTheme } from './themeContext.jsx';
+import { useTheme } from '../theme/themeContext.jsx';
+import { MORPH, CIRCLE_RADIUS, squircleRadius } from '../animations/motion.js';
 import { verifyTypesThemeModal } from '../utils/verifyTypes.js';
 
 
@@ -15,26 +16,30 @@ const MODES = [
     { value: 'system', icon: 'brightness_4', label: 'Sistema' },
 ];
 
-// Same numbers ButtonGroup animates with, so the two selections in the library move alike: a circle
-// resolving into a squircle rather than a box lighting up.
-const MORPH = { duration: 0.4, ease: 'power3.out' };
-const CIRCLE = '50%';
+// The swatches morph on the same shared numbers as ButtonGroup and Navbar, so every selection in
+// the library moves alike: a circle resolving into a squircle rather than a box lighting up.
 const SWATCH = 56;
-
-
-const squircleRadius = () =>
-    getComputedStyle(document.documentElement).getPropertyValue('--control-radius').trim() || '28%';
 
 
 function Swatch({ theme, selected, onSelect }) {
     const ref = useRef(null);
+    const didMountRef = useRef(false);
 
     useGSAP(() => {
-        gsap.to(ref.current, {
-            borderRadius: selected ? squircleRadius() : CIRCLE,
+        if (!ref.current) return;
+        const shape = {
+            borderRadius: selected ? squircleRadius() : CIRCLE_RADIUS,
             scale: selected ? 1.1 : 1,
-            ...MORPH,
-        });
+        };
+        /*Settle rather than play on the first pass: the modal mounts with one swatch already
+          selected, and morphing it while the panel is still running its own opening animation is
+          most of what made this modal feel stuck.*/
+        if (!didMountRef.current) {
+            didMountRef.current = true;
+            gsap.set(ref.current, shape);
+            return;
+        }
+        gsap.to(ref.current, { ...shape, ...MORPH });
     }, { dependencies: [selected] });
 
     return (
@@ -45,17 +50,12 @@ function Swatch({ theme, selected, onSelect }) {
             aria-pressed={selected}
             aria-label={theme.name}
             title={theme.name}
-            className="cursor-pointer border-0 p-0 transition-shadow duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--md-sys-color-primary)]"
+            className="cursor-pointer border-0 p-0 transition-shadow duration-[var(--duration-base)] ease-[var(--ease-emphasized)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--md-sys-color-primary)]"
             style={{
                 width: SWATCH,
                 height: SWATCH,
-                borderRadius: CIRCLE,
+                borderRadius: CIRCLE_RADIUS,
                 background: theme.hex,
-                // Offset ring rather than a border: it never eats into the colour. The outer stroke
-                // is `on-surface` and deliberately NOT `primary` — the ring lives on the panel, and
-                // `on-surface` is the role guaranteed to read there. `primary` was the bug: in the
-                // neutral themes it is near-black or near-white, the very colours it had to stand
-                // out from, so the marker disappeared against the swatch or against the panel.
                 boxShadow: selected
                     ? '0 0 0 2px var(--md-sys-color-surface-container-high), 0 0 0 4px var(--md-sys-color-on-surface)'
                     : 'none',
@@ -64,8 +64,7 @@ function Swatch({ theme, selected, onSelect }) {
     );
 }
 
-//component for the appearance modal in mott-design — the seed colour and the light/dark mode, which
-//are the two halves of what ThemeProvider holds.
+
 export default function ThemeModal({ open, onClose, triggerRef, title = 'Apariencia' }) {
     verifyTypesThemeModal({ open, onClose, triggerRef, title });
 
@@ -81,10 +80,6 @@ export default function ThemeModal({ open, onClose, triggerRef, title = 'Aparien
         <CustomModal open={open} onClose={onClose} triggerRef={triggerRef} className="w-[360px]">
             <div className="flex flex-col gap-[var(--gap-page)]">
                 <div className="flex items-center gap-[var(--gap-group)]">
-                    {/* `primary` and not the inherited `on-surface`: it answers both halves at once.
-                        In dark mode primary is a light colour by construction (near-white on the
-                        black theme), so the icon reads without a per-mode special case, and it
-                        carries the accent while it is at it. */}
                     <Icon name="palette" size="lg" style={{ color: 'var(--md-sys-color-primary)' }} />
                     <h2
                         className="font-[number:var(--font-medium)] tracking-[var(--tracking-h3)]"
@@ -94,11 +89,7 @@ export default function ThemeModal({ open, onClose, triggerRef, title = 'Aparien
                     </h2>
                 </div>
 
-                {/* Flex and not a grid: a grid with `1fr` columns stretches each cell to fill the
-                    panel, which pushed the swatches far apart no matter how small the gap was. Flex
-                    lets them keep their own width and sit at the gap ButtonGroup uses, so the two
-                    rows of controls in this modal are spaced alike. `flex-wrap` keeps what the grid
-                    was good for: more themes drop to a second line on their own. */}
+                {/*CONTAINER FOR THEME ACCENTS*/}
                 <div className="flex flex-wrap gap-[var(--gap-group)]">
                     {THEMES_AVAILABLE.map((theme) => (
                         <Swatch
@@ -110,6 +101,7 @@ export default function ThemeModal({ open, onClose, triggerRef, title = 'Aparien
                     ))}
                 </div>
 
+                {/*CONTAINER FOR THEME MODES*/}
                 <div className="flex flex-col gap-[var(--gap-section)]">
                     <p
                         className="tracking-[var(--tracking-label)]"
@@ -117,8 +109,6 @@ export default function ThemeModal({ open, onClose, triggerRef, title = 'Aparien
                     >
                         Modo
                     </p>
-                    {/* allowDeselect is off: there is no such thing as "no mode" — clicking the
-                        active one again would otherwise leave the theme with nothing selected */}
                     <ButtonGroup
                         vertical={false}
                         allowDeselect={false}

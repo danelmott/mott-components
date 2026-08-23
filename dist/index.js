@@ -542,11 +542,41 @@ function FabButton({
 // src/buttons/buttonGroup.jsx
 import { useRef, useState } from "react";
 import { useGSAP } from "@gsap/react";
-import gsap from "gsap";
+import gsap2 from "gsap";
 import { twMerge as twMerge3 } from "tailwind-merge";
+
+// src/animations/motion.js
+import gsap from "gsap";
+import CustomEase from "gsap/CustomEase";
+gsap.registerPlugin(CustomEase);
+var DURATION = {
+  instant: 0.12,
+  fast: 0.2,
+  base: 0.28,
+  slow: 0.4,
+  modal: 0.55
+};
+var EASE = {
+  standard: CustomEase.create("mottStandard", "0.2, 0, 0, 1"),
+  emphasized: CustomEase.create("mottEmphasized", "0.32, 0.72, 0, 1"),
+  inOut: CustomEase.create("mottInOut", "0.65, 0, 0.35, 1"),
+  exit: CustomEase.create("mottExit", "0.3, 0, 0.8, 0.15")
+};
+var MORPH = {
+  duration: DURATION.base,
+  ease: EASE.emphasized,
+  overwrite: "auto",
+  force3D: true
+};
+var longForm = (value) => `${value} ${value} ${value} ${value} / ${value} ${value} ${value} ${value}`;
+var CIRCLE_RADIUS = longForm("50%");
+var squircleRadius = () => longForm(
+  typeof document !== "undefined" && getComputedStyle(document.documentElement).getPropertyValue("--control-radius").trim() || "28%"
+);
+var prefersReducedMotion = () => typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+// src/buttons/buttonGroup.jsx
 import { jsx as jsx4, jsxs } from "react/jsx-runtime";
-var CIRCLE = "50%";
-var SQUIRCLE = "28%";
 function ButtonGroup({ buttons, vertical = true, variant = "support", defaultSelected = null, value, allowDeselect = true, onChange }) {
   verifyTypesButtonGroup({ buttons, vertical, variant, allowDeselect, onChange, value, defaultSelected });
   const [internalSelected, setInternalSelected] = useState(defaultSelected);
@@ -554,19 +584,30 @@ function ButtonGroup({ buttons, vertical = true, variant = "support", defaultSel
   const selectedButton = isControlled ? value : internalSelected;
   const itemRefs = useRef([]);
   const containerRef = useRef(null);
+  const prevSelectedRef = useRef(selectedButton);
+  const prevCountRef = useRef(null);
   const selected = selectionTint(variant);
   const resting = FAMILIES.neutral;
   useGSAP(() => {
-    itemRefs.current.forEach((el, i) => {
-      if (!el) return;
-      gsap.to(el, {
-        borderRadius: i === selectedButton ? SQUIRCLE : CIRCLE,
-        scale: i === selectedButton ? 1.1 : 1,
-        duration: 0.4,
-        ease: "power3.out"
+    itemRefs.current.length = buttons.length;
+    const squircle = squircleRadius();
+    const shapeOf = (i) => i === selectedButton ? { borderRadius: squircle, scale: 1.1 } : { borderRadius: CIRCLE_RADIUS, scale: 1 };
+    const settleOnly = prevCountRef.current !== buttons.length;
+    prevCountRef.current = buttons.length;
+    if (settleOnly) {
+      itemRefs.current.forEach((el, i) => {
+        if (el) gsap2.set(el, shapeOf(i));
       });
+      prevSelectedRef.current = selectedButton;
+      return;
+    }
+    const changed = /* @__PURE__ */ new Set([prevSelectedRef.current, selectedButton]);
+    prevSelectedRef.current = selectedButton;
+    changed.forEach((i) => {
+      const el = itemRefs.current[i];
+      if (el) gsap2.to(el, { ...shapeOf(i), ...MORPH });
     });
-  }, { dependencies: [selectedButton], scope: containerRef });
+  }, { dependencies: [selectedButton, buttons.length], scope: containerRef });
   const handleSelect = (i) => {
     const next = allowDeselect && selectedButton === i ? null : i;
     if (!isControlled) setInternalSelected(next);
@@ -591,7 +632,7 @@ function ButtonGroup({ buttons, vertical = true, variant = "support", defaultSel
         style: {
           backgroundColor: i === selectedButton ? selected.surface : resting.container,
           color: i === selectedButton ? selected.on : resting.onContainer,
-          borderRadius: CIRCLE,
+          borderRadius: CIRCLE_RADIUS,
           height: "var(--control-size-md)",
           ...iconOnly ? { width: "var(--control-size-md)", padding: 0 } : { padding: "0 20px" }
         },
@@ -609,32 +650,22 @@ function ButtonGroup({ buttons, vertical = true, variant = "support", defaultSel
 import { useEffect, useRef as useRef2, useState as useState2 } from "react";
 import { createPortal } from "react-dom";
 import { useGSAP as useGSAP2 } from "@gsap/react";
-import gsap2 from "gsap";
+import gsap3 from "gsap";
 import { Draggable } from "gsap/Draggable";
 import { Flip } from "gsap/Flip";
 
 // src/toast/toastStack.js
 var STACK_ATTR = "data-mott-toast-stack";
 var STACK_STYLE = {
-  // `fixed` does two jobs: it lifts the stack out of the scrollable area (which is why dragging
-  // cannot produce scrollX) and makes it the containing block for its absolute children, which is
-  // what the leaving toast's detach needs (see `flyOut` in toast.jsx)
   position: "fixed",
   top: "1rem",
   right: "1rem",
-  // FIXED width, with two roles: it caps the toasts (which size themselves by their text against
-  // this `max-width: 100%`) and it keeps the geometry stable. Were the stack shrink-to-fit it would
-  // size to its widest child, and detaching a toast for its exit would re-measure it to the next
-  // one: the leaving toast would be squeezed against a narrower parent and its text would re-wrap
-  // mid-animation.
   width: "min(24rem, calc(100vw - 2rem))",
   display: "flex",
   flexDirection: "column",
   alignItems: "flex-end",
   gap: "var(--gap-section)",
   zIndex: "var(--z-floating)",
-  // the empty band around the toasts must not swallow clicks on the page; each toast re-enables
-  // itself
   pointerEvents: "none"
 };
 var stack = null;
@@ -651,7 +682,7 @@ function getToastStack() {
 
 // src/toast/toast.jsx
 import { jsx as jsx5, jsxs as jsxs2 } from "react/jsx-runtime";
-gsap2.registerPlugin(Draggable, Flip);
+gsap3.registerPlugin(Draggable, Flip);
 var VARIANT_ICONS = {
   info: "info",
   success: "check_circle",
@@ -695,7 +726,7 @@ function Toast({
     }
   }, [open]);
   const exitDistance = (el) => {
-    const currentX = Number(gsap2.getProperty(el, "x")) || 0;
+    const currentX = Number(gsap3.getProperty(el, "x")) || 0;
     return currentX + (window.innerWidth - el.getBoundingClientRect().left) + 16;
   };
   const flyOut = (el, { ease, duration: duration2, onDone }) => {
@@ -703,7 +734,7 @@ function Toast({
     const siblings = stack3 ? Array.from(stack3.children).filter((c) => c !== el) : [];
     const state = siblings.length ? Flip.getState(siblings) : null;
     const rect = el.getBoundingClientRect();
-    const scaleX = Number(gsap2.getProperty(el, "scaleX")) || 1;
+    const scaleX = Number(gsap3.getProperty(el, "scaleX")) || 1;
     const top = stack3 ? rect.top - stack3.getBoundingClientRect().top : 0;
     Object.assign(el.style, {
       position: "absolute",
@@ -712,7 +743,7 @@ function Toast({
       width: `${rect.width / scaleX}px`
     });
     if (state) Flip.from(state, { duration: duration2, ease: "power3.out" });
-    gsap2.to(el, { x: exitDistance(el), duration: duration2, ease, onComplete: onDone });
+    gsap3.to(el, { x: exitDistance(el), duration: duration2, ease, onComplete: onDone });
   };
   const timerRef = useRef2(null);
   const remainingRef = useRef2(duration);
@@ -739,10 +770,10 @@ function Toast({
   }, [open, duration]);
   useGSAP2(() => {
     if (open && toastRef.current) {
-      gsap2.fromTo(
+      gsap3.fromTo(
         toastRef.current,
         { opacity: 0, x: 24, scale: 0.95 },
-        { opacity: 1, x: 0, scale: 1, duration: 0.4, ease: "back.out(1.7)" }
+        { opacity: 1, x: 0, scale: 1, duration: DURATION.slow, ease: "back.out(1.7)", overwrite: "auto" }
       );
     }
   }, { dependencies: [open, rendered] });
@@ -754,7 +785,7 @@ function Toast({
     }
     flyOut(toastRef.current, {
       ease: "back.in(1.7)",
-      duration: 0.45,
+      duration: DURATION.slow,
       onDone: finishExit
     });
   }, [open, rendered]);
@@ -770,21 +801,21 @@ function Toast({
       bounds: { minX: -width * COUNTER_DRAG, maxX: width, minY: 0, maxY: 0 },
       onPressInit: pauseTimer,
       onDrag: function() {
-        gsap2.set(el, { opacity: 1 - Math.min(Math.abs(this.x) / threshold, 1) * 0.6 });
+        gsap3.set(el, { opacity: 1 - Math.min(Math.abs(this.x) / threshold, 1) * 0.6 });
       },
       onDragEnd: function() {
         if (this.x >= threshold) {
           dismissedRef.current = true;
           flyOut(el, {
-            ease: "power2.in",
-            duration: 0.3,
+            ease: EASE.exit,
+            duration: DURATION.base,
             onDone: () => {
               var _a;
               return (_a = onCloseRef.current) == null ? void 0 : _a.call(onCloseRef);
             }
           });
         } else {
-          gsap2.to(el, { x: 0, opacity: 1, duration: 0.3, ease: "power3.out" });
+          gsap3.to(el, { x: 0, opacity: 1, duration: DURATION.base, ease: EASE.standard, overwrite: "auto" });
           resumeTimer();
         }
       }
@@ -1119,28 +1150,27 @@ function useTheme() {
   return context;
 }
 
-// src/theme/themeModal.jsx
+// src/themeModal/themeModal.jsx
 import { useRef as useRef5 } from "react";
 import { useGSAP as useGSAP3 } from "@gsap/react";
-import gsap4 from "gsap";
+import gsap5 from "gsap";
 
 // src/customModal/customModal.jsx
 import { useEffect as useEffect3, useRef as useRef4 } from "react";
 import { twMerge as twMerge4 } from "tailwind-merge";
 
 // src/animations/modalAnimation.js
-import gsap3 from "gsap";
-import CustomEase from "gsap/CustomEase";
-gsap3.registerPlugin(CustomEase);
-var LIQUID_EASE = CustomEase.create("mottLiquid", "0.32, 0.72, 0, 1");
-var LIQUID_EASE_IN = CustomEase.create("mottLiquidIn", "1, 0, 0.68, 0.28");
-var MORPH_OPEN_DURATION = 0.8;
-var MORPH_CLOSE_DURATION = 0.7;
+import gsap4 from "gsap";
+var MORPH_OPEN_DURATION = DURATION.modal;
+var MORPH_CLOSE_DURATION = DURATION.modal;
 var OPEN_BEATS = {
   morph: { at: 0, span: 1 },
   color: { at: 0, span: 1 },
   overlay: { at: 0, span: 0.6 },
-  content: { at: 0.55, span: 0.45 }
+  /*0.7, not 0.55: under the old fast-headed curve the panel was already at 97% of its size by
+    0.55, but `inOut` splits the journey evenly and only reaches 59% there - the content would
+    fade in while the panel was still growing, clipped in half. At 0.7 the panel is at 89%.*/
+  content: { at: 0.7, span: 0.3 }
 };
 var CLOSE_BEATS = {
   morph: { at: 0, span: 1 },
@@ -1156,9 +1186,17 @@ function killRunningMorph(panel) {
   panel[RUNNING_MORPH] = null;
 }
 function resolveRadius(el, rect) {
-  const raw = getComputedStyle(el).borderTopLeftRadius;
-  const value = parseFloat(raw) || 0;
-  return raw.trim().endsWith("%") ? value / 100 * Math.min(rect.width, rect.height) : value;
+  const raw = getComputedStyle(el).borderTopLeftRadius.trim();
+  const parts = raw.split(/\s+/);
+  const toPx = (part, basis) => {
+    const value = parseFloat(part) || 0;
+    return part.endsWith("%") ? value / 100 * basis : value;
+  };
+  const radius = Math.min(
+    toPx(parts[0], rect.width),
+    toPx(parts[1] ?? parts[0], rect.height)
+  );
+  return Math.min(radius, Math.min(rect.width, rect.height) / 2);
 }
 function separationProgress(from, to, target) {
   const edge = (fromV, toV, limit, sign) => {
@@ -1233,19 +1271,29 @@ var ModalAnimation = class {
 };
 var FadeScaleAnimation = class extends ModalAnimation {
   open({ panel, overlay }) {
-    const tl = gsap3.timeline();
-    this.fadeOverlay(tl, overlay, 1, 0.22);
+    if (prefersReducedMotion()) {
+      gsap4.set(panel, { opacity: 1, y: 0, scale: 1 });
+      if (overlay) gsap4.set(overlay, { opacity: 1 });
+      return;
+    }
+    const tl = gsap4.timeline();
+    this.fadeOverlay(tl, overlay, 1, DURATION.fast);
     tl.fromTo(
       panel,
       { opacity: 0, y: 12, scale: 0.94 },
-      { opacity: 1, y: 0, scale: 1, duration: 0.35, ease: "power3.out" },
+      { opacity: 1, y: 0, scale: 1, duration: DURATION.base, ease: EASE.standard },
       0
     );
   }
   close({ panel, overlay }, onDone) {
-    const tl = gsap3.timeline({ onComplete: () => onDone == null ? void 0 : onDone() });
-    this.fadeOverlay(tl, overlay, 0, 0.2);
-    tl.to(panel, { opacity: 0, y: 12, scale: 0.94, duration: 0.25, ease: "power2.in" }, 0);
+    if (prefersReducedMotion()) {
+      if (overlay) gsap4.set(overlay, { opacity: 0 });
+      onDone == null ? void 0 : onDone();
+      return;
+    }
+    const tl = gsap4.timeline({ onComplete: () => onDone == null ? void 0 : onDone() });
+    this.fadeOverlay(tl, overlay, 0, DURATION.fast);
+    tl.to(panel, { opacity: 0, y: 12, scale: 0.94, duration: DURATION.fast, ease: EASE.exit }, 0);
   }
 };
 var MorphAnimation = class extends ModalAnimation {
@@ -1254,9 +1302,9 @@ var MorphAnimation = class extends ModalAnimation {
     closeDuration = MORPH_CLOSE_DURATION,
     openBeats = {},
     closeBeats = {},
-    openEase = LIQUID_EASE,
-    closeEase = LIQUID_EASE_IN,
-    closeGhost = false,
+    openEase = EASE.inOut,
+    closeEase = EASE.inOut,
+    closeGhost = true,
     ghostFade = 0.2
   } = {}) {
     super();
@@ -1281,11 +1329,12 @@ var MorphAnimation = class extends ModalAnimation {
   // trigger's exact rect, and `openClip` opens it back up. Live transforms are backed out of
   // `panelRect` so a re-measure mid-flight still reports the panel's resting position.
   measure(panel, trigger) {
+    panel.style.borderRadius = "";
     const cs = getComputedStyle(panel);
     const pad = { top: parseFloat(cs.paddingTop) || 0, left: parseFloat(cs.paddingLeft) || 0 };
     const rect = panel.getBoundingClientRect();
-    const tx = Number(gsap3.getProperty(panel, "x")) || 0;
-    const ty = Number(gsap3.getProperty(panel, "y")) || 0;
+    const tx = Number(gsap4.getProperty(panel, "x")) || 0;
+    const ty = Number(gsap4.getProperty(panel, "y")) || 0;
     const panelRect = { left: rect.left - tx, top: rect.top - ty, width: rect.width, height: rect.height };
     const originRect = trigger.getBoundingClientRect();
     const panelBox = { ...panelRect, right: panelRect.left + panelRect.width, bottom: panelRect.top + panelRect.height };
@@ -1372,8 +1421,8 @@ var MorphAnimation = class extends ModalAnimation {
     removeTriggerGhost(dialog);
     panel.style.clipPath = "";
     panel[RUNNING_MORPH] = null;
-    gsap3.set(panel, { clearProps: `transform,backgroundColor,willChange${alsoClear ? `,${alsoClear}` : ""}` });
-    gsap3.set(content, { clearProps: "opacity,visibility" });
+    gsap4.set(panel, { clearProps: `transform,backgroundColor,borderRadius,willChange${alsoClear ? `,${alsoClear}` : ""}` });
+    gsap4.set(content, { clearProps: "opacity,visibility" });
   }
   // Panel starts disguised as the trigger, then one timeline runs the lot: it slides into place, its
   // colour crossfades, the clip opens up, the content fades in and the backdrop darkens - each on
@@ -1382,22 +1431,28 @@ var MorphAnimation = class extends ModalAnimation {
     if (!trigger) return new FadeScaleAnimation().open({ panel, overlay });
     killRunningMorph(panel);
     this.place(panel, trigger);
+    if (prefersReducedMotion()) {
+      this.settle(dialog, panel, content);
+      if (overlay) gsap4.set(overlay, { opacity: 1 });
+      return;
+    }
     const { originRect, clearP, openClip, buttonClip, buttonOffset } = this.measure(panel, trigger);
     const originColor = getComputedStyle(trigger).backgroundColor;
     const finalColor = getComputedStyle(panel).backgroundColor;
     const ghost = createTriggerGhost(dialog, trigger, originRect);
-    gsap3.set(panel, {
+    gsap4.set(panel, {
       x: buttonOffset.x,
       y: buttonOffset.y,
       backgroundColor: originColor,
-      willChange: "transform, clip-path"
+      borderRadius: 0,
+      willChange: "transform"
     });
-    gsap3.set(content, { autoAlpha: 0 });
+    gsap4.set(content, { autoAlpha: 0 });
     const d = this.openDuration;
     const { morph, color, overlay: ov, content: cont } = this.openBeats;
     const morphAt = d * morph.at;
     const morphSpan = d * morph.span;
-    const tl = gsap3.timeline({ onComplete: () => this.settle(dialog, panel, content) });
+    const tl = gsap4.timeline({ onComplete: () => this.settle(dialog, panel, content) });
     panel[RUNNING_MORPH] = tl;
     tl.to(panel, { x: 0, y: 0, duration: morphSpan, ease: this.openEase, force3D: true }, morphAt);
     tl.to(panel, {
@@ -1418,22 +1473,31 @@ var MorphAnimation = class extends ModalAnimation {
     tl.to(content, { autoAlpha: 1, duration: d * cont.span, ease: "power1.out" }, d * cont.at);
     this.fadeOverlay(tl, overlay, 1, d * ov.span, d * ov.at);
   }
-  // The inverse, with two differences: the clip starts from wherever an interrupted opening left it,
-  // and the ghost is optional - only subclasses that leave the trigger hidden want it faded back in.
+  /*The inverse, with one difference: the clip starts from wherever an interrupted opening left it.
+    The ghost is faded back IN here rather than out. The panel is opaque and comes to rest exactly
+    on top of the trigger, so without it the trigger's label stays hidden until the <dialog> closes
+    and then pops back - right at the moment the eye is following the panel down onto the button.
+    `ghostFader` lands the fade on `p = 1 - clearP`, the frame the panel starts covering it again.*/
   close({ dialog, panel, content, overlay, trigger }, onDone) {
     if (!trigger) return new FadeScaleAnimation().close({ panel, overlay }, onDone);
     killRunningMorph(panel);
     removeTriggerGhost(dialog);
+    if (prefersReducedMotion()) {
+      if (overlay) gsap4.set(overlay, { opacity: 0 });
+      onDone == null ? void 0 : onDone();
+      this.settle(dialog, panel, content, this.placedProps());
+      return;
+    }
     const { originRect, clearP, openClip, buttonClip, buttonOffset } = this.measure(panel, trigger);
     const originColor = getComputedStyle(trigger).backgroundColor;
     const ghost = this.closeGhost ? createTriggerGhost(dialog, trigger, originRect) : null;
     if (ghost) ghost.style.opacity = "0";
-    gsap3.set(panel, { willChange: "transform, clip-path" });
+    gsap4.set(panel, { borderRadius: 0, willChange: "transform" });
     const d = this.closeDuration;
     const { morph, color, overlay: ov, content: cont } = this.closeBeats;
     const morphAt = d * morph.at;
     const morphSpan = d * morph.span;
-    const tl = gsap3.timeline({
+    const tl = gsap4.timeline({
       onComplete: () => {
         onDone == null ? void 0 : onDone();
         this.settle(dialog, panel, content, this.placedProps());
@@ -1469,14 +1533,15 @@ var MorphAnimation = class extends ModalAnimation {
 var AnchoredAnimation = class extends MorphAnimation {
   constructor({ cover = 6, ...options } = {}) {
     super({
-      openDuration: 0.45,
-      closeDuration: 0.38,
-      closeEase: "power1.in",
+      openDuration: DURATION.slow,
+      closeDuration: DURATION.slow,
       openBeats: {
         morph: { at: 0.15, span: 0.85 },
         color: { at: 0.3, span: 0.7 },
         overlay: { at: 0, span: 0.22 },
-        content: { at: 0.62, span: 0.38 }
+        // same recalibration as OPEN_BEATS: its morph runs 0.15-1.0, so 0.62 sat at 55%
+        // of the morph's own progress and hit the identical half-grown-panel problem
+        content: { at: 0.72, span: 0.28 }
       },
       closeBeats: {
         morph: { at: 0, span: 0.75 },
@@ -1500,11 +1565,12 @@ var AnchoredAnimation = class extends MorphAnimation {
     };
   }
   place(panel, trigger) {
+    gsap4.set(panel, { position: "fixed", margin: 0 });
     const { left, top } = this.computeAnchoredPosition(
       trigger.getBoundingClientRect(),
       panel.getBoundingClientRect()
     );
-    gsap3.set(panel, { position: "fixed", margin: 0, left, top });
+    gsap4.set(panel, { left, top });
   }
   placedProps() {
     return "position,left,top,margin";
@@ -1619,25 +1685,29 @@ function CustomModal({ open, onClose, onCloseComplete, children, triggerRef, ani
   );
 }
 
-// src/theme/themeModal.jsx
+// src/themeModal/themeModal.jsx
 import { jsx as jsx9, jsxs as jsxs5 } from "react/jsx-runtime";
 var MODES = [
   { value: "light", icon: "light_mode", label: "Claro" },
   { value: "dark", icon: "dark_mode", label: "Oscuro" },
   { value: "system", icon: "brightness_4", label: "Sistema" }
 ];
-var MORPH = { duration: 0.4, ease: "power3.out" };
-var CIRCLE2 = "50%";
 var SWATCH = 56;
-var squircleRadius = () => getComputedStyle(document.documentElement).getPropertyValue("--control-radius").trim() || "28%";
 function Swatch({ theme, selected, onSelect }) {
   const ref = useRef5(null);
+  const didMountRef = useRef5(false);
   useGSAP3(() => {
-    gsap4.to(ref.current, {
-      borderRadius: selected ? squircleRadius() : CIRCLE2,
-      scale: selected ? 1.1 : 1,
-      ...MORPH
-    });
+    if (!ref.current) return;
+    const shape = {
+      borderRadius: selected ? squircleRadius() : CIRCLE_RADIUS,
+      scale: selected ? 1.1 : 1
+    };
+    if (!didMountRef.current) {
+      didMountRef.current = true;
+      gsap5.set(ref.current, shape);
+      return;
+    }
+    gsap5.to(ref.current, { ...shape, ...MORPH });
   }, { dependencies: [selected] });
   return /* @__PURE__ */ jsx9(
     "button",
@@ -1648,17 +1718,12 @@ function Swatch({ theme, selected, onSelect }) {
       "aria-pressed": selected,
       "aria-label": theme.name,
       title: theme.name,
-      className: "cursor-pointer border-0 p-0 transition-shadow duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--md-sys-color-primary)]",
+      className: "cursor-pointer border-0 p-0 transition-shadow duration-[var(--duration-base)] ease-[var(--ease-emphasized)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--md-sys-color-primary)]",
       style: {
         width: SWATCH,
         height: SWATCH,
-        borderRadius: CIRCLE2,
+        borderRadius: CIRCLE_RADIUS,
         background: theme.hex,
-        // Offset ring rather than a border: it never eats into the colour. The outer stroke
-        // is `on-surface` and deliberately NOT `primary` — the ring lives on the panel, and
-        // `on-surface` is the role guaranteed to read there. `primary` was the bug: in the
-        // neutral themes it is near-black or near-white, the very colours it had to stand
-        // out from, so the marker disappeared against the swatch or against the panel.
         boxShadow: selected ? "0 0 0 2px var(--md-sys-color-surface-container-high), 0 0 0 4px var(--md-sys-color-on-surface)" : "none"
       }
     }
@@ -1810,7 +1875,7 @@ function Textarea({
 import { useEffect as useEffect4, useId as useId3, useRef as useRef6, useState as useState5 } from "react";
 import { createPortal as createPortal2 } from "react-dom";
 import { useGSAP as useGSAP4 } from "@gsap/react";
-import gsap5 from "gsap";
+import gsap6 from "gsap";
 import { jsx as jsx12, jsxs as jsxs8 } from "react/jsx-runtime";
 function Select({ options = [], value, onChange, label, placeholder = "Seleccionar", disabled, id }) {
   verifyTypesSelect({ options, onChange, label, placeholder, disabled });
@@ -1843,26 +1908,28 @@ function Select({ options = [], value, onChange, label, placeholder = "Seleccion
     if (open && panelRef.current) {
       const el = panelRef.current;
       const targetHeight = el.scrollHeight;
-      gsap5.fromTo(
+      gsap6.fromTo(
         el,
         { height: 0, opacity: 0 },
         {
           height: targetHeight,
           opacity: 1,
-          duration: 0.35,
-          ease: "power3.out",
-          onComplete: () => gsap5.set(el, { height: "auto" })
+          duration: DURATION.base,
+          ease: EASE.standard,
+          overwrite: "auto",
+          onComplete: () => gsap6.set(el, { height: "auto" })
         }
       );
     }
   }, { dependencies: [open, rendered] });
   useEffect4(() => {
     if (!open && rendered && panelRef.current) {
-      gsap5.to(panelRef.current, {
+      gsap6.to(panelRef.current, {
         height: 0,
         opacity: 0,
-        duration: 0.25,
-        ease: "power2.in",
+        duration: DURATION.fast,
+        ease: EASE.exit,
+        overwrite: "auto",
         onComplete: () => setRendered(false)
       });
     }
@@ -2041,7 +2108,7 @@ function Search({
 // src/dropdown/dropdown.jsx
 import { useEffect as useEffect6, useRef as useRef8, useState as useState7 } from "react";
 import { useGSAP as useGSAP5 } from "@gsap/react";
-import gsap6 from "gsap";
+import gsap7 from "gsap";
 import { twMerge as twMerge8 } from "tailwind-merge";
 import { jsx as jsx14 } from "react/jsx-runtime";
 function Dropdown({ open, onClose, children, triggerRef, className, style, ...props }) {
@@ -2052,22 +2119,38 @@ function Dropdown({ open, onClose, children, triggerRef, className, style, ...pr
     if (open) setRendered(true);
   }, [open]);
   useGSAP5(() => {
-    if (open && panelRef.current) {
-      gsap6.fromTo(
-        panelRef.current,
-        { opacity: 0, y: -8, scale: 0.96 },
-        { opacity: 1, y: 0, scale: 1, duration: 0.25, ease: "back.out(1.7)", transformOrigin: "top" }
-      );
+    if (!open || !panelRef.current) return;
+    if (prefersReducedMotion()) {
+      gsap7.set(panelRef.current, { opacity: 1, y: 0, scale: 1 });
+      return;
     }
+    gsap7.fromTo(
+      panelRef.current,
+      { opacity: 0, y: -8, scale: 0.96 },
+      {
+        opacity: 1,
+        y: 0,
+        scale: 1,
+        duration: DURATION.fast,
+        ease: EASE.standard,
+        transformOrigin: "top",
+        overwrite: "auto"
+      }
+    );
   }, { dependencies: [open, rendered] });
   useEffect6(() => {
     if (!open && rendered && panelRef.current) {
-      gsap6.to(panelRef.current, {
+      if (prefersReducedMotion()) {
+        setRendered(false);
+        return;
+      }
+      gsap7.to(panelRef.current, {
         opacity: 0,
         y: -8,
         scale: 0.96,
-        duration: 0.18,
-        ease: "power2.in",
+        duration: DURATION.instant,
+        ease: EASE.exit,
+        overwrite: "auto",
         onComplete: () => setRendered(false)
       });
     }
@@ -2107,7 +2190,7 @@ function Dropdown({ open, onClose, children, triggerRef, className, style, ...pr
 // src/loading/loading.jsx
 import { useRef as useRef9 } from "react";
 import { useGSAP as useGSAP6 } from "@gsap/react";
-import gsap7 from "gsap";
+import gsap8 from "gsap";
 import { jsx as jsx15 } from "react/jsx-runtime";
 var SHAPES = [
   "50% 50% 50% 50% / 50% 50% 50% 50%",
@@ -2127,7 +2210,11 @@ function Loading({ size = "sm", color = "primary", className, style, ...props })
   const background = ACCENTS[color] ?? color;
   useGSAP6(() => {
     const el = shapeRef.current;
-    const tl = gsap7.timeline({ repeat: -1 });
+    if (prefersReducedMotion()) {
+      gsap8.to(el, { rotate: 360, duration: 12, repeat: -1, ease: "none" });
+      return;
+    }
+    const tl = gsap8.timeline({ repeat: -1 });
     const morph = (shape) => {
       tl.to(el, { borderRadius: shape, scale: 1.12, duration: 0.5, ease: "power2.out" }, "+=0.05").to(el, { scale: 1, duration: 0.45, ease: "power2.in" });
     };
@@ -2136,7 +2223,7 @@ function Loading({ size = "sm", color = "primary", className, style, ...props })
     morph(SHAPES[3]);
     tl.to(el, { opacity: 0, scale: 0.85, duration: 0.2, ease: "power2.in" }, "+=0.05").set(el, { clipPath: PENTAGON }).to(el, { opacity: 1, scale: 1.12, duration: 0.3, ease: "power2.out" }).to(el, { scale: 1, duration: 0.45, ease: "power2.in" });
     tl.to(el, { opacity: 0, scale: 0.85, duration: 0.2, ease: "power2.in" }, "+=0.3").set(el, { clipPath: "none", borderRadius: SHAPES[0] }).to(el, { opacity: 1, scale: 1.12, duration: 0.3, ease: "power2.out" }).to(el, { scale: 1, duration: 0.45, ease: "power2.in" });
-    gsap7.to(el, { rotate: 360, duration: 5, repeat: -1, ease: "none" });
+    gsap8.to(el, { rotate: 360, duration: 5, repeat: -1, ease: "none" });
   }, []);
   return /* @__PURE__ */ jsx15(
     "div",
@@ -2161,7 +2248,7 @@ function Loading({ size = "sm", color = "primary", className, style, ...props })
 // src/loading/progress.jsx
 import { useRef as useRef10 } from "react";
 import { useGSAP as useGSAP7 } from "@gsap/react";
-import gsap8 from "gsap";
+import gsap9 from "gsap";
 import { jsx as jsx16 } from "react/jsx-runtime";
 function Progress({ value, color = "primary", className, style, ...props }) {
   verifyTypesProgress({ value, color });
@@ -2171,11 +2258,13 @@ function Progress({ value, color = "primary", className, style, ...props }) {
   const indeterminate = value === void 0 || value === null;
   useGSAP7(() => {
     if (indeterminate) {
-      gsap8.set(fillRef.current, { xPercent: -100 });
-      gsap8.to(fillRef.current, { xPercent: 200, duration: 1.2, repeat: -1, ease: "none" });
+      gsap9.set(fillRef.current, { xPercent: -100 });
+      gsap9.to(fillRef.current, { xPercent: 200, duration: prefersReducedMotion() ? 3 : 1.2, repeat: -1, ease: "none" });
     } else {
-      gsap8.killTweensOf(fillRef.current);
-      gsap8.to(fillRef.current, { width: `${Math.min(100, Math.max(0, value))}%`, duration: 0.4, ease: "power3.out" });
+      gsap9.killTweensOf(fillRef.current);
+      const width = `${Math.min(100, Math.max(0, value))}%`;
+      if (prefersReducedMotion()) gsap9.set(fillRef.current, { width });
+      else gsap9.to(fillRef.current, { width, duration: DURATION.slow, ease: EASE.standard });
     }
   }, { dependencies: [indeterminate, value] });
   return /* @__PURE__ */ jsx16(
@@ -2203,18 +2292,15 @@ function Progress({ value, color = "primary", className, style, ...props }) {
 // src/navbar/navbar.jsx
 import { useRef as useRef11, useState as useState8 } from "react";
 import { useGSAP as useGSAP8 } from "@gsap/react";
-import gsap9 from "gsap";
+import gsap10 from "gsap";
 import { twMerge as twMerge9 } from "tailwind-merge";
 import { Fragment, jsx as jsx17, jsxs as jsxs10 } from "react/jsx-runtime";
 var DESKTOP_ALIGN = {
   center: "top-1/2 -translate-y-1/2",
   top: "top-8"
 };
-var ITEM_BASE = "inline-flex items-center justify-center gap-2 border-0 cursor-pointer p-0 text-[length:var(--text-md)] tracking-[var(--tracking-h4)] font-[number:var(--font-medium)] bg-[var(--md-sys-color-surface-container)] text-[var(--md-sys-color-on-surface-variant)] transition-[background-color,color] duration-400 ease-[var(--ease-morph)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--md-sys-color-primary)]";
+var ITEM_BASE = "inline-flex items-center justify-center gap-2 border-0 cursor-pointer p-0 text-[length:var(--text-md)] tracking-[var(--tracking-h4)] font-[number:var(--font-medium)] bg-[var(--md-sys-color-surface-container)] text-[var(--md-sys-color-on-surface-variant)] transition-[background-color,color] duration-[var(--duration-base)] ease-[var(--ease-emphasized)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--md-sys-color-primary)]";
 var ITEM_SELECTED = "bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)]";
-var MORPH2 = { duration: 0.4, ease: "power3.out" };
-var CIRCLE3 = "50%";
-var squircleRadius2 = () => getComputedStyle(document.documentElement).getPropertyValue("--control-radius").trim() || "28%";
 var attachRef = (node, store, i, forwarded) => {
   if (i === null) store.current = node;
   else store.current[i] = node;
@@ -2224,16 +2310,26 @@ var attachRef = (node, store, i, forwarded) => {
 function NavItems({ items, selectedItem, onSelect, vertical }) {
   const itemRefs = useRef11([]);
   const containerRef = useRef11(null);
+  const prevSelectedRef = useRef11(selectedItem);
+  const prevCountRef = useRef11(null);
   useGSAP8(() => {
-    const squircle = squircleRadius2();
-    itemRefs.current.forEach((el, i) => {
-      if (!el) return;
-      const isSelected = i === selectedItem;
-      gsap9.to(el, {
-        borderRadius: isSelected ? squircle : CIRCLE3,
-        scale: isSelected ? 1.1 : 1,
-        ...MORPH2
+    itemRefs.current.length = items.length;
+    const squircle = squircleRadius();
+    const shapeOf = (i) => i === selectedItem ? { borderRadius: squircle, scale: 1.1 } : { borderRadius: CIRCLE_RADIUS, scale: 1 };
+    const settleOnly = prevCountRef.current !== items.length;
+    prevCountRef.current = items.length;
+    if (settleOnly) {
+      itemRefs.current.forEach((el, i) => {
+        if (el) gsap10.set(el, shapeOf(i));
       });
+      prevSelectedRef.current = selectedItem;
+      return;
+    }
+    const changed = /* @__PURE__ */ new Set([prevSelectedRef.current, selectedItem]);
+    prevSelectedRef.current = selectedItem;
+    changed.forEach((i) => {
+      const el = itemRefs.current[i];
+      if (el) gsap10.to(el, { ...shapeOf(i), ...MORPH });
     });
   }, { dependencies: [selectedItem, items.length], scope: containerRef });
   return /* @__PURE__ */ jsx17("div", { ref: containerRef, className: twMerge9("inline-flex gap-[var(--gap-group)]", vertical && "flex-col"), children: items.map((item, i) => {
@@ -2247,7 +2343,7 @@ function NavItems({ items, selectedItem, onSelect, vertical }) {
         "aria-pressed": selectedItem === i,
         className: twMerge9(ITEM_BASE, selectedItem === i && ITEM_SELECTED),
         style: {
-          borderRadius: CIRCLE3,
+          borderRadius: CIRCLE_RADIUS,
           height: "var(--control-size-md)",
           ...iconOnly ? { width: "var(--control-size-md)" } : { padding: "0 20px" }
         },
@@ -2262,13 +2358,19 @@ function NavItems({ items, selectedItem, onSelect, vertical }) {
 }
 function LogoButton({ logo }) {
   const ref = useRef11(null);
+  const didMountRef = useRef11(false);
   useGSAP8(() => {
     if (!ref.current) return;
-    gsap9.to(ref.current, {
-      borderRadius: logo.active ? squircleRadius2() : CIRCLE3,
-      scale: logo.active ? 1.1 : 1,
-      ...MORPH2
-    });
+    const shape = {
+      borderRadius: logo.active ? squircleRadius() : CIRCLE_RADIUS,
+      scale: logo.active ? 1.1 : 1
+    };
+    if (!didMountRef.current) {
+      didMountRef.current = true;
+      gsap10.set(ref.current, shape);
+      return;
+    }
+    gsap10.to(ref.current, { ...shape, ...MORPH });
   }, { dependencies: [logo.active] });
   return /* @__PURE__ */ jsx17(
     "button",
@@ -2282,7 +2384,7 @@ function LogoButton({ logo }) {
       style: {
         width: "var(--control-size-md)",
         height: "var(--control-size-md)",
-        borderRadius: CIRCLE3
+        borderRadius: CIRCLE_RADIUS
       },
       children: typeof logo.icon === "string" ? /* @__PURE__ */ jsx17(Icon, { name: logo.icon }) : logo.icon
     }
@@ -2346,11 +2448,11 @@ function Navbar({
 // src/dragScroll/dragScroll.jsx
 import { useCallback as useCallback3, useEffect as useEffect7, useLayoutEffect, useRef as useRef12, useState as useState9 } from "react";
 import { twMerge as twMerge10 } from "tailwind-merge";
-import gsap10 from "gsap";
+import gsap11 from "gsap";
 import { Draggable as Draggable2 } from "gsap/Draggable";
 import { InertiaPlugin } from "gsap/InertiaPlugin";
 import { jsx as jsx18 } from "react/jsx-runtime";
-gsap10.registerPlugin(Draggable2, InertiaPlugin);
+gsap11.registerPlugin(Draggable2, InertiaPlugin);
 var DRAG_TYPE = { y: "scrollTop", x: "scrollLeft", both: "scroll" };
 var EDGE_RESISTANCE = 0.85;
 function useDragScroll(ref, { axis = "y", inertia = true, disabled = false } = {}) {
@@ -2453,13 +2555,17 @@ export {
   AnchoredAnimation,
   button_default as Button,
   ButtonGroup,
+  CIRCLE_RADIUS,
   CustomModal,
+  DURATION,
   DragScroll,
   Dropdown,
+  EASE,
   FabButton,
   Icon,
   Input,
   Loading,
+  MORPH,
   ModalAnimation,
   MorphAnimation,
   Navbar,
@@ -2473,6 +2579,8 @@ export {
   ToastProvider,
   anchoredAnimation,
   morphAnimation,
+  prefersReducedMotion,
+  squircleRadius,
   useDragScroll,
   useTheme,
   useToast

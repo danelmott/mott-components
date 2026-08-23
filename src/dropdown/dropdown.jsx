@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
 import { twMerge } from 'tailwind-merge';
+import { DURATION, EASE, prefersReducedMotion } from '../animations/motion.js';
 import { verifyTypesDropdown } from '../utils/verifyTypes.js';
 
 //component for dropdown in mott-design - no backdrop, closes on Escape or an outside click
@@ -18,23 +19,36 @@ export default function Dropdown({ open, onClose, children, triggerRef, classNam
     
     //hook for animate open for dropdown
     useGSAP(() => {
-        if (open && panelRef.current) {
-            gsap.fromTo(panelRef.current,
-                { opacity: 0, y: -8, scale: 0.96 },
-                { opacity: 1, y: 0, scale: 1, duration: 0.25, ease: 'back.out(1.7)', transformOrigin: 'top' }
-            );
+        if (!open || !panelRef.current) return;
+        if (prefersReducedMotion()) {
+            gsap.set(panelRef.current, { opacity: 1, y: 0, scale: 1 });
+            return;
         }
+        // no overshoot: a menu that springs past its resting size reads as imprecise, and this one
+        // is a hit target the pointer is already travelling towards
+        gsap.fromTo(panelRef.current,
+            { opacity: 0, y: -8, scale: 0.96 },
+            {
+                opacity: 1, y: 0, scale: 1,
+                duration: DURATION.fast,
+                ease: EASE.standard,
+                transformOrigin: 'top',
+                overwrite: 'auto',
+            }
+        );
     }, { dependencies: [open, rendered] });
     
     //effect for animate close for dropdown
     useEffect(() => {
         if (!open && rendered && panelRef.current) {
+            if (prefersReducedMotion()) { setRendered(false); return; }
             gsap.to(panelRef.current, {
                 opacity: 0,
                 y: -8,
                 scale: 0.96,
-                duration: 0.18,
-                ease: 'power2.in',
+                duration: DURATION.instant,
+                ease: EASE.exit,
+                overwrite: 'auto',
                 onComplete: () => setRendered(false),
             });
         }

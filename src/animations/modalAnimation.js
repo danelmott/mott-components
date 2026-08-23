@@ -1,16 +1,15 @@
 import gsap from 'gsap';
-import CustomEase from 'gsap/CustomEase';
-
-gsap.registerPlugin(CustomEase);
+import { DURATION, EASE, prefersReducedMotion } from './motion.js';
 
 
-// Shared bezier for every morph: a fast head that settles slowly, so the panel reads as one liquid
-// gesture rather than a box being moved. `_IN` is its mirror, used on close.
-const LIQUID_EASE = CustomEase.create('mottLiquid', '0.32, 0.72, 0, 1');
-const LIQUID_EASE_IN = CustomEase.create('mottLiquidIn', '1, 0, 0.68, 0.28');
-
-const MORPH_OPEN_DURATION = 0.8;
-const MORPH_CLOSE_DURATION = 0.7;
+/*Opening and closing take the same time and ride the same curve, because they are one gesture
+  played in both directions: the button becomes the panel, then the panel becomes the button again.
+  `EASE.inOut` starts and ends practically stationary and spreads the journey evenly, so the panel
+  is legible the whole way instead of arriving and then settling. An accelerating curve here - the
+  Material `exit` this used to close with - lands at 4.25x the average speed, and hitting the
+  button at full tilt is exactly what read as a jerk.*/
+const MORPH_OPEN_DURATION = DURATION.modal;
+const MORPH_CLOSE_DURATION = DURATION.modal;
 
 
 // Choreography, as fractions of the total duration: `at` is when a part starts, `span` how long it
@@ -19,7 +18,10 @@ const OPEN_BEATS = {
     morph: { at: 0, span: 1 },
     color: { at: 0, span: 1 },
     overlay: { at: 0, span: 0.6 },
-    content: { at: 0.55, span: 0.45 },
+    /*0.7, not 0.55: under the old fast-headed curve the panel was already at 97% of its size by
+      0.55, but `inOut` splits the journey evenly and only reaches 59% there - the content would
+      fade in while the panel was still growing, clipped in half. At 0.7 the panel is at 89%.*/
+    content: { at: 0.7, span: 0.3 },
 };
 const CLOSE_BEATS = {
     morph: { at: 0, span: 1 },
@@ -44,11 +46,26 @@ function killRunningMorph(panel) {
 }
 
 
-// border-radius may be a percentage, which clip-path's `round` cannot take - resolve it to px.
+/*border-radius may be a percentage, which clip-path's `round` cannot take - resolve it to px.
+  Two details matter. CSS resolves the two halves of a percentage radius against DIFFERENT axes
+  (horizontal against the width, vertical against the height), so a single Math.min() reading turns
+  a pill-shaped control into a stadium and the first frame of the morph does not match the trigger.
+  And the result is clamped to half the box, because a `rounded-full` trigger computes to 9999px
+  (or Tailwind v4's 2147483647px): interpolating from there down to the panel's 24px keeps the
+  browser's own clamp pinned for almost the whole tween and then snaps in the last few frames -
+  that is the jerk. Clamped, the same trigger simply reads as the circle it already looks like.*/
 function resolveRadius(el, rect) {
-    const raw = getComputedStyle(el).borderTopLeftRadius;
-    const value = parseFloat(raw) || 0;
-    return raw.trim().endsWith('%') ? (value / 100) * Math.min(rect.width, rect.height) : value;
+    const raw = getComputedStyle(el).borderTopLeftRadius.trim();
+    const parts = raw.split(/\s+/);
+    const toPx = (part, basis) => {
+        const value = parseFloat(part) || 0;
+        return part.endsWith('%') ? (value / 100) * basis : value;
+    };
+    const radius = Math.min(
+        toPx(parts[0], rect.width),
+        toPx(parts[1] ?? parts[0], rect.height),
+    );
+    return Math.min(radius, Math.min(rect.width, rect.height) / 2);
 }
 
 // Progress (0-1) at which the morphing rect stops overlapping `target` - the moment the panel
@@ -141,19 +158,29 @@ export class ModalAnimation {
 // `triggerRef` (a session timeout, an error the app raises on its own) lands here instead of crashing.
 export class FadeScaleAnimation extends ModalAnimation {
     open({ panel, overlay }) {
+        if (prefersReducedMotion()) {
+            gsap.set(panel, { opacity: 1, y: 0, scale: 1 });
+            if (overlay) gsap.set(overlay, { opacity: 1 });
+            return;
+        }
         const tl = gsap.timeline();
-        this.fadeOverlay(tl, overlay, 1, 0.22);
+        this.fadeOverlay(tl, overlay, 1, DURATION.fast);
         tl.fromTo(panel,
             { opacity: 0, y: 12, scale: 0.94 },
-            { opacity: 1, y: 0, scale: 1, duration: 0.35, ease: 'power3.out' },
+            { opacity: 1, y: 0, scale: 1, duration: DURATION.base, ease: EASE.standard },
             0
         );
     }
     
     close({ panel, overlay }, onDone) {
+        if (prefersReducedMotion()) {
+            if (overlay) gsap.set(overlay, { opacity: 0 });
+            onDone?.();
+            return;
+        }
         const tl = gsap.timeline({ onComplete: () => onDone?.() });
-        this.fadeOverlay(tl, overlay, 0, 0.2);
-        tl.to(panel, { opacity: 0, y: 12, scale: 0.94, duration: 0.25, ease: 'power2.in' }, 0);
+        this.fadeOverlay(tl, overlay, 0, DURATION.fast);
+        tl.to(panel, { opacity: 0, y: 12, scale: 0.94, duration: DURATION.fast, ease: EASE.exit }, 0);
     }
 }
 
@@ -167,9 +194,9 @@ export class MorphAnimation extends ModalAnimation {
         closeDuration = MORPH_CLOSE_DURATION,
         openBeats = {},
         closeBeats = {},
-        openEase = LIQUID_EASE,
-        closeEase = LIQUID_EASE_IN,
-        closeGhost = false,
+        openEase = EASE.inOut,
+        closeEase = EASE.inOut,
+        closeGhost = true,
         ghostFade = 0.2,
     } = {}) {
         super();
@@ -193,6 +220,10 @@ export class MorphAnimation extends ModalAnimation {
     // trigger's exact rect, and `openClip` opens it back up. Live transforms are backed out of
     // `panelRect` so a re-measure mid-flight still reports the panel's resting position.
     measure(panel, trigger) {
+        // open() zeroes the panel's own border-radius for the duration of the flight (see there), so
+        // a close that interrupts an open would otherwise resolve `openClip` against a square panel.
+        panel.style.borderRadius = '';
+
         const cs = getComputedStyle(panel);
         const pad = { top: parseFloat(cs.paddingTop) || 0, left: parseFloat(cs.paddingLeft) || 0 };
         
@@ -295,7 +326,7 @@ export class MorphAnimation extends ModalAnimation {
         removeTriggerGhost(dialog);
         panel.style.clipPath = '';
         panel[RUNNING_MORPH] = null;
-        gsap.set(panel, { clearProps: `transform,backgroundColor,willChange${alsoClear ? `,${alsoClear}` : ''}` });
+        gsap.set(panel, { clearProps: `transform,backgroundColor,borderRadius,willChange${alsoClear ? `,${alsoClear}` : ''}` });
         gsap.set(content, { clearProps: 'opacity,visibility' });
     }
     
@@ -308,17 +339,35 @@ export class MorphAnimation extends ModalAnimation {
         killRunningMorph(panel);
         this.place(panel, trigger);
         
+        /*Nothing to morph from if the user asked for less motion: show the finished modal at once.
+          settle() is the same teardown the timeline would have run, so anything an interrupted
+          flight left behind goes too - but placedProps() is deliberately not passed, because an
+          anchored panel still needs the position place() just gave it.*/
+        if (prefersReducedMotion()) {
+            this.settle(dialog, panel, content);
+            if (overlay) gsap.set(overlay, { opacity: 1 });
+            return;
+        }
+        
         const { originRect, clearP, openClip, buttonClip, buttonOffset } = this.measure(panel, trigger);
         const originColor = getComputedStyle(trigger).backgroundColor;
         const finalColor = getComputedStyle(panel).backgroundColor;
         
         const ghost = createTriggerGhost(dialog, trigger, originRect);
         
+        /*`borderRadius: 0` is what keeps the corners clean. While the panel is in flight its rounding
+          comes entirely from the clip-path, which interpolates from the trigger's radius to the
+          panel's; leaving the panel's own 24px CSS radius switched on underneath means two different
+          rounded corners intersecting every frame, and what you see is the angular notch where they
+          cross. settle() hands the radius straight back to CSS at the end.
+          will-change asks for `transform` only: clip-path is not compositable, so listing it buys
+          nothing and just adds layer churn.*/
         gsap.set(panel, {
             x: buttonOffset.x,
             y: buttonOffset.y,
             backgroundColor: originColor,
-            willChange: 'transform, clip-path',
+            borderRadius: 0,
+            willChange: 'transform',
         });
         
         gsap.set(content, { autoAlpha: 0 });
@@ -345,13 +394,23 @@ export class MorphAnimation extends ModalAnimation {
         this.fadeOverlay(tl, overlay, 1, d * ov.span, d * ov.at);
     }
     
-    // The inverse, with two differences: the clip starts from wherever an interrupted opening left it,
-    // and the ghost is optional - only subclasses that leave the trigger hidden want it faded back in.
+    /*The inverse, with one difference: the clip starts from wherever an interrupted opening left it.
+      The ghost is faded back IN here rather than out. The panel is opaque and comes to rest exactly
+      on top of the trigger, so without it the trigger's label stays hidden until the <dialog> closes
+      and then pops back - right at the moment the eye is following the panel down onto the button.
+      `ghostFader` lands the fade on `p = 1 - clearP`, the frame the panel starts covering it again.*/
     close({ dialog, panel, content, overlay, trigger }, onDone) {
         if (!trigger) return new FadeScaleAnimation().close({ panel, overlay }, onDone);
         
         killRunningMorph(panel);
         removeTriggerGhost(dialog); // in case the close interrupts an opening
+        
+        if (prefersReducedMotion()) {
+            if (overlay) gsap.set(overlay, { opacity: 0 });
+            onDone?.();
+            this.settle(dialog, panel, content, this.placedProps());
+            return;
+        }
         
         const { originRect, clearP, openClip, buttonClip, buttonOffset } = this.measure(panel, trigger);
         const originColor = getComputedStyle(trigger).backgroundColor;
@@ -359,7 +418,7 @@ export class MorphAnimation extends ModalAnimation {
         const ghost = this.closeGhost ? createTriggerGhost(dialog, trigger, originRect) : null;
         if (ghost) ghost.style.opacity = '0';
         
-        gsap.set(panel, { willChange: 'transform, clip-path' });
+        gsap.set(panel, { borderRadius: 0, willChange: 'transform' });
         
         const d = this.closeDuration;
         const { morph, color, overlay: ov, content: cont } = this.closeBeats;
@@ -404,15 +463,16 @@ export class MorphAnimation extends ModalAnimation {
 export class AnchoredAnimation extends MorphAnimation {
     constructor({ cover = 6, ...options } = {}) {
         super({
-            openDuration: 0.45,
-            closeDuration: 0.38,
-            closeEase: 'power1.in',
+            openDuration: DURATION.slow,
+            closeDuration: DURATION.slow,
             
             openBeats: {
                 morph: { at: 0.15, span: 0.85 },
                 color: { at: 0.3, span: 0.7 },
                 overlay: { at: 0, span: 0.22 },
-                content: { at: 0.62, span: 0.38 },
+                // same recalibration as OPEN_BEATS: its morph runs 0.15-1.0, so 0.62 sat at 55%
+                // of the morph's own progress and hit the identical half-grown-panel problem
+                content: { at: 0.72, span: 0.28 },
             },
             closeBeats: {
                 morph: { at: 0, span: 0.75 },
@@ -441,11 +501,15 @@ export class AnchoredAnimation extends MorphAnimation {
     }
     
     place(panel, trigger) {
+        /*Switch the panel over BEFORE measuring it. `position: fixed` with no auto margins sizes it
+          shrink-to-fit instead of flex-centred, so reading the rect first and switching afterwards
+          measured one layout and animated a different one - the panel jumped a frame on open.*/
+        gsap.set(panel, { position: 'fixed', margin: 0 });
         const { left, top } = this.computeAnchoredPosition(
             trigger.getBoundingClientRect(),
             panel.getBoundingClientRect(),
         );
-        gsap.set(panel, { position: 'fixed', margin: 0, left, top });
+        gsap.set(panel, { left, top });
     }
     
     placedProps() { return 'position,left,top,margin'; }

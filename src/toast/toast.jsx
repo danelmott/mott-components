@@ -8,6 +8,7 @@ import { Flip } from 'gsap/Flip';
 import Icon from '../icon/icon.jsx';
 import { getToastStack } from './toastStack.js';
 import { ACCENTS } from '../theme/roles.js';
+import { DURATION, EASE } from '../animations/motion.js';
 import { verifyTypesToast } from '../utils/verifyTypes.js';
 
 gsap.registerPlugin(Draggable, Flip);
@@ -152,7 +153,7 @@ export default function Toast({
         if (open && toastRef.current) {
             gsap.fromTo(toastRef.current,
                 { opacity: 0, x: 24, scale: 0.95 },
-                { opacity: 1, x: 0, scale: 1, duration: 0.4, ease: 'back.out(1.7)' }
+                { opacity: 1, x: 0, scale: 1, duration: DURATION.slow, ease: 'back.out(1.7)', overwrite: 'auto' }
             );
         }
     }, { dependencies: [open, rendered] });
@@ -166,7 +167,7 @@ export default function Toast({
         // `back.out` exactly: it pulls back inwards to wind up, then fires out of the viewport.
         flyOut(toastRef.current, {
             ease: 'back.in(1.7)',
-            duration: 0.45,
+            duration: DURATION.slow,
             onDone: finishExit,
         });
     }, [open, rendered]);
@@ -198,12 +199,12 @@ export default function Toast({
                     // screen creates no overflow.
                     dismissedRef.current = true;
                     flyOut(el, {
-                        ease: 'power2.in',
-                        duration: 0.3,
+                        ease: EASE.exit,
+                        duration: DURATION.base,
                         onDone: () => onCloseRef.current?.(),
                     });
                 } else {
-                    gsap.to(el, { x: 0, opacity: 1, duration: 0.3, ease: 'power3.out' });
+                    gsap.to(el, { x: 0, opacity: 1, duration: DURATION.base, ease: EASE.standard, overwrite: 'auto' });
                     resumeTimer();
                 }
             },

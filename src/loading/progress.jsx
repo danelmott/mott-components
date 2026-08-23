@@ -3,6 +3,7 @@ import { useRef } from 'react';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
 import { ACCENTS } from '../theme/roles.js';
+import { DURATION, EASE, prefersReducedMotion } from '../animations/motion.js';
 import { verifyTypesProgress } from '../utils/verifyTypes.js';
 
 
@@ -16,12 +17,16 @@ export default function Progress({ value, color = 'primary', className, style, .
 
     useGSAP(() => {
         if (indeterminate) {
+            // the travelling sheen is the only thing saying "still working", so it keeps running
+            // under reduced motion - just slower, instead of strobing across the track
             gsap.set(fillRef.current, { xPercent: -100 });
-            gsap.to(fillRef.current, { xPercent: 200, duration: 1.2, repeat: -1, ease: 'none' });
+            gsap.to(fillRef.current, { xPercent: 200, duration: prefersReducedMotion() ? 3 : 1.2, repeat: -1, ease: 'none' });
         } 
         else {
             gsap.killTweensOf(fillRef.current);
-            gsap.to(fillRef.current, { width: `${Math.min(100, Math.max(0, value))}%`, duration: 0.4, ease: 'power3.out' });
+            const width = `${Math.min(100, Math.max(0, value))}%`;
+            if (prefersReducedMotion()) gsap.set(fillRef.current, { width });
+            else gsap.to(fillRef.current, { width, duration: DURATION.slow, ease: EASE.standard });
         }
     }, { dependencies: [indeterminate, value] });
 

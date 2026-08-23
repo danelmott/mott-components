@@ -5,12 +5,16 @@ import gsap from 'gsap';
 import { twMerge } from 'tailwind-merge';
 import Icon from '../icon/icon.jsx';
 import { selectionTint, FAMILIES } from '../theme/roles.js';
+import { MORPH, CIRCLE_RADIUS, squircleRadius } from '../animations/motion.js';
 import { verifyTypesButtonGroup } from '../utils/verifyTypes.js';
 
 
-
-const CIRCLE = '50%';
-const SQUIRCLE = '28%';
+/*Selection reads as a morph: a circle resolving into a squircle, scaled up. COLOUR is left to CSS
+  (see `mott-btn-in-group` in globals.css) because GSAP writes what it animates into the inline
+  style, and tweening backgroundColor would bake a literal hex over the role token - the button
+  would stop following the theme from its first click onwards. GEOMETRY stays in GSAP because the
+  radius and the scale have to move as one. Both halves run on --duration-base / --ease-emphasized,
+  so they still land on the same frame.*/
 
 
 export default function ButtonGroup({ buttons, vertical = true, variant = 'support', defaultSelected = null, value, allowDeselect = true, onChange }) {
@@ -20,20 +24,43 @@ export default function ButtonGroup({ buttons, vertical = true, variant = 'suppo
     const selectedButton = isControlled ? value : internalSelected;
     const itemRefs = useRef([]);
     const containerRef = useRef(null);
+    const prevSelectedRef = useRef(selectedButton);
+    const prevCountRef = useRef(null);
     const selected = selectionTint(variant);
     const resting = FAMILIES.neutral;
 
     useGSAP(() => {
-        itemRefs.current.forEach((el, i) => {
-            if (!el) return;
-            gsap.to(el, {
-                borderRadius: i === selectedButton ? SQUIRCLE : CIRCLE,
-                scale: i === selectedButton ? 1.1 : 1,
-                duration: 0.4,
-                ease: 'power3.out',
-            });
+        // buttons can shrink; without this the array keeps handing back detached nodes to tween
+        itemRefs.current.length = buttons.length;
+
+        const squircle = squircleRadius();
+        const shapeOf = (i) => (i === selectedButton
+            ? { borderRadius: squircle, scale: 1.1 }
+            : { borderRadius: CIRCLE_RADIUS, scale: 1 });
+
+        /*The first pass - and any pass where the set of buttons itself changed - only puts the
+          resting state in place. Animating it means a group that mounts already selected (the mode
+          switch inside ThemeModal, for one) runs its morph on top of the modal's own opening
+          animation, and the two together read as a stutter.*/
+        const settleOnly = prevCountRef.current !== buttons.length;
+        prevCountRef.current = buttons.length;
+
+        if (settleOnly) {
+            itemRefs.current.forEach((el, i) => { if (el) gsap.set(el, shapeOf(i)); });
+            prevSelectedRef.current = selectedButton;
+            return;
+        }
+
+        /*Only the two buttons whose state actually changed. Tweening all of them repainted every
+          corner in the group on every click to arrive at the value they already had.*/
+        const changed = new Set([prevSelectedRef.current, selectedButton]);
+        prevSelectedRef.current = selectedButton;
+
+        changed.forEach((i) => {
+            const el = itemRefs.current[i];
+            if (el) gsap.to(el, { ...shapeOf(i), ...MORPH });
         });
-    }, { dependencies: [selectedButton], scope: containerRef });
+    }, { dependencies: [selectedButton, buttons.length], scope: containerRef });
 
     const handleSelect = (i) => {
         const next = (allowDeselect && selectedButton === i) ? null : i;
@@ -62,7 +89,7 @@ export default function ButtonGroup({ buttons, vertical = true, variant = 'suppo
                         style={{
                             backgroundColor: i === selectedButton ? selected.surface : resting.container,
                             color: i === selectedButton ? selected.on : resting.onContainer,
-                            borderRadius: CIRCLE,
+                            borderRadius: CIRCLE_RADIUS,
                             height: 'var(--control-size-md)',
                             ...(iconOnly
                                 ? { width: 'var(--control-size-md)', padding: 0 }

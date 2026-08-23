@@ -4,6 +4,7 @@ import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
 import { twMerge } from 'tailwind-merge';
 import Icon from '../icon/icon.jsx';
+import { MORPH, CIRCLE_RADIUS, squircleRadius } from '../animations/motion.js';
 import { verifyTypesNavbar } from '../utils/verifyTypes.js';
 
 const DESKTOP_ALIGN = {
@@ -19,26 +20,19 @@ const DESKTOP_ALIGN = {
   literal hex over the var() and the button would stop following the theme from its first click
   onwards. GEOMETRY (borderRadius + scale) stays in GSAP because those two have to move as one, and
   splitting them across two engines with two different curves is what makes a morph look broken.
-  The resting 50% matters beyond the look: `resolveRadius` in modalAnimation.js reads the trigger's
-  computed radius to build the modal's clip-path, and it needs a percentage. Do NOT swap it for
-  Tailwind's full-round radius utility: it compiles to border-radius:2147483647px, which corrupts
-  both the morph (px/% interpolation) and the modal's clip-path. Keep the percentage.*/
+  The resting radius feeds the modal too: `resolveRadius` in modalAnimation.js reads the trigger's
+  computed radius to build the clip-path the panel morphs out of. It now resolves percentages per
+  axis and clamps to half the box, so Tailwind's full-round utility no longer corrupts the morph
+  the way it used to - but a percentage is still what makes a control read as a true circle at any
+  --control-size, so keep it.*/
 const ITEM_BASE =
     'inline-flex items-center justify-center gap-2 border-0 cursor-pointer p-0' +
     ' text-[length:var(--text-md)] tracking-[var(--tracking-h4)] font-[number:var(--font-medium)]' +
     ' bg-[var(--md-sys-color-surface-container)] text-[var(--md-sys-color-on-surface-variant)]' +
-    ' transition-[background-color,color] duration-400 ease-[var(--ease-morph)]' +
+    ' transition-[background-color,color] duration-[var(--duration-base)] ease-[var(--ease-emphasized)]' +
     ' focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--md-sys-color-primary)]';
 
 const ITEM_SELECTED = 'bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)]';
-
-const MORPH = { duration: 0.4, ease: 'power3.out' };
-const CIRCLE = '50%';
-
-// Safe here and NOT for colour: --control-radius is static, it does not change with the theme, so a
-// one-shot read can never go stale the way a resolved colour would.
-const squircleRadius = () =>
-    getComputedStyle(document.documentElement).getPropertyValue('--control-radius').trim() || '28%';
 
 // besides driving the animation, the ref is exposed outwards (e.g. to use the node as the
 // `triggerRef` of a CustomModal anchored to this button)
@@ -52,17 +46,33 @@ const attachRef = (node, store, i, forwarded) => {
 function NavItems({ items, selectedItem, onSelect, vertical }) {
     const itemRefs = useRef([]);
     const containerRef = useRef(null);
+    const prevSelectedRef = useRef(selectedItem);
+    const prevCountRef = useRef(null);
 
     useGSAP(() => {
+        itemRefs.current.length = items.length;
+
         const squircle = squircleRadius();
-        itemRefs.current.forEach((el, i) => {
-            if (!el) return;
-            const isSelected = i === selectedItem;
-            gsap.to(el, {
-                borderRadius: isSelected ? squircle : CIRCLE,
-                scale: isSelected ? 1.1 : 1,
-                ...MORPH,
-            });
+        const shapeOf = (i) => (i === selectedItem
+            ? { borderRadius: squircle, scale: 1.1 }
+            : { borderRadius: CIRCLE_RADIUS, scale: 1 });
+
+        // mounting, or the set of items itself changed: put the resting state in place, do not play it
+        const settleOnly = prevCountRef.current !== items.length;
+        prevCountRef.current = items.length;
+
+        if (settleOnly) {
+            itemRefs.current.forEach((el, i) => { if (el) gsap.set(el, shapeOf(i)); });
+            prevSelectedRef.current = selectedItem;
+            return;
+        }
+
+        const changed = new Set([prevSelectedRef.current, selectedItem]);
+        prevSelectedRef.current = selectedItem;
+
+        changed.forEach((i) => {
+            const el = itemRefs.current[i];
+            if (el) gsap.to(el, { ...shapeOf(i), ...MORPH });
         });
     }, { dependencies: [selectedItem, items.length], scope: containerRef });
 
@@ -79,7 +89,7 @@ function NavItems({ items, selectedItem, onSelect, vertical }) {
                         aria-pressed={selectedItem === i}
                         className={twMerge(ITEM_BASE, selectedItem === i && ITEM_SELECTED)}
                         style={{
-                            borderRadius: CIRCLE,
+                            borderRadius: CIRCLE_RADIUS,
                             height: 'var(--control-size-md)',
                             ...(iconOnly
                                 ? { width: 'var(--control-size-md)' }
@@ -97,14 +107,20 @@ function NavItems({ items, selectedItem, onSelect, vertical }) {
 
 function LogoButton({ logo }) {
     const ref = useRef(null);
+    const didMountRef = useRef(false);
 
     useGSAP(() => {
         if (!ref.current) return;
-        gsap.to(ref.current, {
-            borderRadius: logo.active ? squircleRadius() : CIRCLE,
+        const shape = {
+            borderRadius: logo.active ? squircleRadius() : CIRCLE_RADIUS,
             scale: logo.active ? 1.1 : 1,
-            ...MORPH,
-        });
+        };
+        if (!didMountRef.current) {
+            didMountRef.current = true;
+            gsap.set(ref.current, shape);
+            return;
+        }
+        gsap.to(ref.current, { ...shape, ...MORPH });
     }, { dependencies: [logo.active] });
 
     return (
@@ -118,7 +134,7 @@ function LogoButton({ logo }) {
             style={{
                 width: 'var(--control-size-md)',
                 height: 'var(--control-size-md)',
-                borderRadius: CIRCLE,
+                borderRadius: CIRCLE_RADIUS,
             }}
         >
             {typeof logo.icon === 'string' ? <Icon name={logo.icon} /> : logo.icon}

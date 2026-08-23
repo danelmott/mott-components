@@ -3,6 +3,7 @@ import { useRef } from 'react';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
 import { ACCENTS } from '../theme/roles.js';
+import { prefersReducedMotion } from '../animations/motion.js';
 import { verifyTypesLoading } from '../utils/verifyTypes.js';
 
 
@@ -25,6 +26,15 @@ export default function Loading({ size = 'sm', color = 'primary', className, sty
 
     useGSAP(() => {
         const el = shapeRef.current;
+
+        /*The shape loop is decoration; the spin is the part that actually says "still working".
+          Under reduced motion the morphing stops and only a slow rotation stays, so the component
+          still reads as a spinner without the pulsing.*/
+        if (prefersReducedMotion()) {
+            gsap.to(el, { rotate: 360, duration: 12, repeat: -1, ease: 'none' });
+            return;
+        }
+
         const tl = gsap.timeline({ repeat: -1 });
 
         const morph = (shape) => {

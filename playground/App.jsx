@@ -17,7 +17,7 @@ import { anchoredAnimation } from '../src/animations/modalAnimation.js';
 import Navbar from '../src/navbar/navbar.jsx';
 import DragScroll from '../src/dragScroll/dragScroll.jsx';
 import { useTheme } from '../src/theme/themeContext.jsx';
-import ThemeModal from '../src/theme/themeModal.jsx';
+import ThemeModal from '../src/themeModal/themeModal.jsx';
 
 function Section({ title, wide, children }) {
   return (

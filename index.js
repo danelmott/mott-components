@@ -4,7 +4,7 @@ export { default as ButtonGroup } from './src/buttons/buttonGroup.jsx';
 export { default as Toast } from './src/toast/toast.jsx';
 export { ToastProvider, useToast } from './src/toast/toastContext.jsx';
 export { ThemeProvider, useTheme } from './src/theme/themeContext.jsx';
-export { default as ThemeModal } from './src/theme/themeModal.jsx';
+export { default as ThemeModal } from './src/themeModal/themeModal.jsx';
 export { default as Input } from './src/input/input.jsx';
 export { default as Textarea } from './src/textarea/textarea.jsx';
 export { default as Select } from './src/select/select.jsx';
@@ -18,3 +18,4 @@ export { default as Navbar } from './src/navbar/navbar.jsx';
 export { default as DragScroll, useDragScroll } from './src/dragScroll/dragScroll.jsx';
 
 export { ModalAnimation, MorphAnimation, AnchoredAnimation, morphAnimation, anchoredAnimation } from './src/animations/modalAnimation.js';
+export { DURATION, EASE, MORPH, CIRCLE_RADIUS, squircleRadius, prefersReducedMotion } from './src/animations/motion.js';

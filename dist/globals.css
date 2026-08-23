@@ -62,7 +62,21 @@
     --control-size-md: 56px;
     --control-size-lg: 80px;
     --control-radius: 28%; 
-    --ease-morph: cubic-bezier(0.165, 0.84, 0.44, 1);
+    /* Motion. Mirrored one-for-one by src/animations/motion.js - CSS transitions read these
+       tokens, GSAP tweens read the constants, and both carry the same numbers so a control whose
+       colour is transitioned by CSS and whose shape is tweened by GSAP lands on the same frame. */
+    --duration-instant: 120ms;
+    --duration-fast: 200ms;
+    --duration-base: 280ms;
+    --duration-slow: 400ms;
+    --duration-modal: 550ms;
+
+    --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+    --ease-emphasized: cubic-bezier(0.32, 0.72, 0, 1);
+    --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+    --ease-exit: cubic-bezier(0.3, 0, 0.8, 0.15);
+    /* kept as an alias so everything already written against it keeps working */
+    --ease-morph: var(--ease-emphasized);
     --shadow-floating:
         0 1px 2px rgb(15 23 42 / 0.05),
         0 6px 16px -4px rgb(15 23 42 / 0.08),
@@ -287,8 +301,6 @@ body {
     background: transparent;
     box-shadow: none;
     outline: none;
-    /* without this the dialog keeps the user-agent's `color: CanvasText` and any content a consumer
-       drops in without a colour of its own renders black, theme or no theme. */
     color: var(--md-sys-color-on-surface);
     &[open] {
         display: flex;
@@ -311,11 +323,10 @@ body {
   letter-spacing: var(--tracking-h4);
   font-weight: var(--font-medium);
 
-  /* colour is written inline by ButtonGroup from the Material 3 role tokens; these two properties are
-     still transitioned, and an inline value changes them exactly like a var() would */
+
   transition-property: background-color, color;
-  transition-duration: 400ms;
-  transition-timing-function: var(--ease-morph);
+  transition-duration: var(--duration-base);
+  transition-timing-function: var(--ease-emphasized);
 
   &:focus-visible {
     outline: none;
@@ -325,18 +336,14 @@ body {
   }
 }
 
-/* Live only for the single frame in which ThemeProvider writes a new palette, so a change of accent
-   lands at once everywhere instead of every tinted surface crossfading on its own. The 400ms morph
-   of a selected control is untouched: the attribute is gone again before that transition starts.
-   GSAP is unaffected - it animates inline style on rAF, not through CSS transitions. */
+
 :root[data-theme-switching] *,
 :root[data-theme-switching] *::before,
 :root[data-theme-switching] *::after {
   transition: none !important;
 }
 
-/*structure for btn component and variants. Colour is deliberately absent: the component writes it
-  inline from the Material 3 role tokens, so what devtools shows is the role itself, never an alias.*/
+
 @utility mott-btn {
   position: relative;
   isolation: isolate;   /* clamps the state layer's negative z-index inside the button */
@@ -354,11 +361,8 @@ body {
   font-weight: var(--font-medium);
 
   transition-property: background-color, color, transform;
-  transition-duration: 150ms;
+  transition-duration: var(--duration-instant);
 
-  /* The Material 3 state layer: the control's own on-colour laid over its own surface. `currentColor`
-     already IS that on-colour, so the layer needs no token of its own and follows the theme by itself
-     - white over a filled primary, the accent over a text button that has no surface at all. */
   &::after {
     content: '';
     position: absolute;
@@ -367,7 +371,7 @@ body {
     border-radius: inherit;
     background-color: currentColor;
     opacity: 0;
-    transition: opacity 150ms;
+    transition: opacity var(--duration-instant);
     pointer-events: none;
   }
 
@@ -396,7 +400,18 @@ body {
 }
 
 
-
+@utility mott-toast-stack {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    width: min(24rem, calc(100vw, 2rem));
+    display: flex;
+    flex-direction: colum;
+    alig-items: flex-end;
+    gap: var(--gap-section);
+    z-index: var(--z-floating);
+    pointer-events: none;
+}
 
 
 /*responsive breakpoints*/
@@ -406,5 +421,17 @@ body {
 @media (min-width: 1280px) { }
 @media (min-width: 1536px) { }
 
-
-
+/* Anyone who asked their OS for less motion gets the same states, arrived at instantly. 1ms rather
+   than 0s on purpose: a zero-length transition never fires transitionend, and code that waits on
+   it would hang. The GSAP half of the library is handled separately by `dur()` in
+   src/animations/motion.js - CSS cannot reach those tweens. */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 1ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 1ms !important;
+        scroll-behavior: auto !important;
+    }
+}

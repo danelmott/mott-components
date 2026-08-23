@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
 import Icon from '../icon/icon.jsx';
+import { DURATION, EASE } from '../animations/motion.js';
 import { verifyTypesSelect } from '../utils/verifyTypes.js';
 
 //component for select in mott-design - custom dropdown animated with GSAP.
@@ -54,8 +55,9 @@ export default function Select({ options = [], value, onChange, label, placehold
                 {
                     height: targetHeight,
                     opacity: 1,
-                    duration: 0.35,
-                    ease: 'power3.out',
+                    duration: DURATION.base,
+                    ease: EASE.standard,
+                    overwrite: 'auto',
                     onComplete: () => gsap.set(el, { height: 'auto' }),
                 }
             );
@@ -67,8 +69,9 @@ export default function Select({ options = [], value, onChange, label, placehold
             gsap.to(panelRef.current, {
                 height: 0,
                 opacity: 0,
-                duration: 0.25,
-                ease: 'power2.in',
+                duration: DURATION.fast,
+                ease: EASE.exit,
+                overwrite: 'auto',
                 onComplete: () => setRendered(false),
             });
         }
