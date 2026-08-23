@@ -104,7 +104,7 @@ export default function Select({ options = [], value, onChange, label, placehold
             {label && (
                 <label
                     htmlFor={selectId}
-                    className="text-[length:var(--text-sm)] leading-[var(--leading-tight)] tracking-[var(--tracking-body)] font-[number:var(--font-medium)] font-[family-name:var(--font-family)] text-[var(--md-sys-color-on-surface-variant)]"
+                    className="mott-body-small text-[var(--md-sys-color-on-surface-variant)]"
                 >
                     {label}
                 </label>
@@ -115,7 +115,7 @@ export default function Select({ options = [], value, onChange, label, placehold
                 type="button"
                 disabled={disabled}
                 onClick={() => setOpen((o) => !o)}
-                className="flex w-full items-center justify-between rounded-[var(--radius-lg)] bg-[var(--md-sys-color-surface-container)] text-[length:var(--text-base)] tracking-[var(--tracking-body)] font-[family-name:var(--font-family)] text-[var(--md-sys-color-on-surface)] outline-none transition-colors duration-150 focus:bg-[color-mix(in_srgb,var(--md-sys-color-on-surface)_8%,var(--md-sys-color-surface-container))] disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex w-full items-center justify-between rounded-[var(--radius-lg)] bg-[var(--md-sys-color-surface-container)] mott-body-large text-[var(--md-sys-color-on-surface)] outline-none transition-colors duration-150 focus:bg-[color-mix(in_srgb,var(--md-sys-color-on-surface)_8%,var(--md-sys-color-surface-container))] disabled:opacity-50 disabled:cursor-not-allowed"
                 style={{ padding: 'var(--pad-input)' }}
             >
                 <span className={selected ? '' : 'text-[var(--md-sys-color-on-surface-variant)]'}>
@@ -137,7 +137,7 @@ export default function Select({ options = [], value, onChange, label, placehold
                                 key={option.value}
                                 type="button"
                                 onClick={() => handleSelect(option)}
-                                className="rounded-[var(--radius-sm)] px-3 py-2 text-left text-[length:var(--text-base)] font-[family-name:var(--font-family)] transition-colors duration-150"
+                                className="rounded-[var(--radius-sm)] px-3 py-2 text-left mott-body-large transition-colors duration-150"
                                 style={{
                                     backgroundColor: isSelected ? 'var(--md-sys-color-primary-container)' : 'transparent',
                                     color: isSelected ? 'var(--md-sys-color-primary)' : 'var(--md-sys-color-on-surface)',

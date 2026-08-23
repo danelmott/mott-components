@@ -1,5 +1,6 @@
 import { CONTROL_NAMES, ACCENTS } from '../theme/roles.js';
 import { SHAPE_NAMES, SCALLOPED_SHAPES } from '../shapes/shapePaths.js';
+import { TYPESCALE_ROLES } from '../text/text.jsx';
 
 const prefixLog = '[MOTT-COMPONENTS]';
 
@@ -209,6 +210,18 @@ export function verifyTypesAvatar({ seed, styleDefinition, options, size, shape,
     // a DiceBear style definition and its options are both plain JSON
     assertPlainObject('Avatar', 'styleDefinition', styleDefinition);
     assertPlainObject('Avatar', 'options', options);
+    return true;
+}
+
+export function verifyTypesText({ variant, as, tone } = {}) {
+    // the closed set here is the point of the component: an unknown role is a size that no other
+    // text in the system shares
+    assertOneOf('Text', 'variant', variant, TYPESCALE_ROLES, 'body-medium');
+    assertOneOf('Text', 'tone', tone, ['default', 'muted'], 'default');
+    // any tag name, or a component - both are legal for `as`
+    if (as !== undefined && as !== null && typeof as !== 'string' && typeof as !== 'function' && typeof as !== 'object') {
+        fail('Text', `\`as\` must be a tag name or a component, received ${typeof as}.`);
+    }
     return true;
 }
 

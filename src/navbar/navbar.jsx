@@ -27,7 +27,7 @@ const DESKTOP_ALIGN = {
   --control-size, so keep it.*/
 const ITEM_BASE =
     'inline-flex items-center justify-center gap-2 border-0 cursor-pointer p-0' +
-    ' text-[length:var(--text-md)] tracking-[var(--tracking-h4)] font-[number:var(--font-medium)]' +
+    ' mott-label-large mott-trim' +
     ' bg-[var(--md-sys-color-surface-container)] text-[var(--md-sys-color-on-surface-variant)]' +
     ' transition-[background-color,color] duration-[var(--duration-base)] ease-[var(--ease-emphasized)]' +
     ' focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--md-sys-color-primary)]';

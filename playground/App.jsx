@@ -17,6 +17,7 @@ import { anchoredAnimation } from '../src/animations/modalAnimation.js';
 import Navbar from '../src/navbar/navbar.jsx';
 import Shape from '../src/shapes/shapes.jsx';
 import Avatar from '../src/avatars/avatars.jsx';
+import Text, { TYPESCALE_ROLES } from '../src/text/text.jsx';
 import { SHAPE_NAMES } from '../src/shapes/shapePaths.js';
 import DragScroll from '../src/dragScroll/dragScroll.jsx';
 import { useTheme } from '../src/theme/themeContext.jsx';
@@ -37,17 +38,13 @@ function Section({ title, wide, children }) {
         marginBottom: '1rem',
       }}
     >
-      <p
-        style={{
-          fontSize: 'var(--text-xs)',
-          fontWeight: 600,
-          color: 'var(--md-sys-color-on-surface-variant)',
-          textTransform: 'uppercase',
-          letterSpacing: 'var(--tracking-caps)',
-        }}
+      <Text
+        variant="label-medium"
+        tone="muted"
+        style={{ textTransform: 'uppercase', letterSpacing: 'var(--tracking-caps)' }}
       >
         {title}
-      </p>
+      </Text>
       {children}
     </section>
   );
@@ -137,7 +134,7 @@ function Swatch({ role }) {
           border: '1px solid var(--md-sys-color-outline-variant)',
         }}
       />
-      <span style={{ fontSize: 'var(--text-xs)', color: 'var(--md-sys-color-on-surface-variant)' }}>{role}</span>
+      <span style={{ font: 'var(--md-sys-typescale-body-small)', letterSpacing: 'var(--md-sys-typescale-body-small-tracking)', color: 'var(--md-sys-color-on-surface-variant)' }}>{role}</span>
     </div>
   );
 }
@@ -149,17 +146,17 @@ function ThemeDemo() {
 
   return (
     <>
-      <p style={{ fontSize: 'var(--text-sm)', color: 'var(--md-sys-color-on-surface-variant)' }}>
+      <Text variant="body-medium" tone="muted">
         El modal es el único sitio desde el que se elige tema. Cada swatch lleva su color y su
         variante: el neutro usa <code>monochrome</code>, que descarta el tono de la semilla y da un
         gris puro; rosa y azul usan <code>content</code>, que respeta el color de origen.
-      </p>
+      </Text>
 
       <Row>
         <Button ref={triggerRef} variant="action" onClick={() => setOpen(true)}>
           Abrir apariencia
         </Button>
-        <span style={{ fontSize: 'var(--text-sm)', color: 'var(--md-sys-color-on-surface-variant)' }}>
+        <span style={{ font: 'var(--md-sys-typescale-body-medium)', letterSpacing: 'var(--md-sys-typescale-body-medium-tracking)', color: 'var(--md-sys-color-on-surface-variant)' }}>
           semilla <strong>{colorSeedHex}</strong> · variante <strong>{variant}</strong> · modo{' '}
           <strong>{mode}</strong>{mode === 'system' && ` (${resolvedMode})`}
         </span>
@@ -188,7 +185,7 @@ function ScrollBox({ id, horizontal, dragScrollProps, children }) {
       style={{
         height: horizontal ? 'auto' : 160,
         borderRadius: 'var(--radius-lg)',
-        fontSize: 'var(--text-sm)',
+        font: 'var(--md-sys-typescale-body-medium)', letterSpacing: 'var(--md-sys-typescale-body-medium-tracking)',
         color: 'var(--md-sys-color-on-surface-variant)',
       }}
       {...dragScrollProps}
@@ -240,7 +237,7 @@ export default function App() {
     <div style={{ padding: '2rem', maxWidth: 1400, margin: '0 auto' }}>
       <h1
         style={{
-          fontSize: 'var(--text-3xl)',
+          font: 'var(--md-sys-typescale-display-small)', letterSpacing: 'var(--md-sys-typescale-display-small-tracking)',
           fontWeight: 700,
           color: 'var(--md-sys-color-on-surface)',
           marginBottom: '1.5rem',
@@ -264,11 +261,11 @@ export default function App() {
         </Section>
 
         <Section title="DragScroll — sin barra, se arrastra" wide>
-          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--md-sys-color-on-surface-variant)' }}>
+          <Text variant="body-medium" tone="muted">
             Las barras de scroll están ocultas en toda la app. Estas cajas se arrastran con el mouse y
             siguen de largo al soltar (inercia). La rueda y el teclado funcionan igual que siempre. El
             degradado en el borde avisa que hay más contenido y se apaga al llegar al tope.
-          </p>
+          </Text>
           <ScrollBox id="scroll-vertical">
             <p style={{ fontWeight: 600, color: 'var(--md-sys-color-on-surface)', marginBottom: '0.5rem' }}>Vertical</p>
             {Array.from({ length: 25 }, (_, i) => (
@@ -286,7 +283,7 @@ export default function App() {
                     borderRadius: 'var(--radius-full)',
                     backgroundColor: 'var(--md-sys-color-secondary-container)',
                     color: 'var(--md-sys-color-on-secondary-container)',
-                    fontSize: 'var(--text-sm)',
+                    font: 'var(--md-sys-typescale-body-medium)', letterSpacing: 'var(--md-sys-typescale-body-medium-tracking)',
                     whiteSpace: 'nowrap',
                   }}
                 >
@@ -304,6 +301,40 @@ export default function App() {
               <p key={i} style={{ marginBottom: '0.5rem' }}>{i + 1}. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation.</p>
             ))}
           </ScrollBox>
+        </Section>
+
+        <Section title="Typescale — los 15 roles de M3 en DM Sans" wide>
+          <Text variant="body-medium" tone="muted">
+            Cada rol dice <em>qué es</em> un texto, no qué tan grande: trae junto su tamaño, interlineado,
+            tracking y peso. La fuente se cambia en un solo lugar — <code>--md-ref-typeface-brand</code> y
+            <code>--md-ref-typeface-plain</code> — y los quince roles la siguen.
+          </Text>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            {TYPESCALE_ROLES.map((role) => (
+              <div
+                key={role}
+                style={{
+                  display: 'flex',
+                  alignItems: 'baseline',
+                  gap: '1.5rem',
+                  borderBottom: '1px solid var(--md-sys-color-surface-container-high)',
+                  paddingBottom: '0.5rem',
+                }}
+              >
+                <Text
+                  as="span"
+                  variant="label-small"
+                  tone="muted"
+                  style={{ minWidth: '9rem', fontVariantNumeric: 'tabular-nums' }}
+                >
+                  {role}
+                </Text>
+                <Text as="span" variant={role}>
+                  Cargá el sistema con una sola fuente
+                </Text>
+              </div>
+            ))}
+          </div>
         </Section>
 
         <Section title="Button — variantes semánticas">
@@ -404,7 +435,7 @@ export default function App() {
             delay={400}
             onSearch={(query) => setSearchLog(query ? `Llamando a la API con: "${query}"` : '(nada buscado todavía)')}
           />
-          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--md-sys-color-on-surface-variant)' }}>{searchLog}</p>
+          <Text variant="body-medium" tone="muted">{searchLog}</Text>
         </Section>
 
         <Section title="Select">
@@ -433,11 +464,11 @@ export default function App() {
 
         <Section title="Progress">
           <div>
-            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--md-sys-color-on-surface-variant)', marginBottom: '0.5rem' }}>Indeterminado</p>
+            <p style={{ font: 'var(--md-sys-typescale-body-medium)', letterSpacing: 'var(--md-sys-typescale-body-medium-tracking)', color: 'var(--md-sys-color-on-surface-variant)', marginBottom: '0.5rem' }}>Indeterminado</p>
             <Progress color="primary" />
           </div>
           <div>
-            <p style={{ fontSize: 'var(--text-sm)', color: 'var(--md-sys-color-on-surface-variant)', marginBottom: '0.5rem' }}>Determinado ({progressValue}%)</p>
+            <p style={{ font: 'var(--md-sys-typescale-body-medium)', letterSpacing: 'var(--md-sys-typescale-body-medium-tracking)', color: 'var(--md-sys-color-on-surface-variant)', marginBottom: '0.5rem' }}>Determinado ({progressValue}%)</p>
             <Progress color="success" value={progressValue} />
             <Row>
               <Button variant="default" onClick={() => setProgressValue((v) => Math.max(0, v - 10))}>-10</Button>
@@ -458,9 +489,9 @@ export default function App() {
               className="absolute top-full left-0 mt-1 w-[220px]"
             >
               <div style={{ padding: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                <span style={{ fontSize: 'var(--text-sm)', color: 'var(--md-sys-color-on-surface)', padding: '0.5rem' }}>Opción 1</span>
-                <span style={{ fontSize: 'var(--text-sm)', color: 'var(--md-sys-color-on-surface)', padding: '0.5rem' }}>Opción 2</span>
-                <span style={{ fontSize: 'var(--text-sm)', color: 'var(--md-sys-color-on-surface)', padding: '0.5rem' }}>Opción 3</span>
+                <span style={{ font: 'var(--md-sys-typescale-body-medium)', letterSpacing: 'var(--md-sys-typescale-body-medium-tracking)', color: 'var(--md-sys-color-on-surface)', padding: '0.5rem' }}>Opción 1</span>
+                <span style={{ font: 'var(--md-sys-typescale-body-medium)', letterSpacing: 'var(--md-sys-typescale-body-medium-tracking)', color: 'var(--md-sys-color-on-surface)', padding: '0.5rem' }}>Opción 2</span>
+                <span style={{ font: 'var(--md-sys-typescale-body-medium)', letterSpacing: 'var(--md-sys-typescale-body-medium-tracking)', color: 'var(--md-sys-color-on-surface)', padding: '0.5rem' }}>Opción 3</span>
               </div>
             </Dropdown>
           </div>
@@ -478,14 +509,14 @@ export default function App() {
           >
             {/* el ancho lo pone este div, no la modal: el panel se mide por su contenido */}
             <div className="w-[23rem]">
-              <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--md-sys-color-on-surface)', marginBottom: '0.5rem' }}>
+              <h3 style={{ font: 'var(--md-sys-typescale-title-large)', letterSpacing: 'var(--md-sys-typescale-title-large-tracking)', fontWeight: 700, color: 'var(--md-sys-color-on-surface)', marginBottom: '0.5rem' }}>
                 Modal personalizado
               </h3>
-              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--md-sys-color-on-surface-variant)', marginBottom: '1rem' }}>
+              <p style={{ font: 'var(--md-sys-typescale-body-medium)', letterSpacing: 'var(--md-sys-typescale-body-medium-tracking)', color: 'var(--md-sys-color-on-surface-variant)', marginBottom: '1rem' }}>
                 Backdrop constante (igual en todas las modales), ancho puesto por el div de adentro, animación anclada junto al botón (AnchoredAnimation).
               </p>
               {Array.from({ length: 2 }, (_, i) => (
-                <p key={i} style={{ fontSize: 'var(--text-sm)', color: 'var(--md-sys-color-on-surface-variant)', marginBottom: '0.75rem' }}>
+                <p key={i} style={{ font: 'var(--md-sys-typescale-body-medium)', letterSpacing: 'var(--md-sys-typescale-body-medium-tracking)', color: 'var(--md-sys-color-on-surface-variant)', marginBottom: '0.75rem' }}>
                   {i + 1}. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation.
                 </p>
               ))}
@@ -498,7 +529,7 @@ export default function App() {
           </Button>
           <CustomModal open={autoModalOpen} onClose={() => setAutoModalOpen(false)}>
             {/* sin div de ancho: el panel mide lo que miden estos hijos y nada más */}
-            <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--md-sys-color-on-surface)', marginBottom: '0.75rem' }}>
+            <h3 style={{ font: 'var(--md-sys-typescale-title-large)', letterSpacing: 'var(--md-sys-typescale-title-large-tracking)', fontWeight: 700, color: 'var(--md-sys-color-on-surface)', marginBottom: '0.75rem' }}>
               ¿Eliminar el elemento?
             </h3>
             <Row>
@@ -509,13 +540,13 @@ export default function App() {
         </Section>
 
         <Section title="Navbar — rail en desktop, barra inferior en mobile" wide>
-          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--md-sys-color-on-surface-variant)' }}>
+          <Text variant="body-medium" tone="muted">
             Achicá la ventana por debajo de ~768px para ver el cambio de rail a barra inferior. El activo está
             controlado (simula la ruta actual) — reclickear el mismo ítem no lo deselecciona. Los dos triggers
             muestran las dos variantes del morph: el <strong>logo</strong> abre un pop up que se apoya encima y lo
             tapa (por eso no cambia de estilo: no se vería), y el <strong>engranaje</strong> abre una modal centrada
             que viaja hasta el medio de la pantalla (por eso sí se ilumina: ese botón queda a la vista).
-          </p>
+          </Text>
           <Navbar
             selected={gearActive ? 4 : activeRoute}
             onChange={(index) => {
@@ -556,10 +587,10 @@ export default function App() {
             triggerRef={gearButtonRef}
           >
             <div className="w-[19rem]">
-              <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--md-sys-color-on-surface)', marginBottom: '0.5rem' }}>
+              <h3 style={{ font: 'var(--md-sys-typescale-title-large)', letterSpacing: 'var(--md-sys-typescale-title-large-tracking)', fontWeight: 700, color: 'var(--md-sys-color-on-surface)', marginBottom: '0.5rem' }}>
                 Modal centrada desde el nav
               </h3>
-              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--md-sys-color-on-surface-variant)', marginBottom: '1rem' }}>
+              <p style={{ font: 'var(--md-sys-typescale-body-medium)', letterSpacing: 'var(--md-sys-typescale-body-medium-tracking)', color: 'var(--md-sys-color-on-surface-variant)', marginBottom: '1rem' }}>
                 El botón se transforma en la modal y viaja hasta el centro. Como queda a la vista, se ilumina
                 al clickearlo y vuelve al default recién cuando la modal termina de plegarse encima.
               </p>
@@ -578,10 +609,10 @@ export default function App() {
             animation={anchoredAnimation}
           >
             <div className="w-[15rem]">
-              <h3 style={{ fontSize: 'var(--text-lg)', fontWeight: 700, color: 'var(--md-sys-color-on-surface)', marginBottom: '0.5rem' }}>
+              <h3 style={{ font: 'var(--md-sys-typescale-title-large)', letterSpacing: 'var(--md-sys-typescale-title-large-tracking)', fontWeight: 700, color: 'var(--md-sys-color-on-surface)', marginBottom: '0.5rem' }}>
                 Pop up desde el logo
               </h3>
-              <p style={{ fontSize: 'var(--text-sm)', color: 'var(--md-sys-color-on-surface-variant)', marginBottom: '1rem' }}>
+              <p style={{ font: 'var(--md-sys-typescale-body-medium)', letterSpacing: 'var(--md-sys-typescale-body-medium-tracking)', color: 'var(--md-sys-color-on-surface-variant)', marginBottom: '1rem' }}>
                 Se apoya encima del logo y lo tapa: el círculo se estira desde su propia esquina hasta
                 convertirse en este panel. Por eso el logo no cambia de estilo al clickearlo — no se vería.
               </p>
@@ -591,34 +622,34 @@ export default function App() {
         </Section>
 
         <Section title="Shape — las 5 formas de M3" wide>
-          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--md-sys-color-on-surface-variant)' }}>
+          <Text variant="body-medium" tone="muted">
             El shape es un recorte, no un dibujo: el <code>clip-path</code> corta también a los children,
             así que lo que va adentro toma la forma en vez de desbordarla. El color acepta un nombre del
             tema o cualquier color CSS.
-          </p>
+          </Text>
           <Row>
             {SHAPE_NAMES.map((name) => (
               <div key={name} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
                 <Shape name={name} label={name}>
                   <Icon name="favorite" size="lg" />
                 </Shape>
-                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--md-sys-color-on-surface-variant)' }}>{name}</span>
+                <span style={{ font: 'var(--md-sys-typescale-body-small)', letterSpacing: 'var(--md-sys-typescale-body-small-tracking)', color: 'var(--md-sys-color-on-surface-variant)' }}>{name}</span>
               </div>
             ))}
           </Row>
         </Section>
 
         <Section title="Avatar — seeded, y recortado por cada shape" wide>
-          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--md-sys-color-on-surface-variant)' }}>
+          <Text variant="body-medium" tone="muted">
             El mismo <code>seed</code> dibuja siempre la misma cara, sin guardar nada en ningún lado. Acá está
             el mismo seed pasado por las cinco formas: el avatar se corta con el contorno en vez de quedar
             encima de él.
-          </p>
+          </Text>
           <Row>
             {SHAPE_NAMES.map((name) => (
               <div key={name} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
                 <Avatar seed="danel" shape={name} size="120px" />
-                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--md-sys-color-on-surface-variant)' }}>{name}</span>
+                <span style={{ font: 'var(--md-sys-typescale-body-small)', letterSpacing: 'var(--md-sys-typescale-body-small-tracking)', color: 'var(--md-sys-color-on-surface-variant)' }}>{name}</span>
               </div>
             ))}
           </Row>
@@ -626,7 +657,7 @@ export default function App() {
             {['ana', 'brenda', 'carlos', 'delfina', 'eze', 'flor'].map((seed) => (
               <div key={seed} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
                 <Avatar seed={seed} shape="cookie" size="120px" />
-                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--md-sys-color-on-surface-variant)' }}>{seed}</span>
+                <span style={{ font: 'var(--md-sys-typescale-body-small)', letterSpacing: 'var(--md-sys-typescale-body-small-tracking)', color: 'var(--md-sys-color-on-surface-variant)' }}>{seed}</span>
               </div>
             ))}
           </Row>
@@ -638,10 +669,10 @@ export default function App() {
         </Section>
 
         <Section title="Avatar — tamaños y sin forma" wide>
-          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--md-sys-color-on-surface-variant)' }}>
+          <Text variant="body-medium" tone="muted">
             Sin <code>shape</code> es una imagen cuadrada. Las fotos no se pueden seleccionar ni arrastrar: las
             dos cosas dibujan el cuadrado que el recorte está tapando.
-          </p>
+          </Text>
           <Row>
             <Avatar seed="danel" size="sm" />
             <Avatar seed="danel" size="md" />
@@ -657,10 +688,10 @@ export default function App() {
         </Section>
 
         <Section title="Shape — color, tamaño, points y rotate" wide>
-          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--md-sys-color-on-surface-variant)' }}>
+          <Text variant="body-medium" tone="muted">
             Los primeros cuatro siguen el tema (cambiá la semilla arriba y se repintan); el del hex crudo
             no, y por eso su contenido hereda el color en vez de resolver uno legible solo.
-          </p>
+          </Text>
           <Row>
             <Shape name="cookie" color="primary" size="sm" />
             <Shape name="cookie" color="secondary" size="md" />
@@ -708,26 +739,26 @@ export default function App() {
               />
             </Shape>
             <Shape name="arch" size="120px" color="secondary">
-              <span style={{ fontSize: 'var(--text-2xl)', fontWeight: 700 }}>DM</span>
+              <span style={{ font: 'var(--md-sys-typescale-headline-large)', letterSpacing: 'var(--md-sys-typescale-headline-large-tracking)', fontWeight: 700 }}>DM</span>
             </Shape>
           </Row>
         </Section>
 
         <Section title="Toast — API imperativa con useToast()" wide>
-          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--md-sys-color-on-surface-variant)' }}>
+          <Text variant="body-medium" tone="muted">
             La forma recomendada de usar toasts: <code>{'<ToastProvider>'}</code> envuelve la app (acá está en
             main.jsx) y <code>useToast()</code> devuelve la API. El provider mantiene una cola, así que varios
             toasts seguidos se apilan; <code>showToast()</code> devuelve un id para cerrarlo a mano.
-          </p>
+          </Text>
           <ToastApiDemo />
         </Section>
 
         <Section title="Toast — uso declarativo (open / onClose)" wide>
-          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--md-sys-color-on-surface-variant)' }}>
+          <Text variant="body-medium" tone="muted">
             Los toasts se renderizan en un stack fijo arriba a la derecha, no donde se los declara. Se
             cierran solos a los 5s —el contador se pausa si les pasás el mouse por encima o los
             arrastrás— o arrastrándolos hacia la derecha más de la mitad de su ancho.
-          </p>
+          </Text>
           <Row>
             <Button variant="default" onClick={() => toggleToast('info')}>Toggle info</Button>
             <Button variant="default" onClick={() => toggleToast('success')}>Toggle success</Button>

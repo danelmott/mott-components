@@ -245,11 +245,11 @@ export default function Toast({
                 would overflow the cap instead of wrapping */}
             <div className="flex min-w-0 flex-col gap-0.5">
                 {title && (
-                    <span className="text-[length:var(--text-sm)] font-[number:var(--font-medium)] text-[var(--md-sys-color-on-surface)]">
+                    <span className="mott-title-small text-[var(--md-sys-color-on-surface)]">
                         {title}
                     </span>
                 )}
-                <span className="text-[length:var(--text-sm)] text-[var(--md-sys-color-on-surface-variant)]">
+                <span className="mott-body-medium text-[var(--md-sys-color-on-surface-variant)]">
                     {children}
                 </span>
             </div>

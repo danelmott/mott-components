@@ -251,6 +251,7 @@ soft step of the neutral family and `ghost` has no surface to soften, so on thos
 | `DragScroll` / `useDragScroll` | drag-to-scroll with inertia and edge fade; hook form for your own element |
 | `Shape` | the five Material 3 shapes as a clipping container: `triangle`, `diamond`, `arch`, `flower`, `cookie` |
 | `Avatar` | seeded DiceBear avatar; `shape` clips it to any Material 3 shape |
+| `Text` | the fifteen Material 3 typescale roles, as a component |
 | `ModalAnimation`, `MorphAnimation`, `AnchoredAnimation` | the animation classes, plus the ready-made `morphAnimation` and `anchoredAnimation` instances |
 
 **For exact props, allowed values, and defaults, read
@@ -313,6 +314,69 @@ import lorelei from '@dicebear/styles/lorelei.json' with { type: 'json' };
 every other component. Rendering is cached and deterministic, so a list that scrolls does not redraw
 the same faces.
 
+### Typography
+
+Text uses the **Material 3 typescale**: fifteen roles — `display`, `headline`, `title`, `body` and
+`label`, each in `large` / `medium` / `small`. A role says what a piece of text *is*, and carries its
+size, line-height, tracking and weight together, so a button label is `label-large` everywhere and
+cannot drift from one component to the next.
+
+```jsx
+import { Text } from '@danelmott/mott-design-components';
+
+<Text variant="headline-small" as="h2">Title</Text>
+<Text variant="body-medium" tone="muted">Supporting copy</Text>
+
+<span className="mott-label-large">or the utility class</span>
+```
+
+`variant` is how it looks and `as` is what it is — keep them separate, or you end up choosing `h1`
+because it was the big one.
+
+**The typeface is named in one place.** Every role points at two reference tokens, so moving the
+system to another font is two lines:
+
+```css
+--md-ref-typeface-brand: 'DM Sans', sans-serif;   /* display, headline, title-large */
+--md-ref-typeface-plain: 'DM Sans', sans-serif;   /* body, label, title */
+```
+
+Sizes, line-heights and weights come from `@material/web`'s own token file. **Tracking is the one
+place this departs from M3** — and it departs mostly by getting out of the way.
+
+M3's tracking numbers were measured on Roboto, a face with no optical-size axis, where letter-spacing
+is the only lever available for compensating size. DM Sans has that lever built into the font: an
+`opsz` axis running 9–40 that the type designer drew, which at the same nominal size renders a 45px
+headline **9.5% narrower** and 11px text **0.6% wider** than the font pinned at its 14px default.
+That is the same correction tracking is reaching for, done by redrawing the letterforms instead of
+prying them apart.
+
+So the axis does it. `display`, `headline`, `title` and `body-large` sit at `0` tracking; only the
+small roles keep a light positive value, where UI micro-copy wants more air than the axis alone
+gives. What remains is in `em` rather than M3's `rem`, so it scales with the size the text is
+actually rendered at.
+
+**The axis only arrives if the font URL asks for it.** Note the `opsz,wght@9..40` in the import:
+
+```css
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,100..1000&display=swap');
+```
+
+A plain `wght@400;500;700` URL gets a 37 KB file with the axis instanced away — every size renders
+from the 14px drawing, and the tuning above silently does not happen. The variable file is 63 KB and
+covers every weight, so it is one request either way. `font-optical-sizing: auto` on `body` turns
+the axis on; the `mott-*` classes get it regardless, since the `font` shorthand they use resets that
+property to `auto`.
+
+One caveat if you use the tokens by hand: the composite `--md-sys-typescale-<role>` is a `font`
+shorthand, and that property has no slot for letter-spacing, so apply
+`--md-sys-typescale-<role>-tracking` alongside it. The `mott-*` utilities and `<Text>` already do.
+
+Controls with centred text (`mott-btn`, and anything given `mott-trim`) also trim the half-leading
+above and below the glyphs via `text-box`, so the label is optically centred rather than sitting
+low. It is behind `@supports` — Firefox has not shipped it — and the padding is set to work either
+way.
+
 ### Toasts
 
 ```jsx
@@ -353,7 +417,7 @@ defines:
 
 | group | tokens |
 |---|---|
-| Typography | `--font-family`, `--font-regular/medium`, `--text-xs` → `--text-4xl`, `--leading-*`, `--tracking-*` |
+| Typography | `--md-ref-typeface-brand/plain`, `--md-ref-typeface-weight-*`, `--md-sys-typescale-<role>-{font,size,line-height,tracking,weight}` for the fifteen roles, `--font-family`, `--tracking-caps` |
 | Radii | `--radius-sm`, `--radius-lg`, `--radius-default`, `--radius-full`, `--radius-modal`, `--control-radius` |
 | Spacing | `--pad-button`, `--pad-input`, `--pad-card`, `--pad-badge-*`, `--gap-tight` → `--gap-page` |
 | Sizing | `--sm-icon` → `--xl-icon`, `--control-size-sm/md/lg` |

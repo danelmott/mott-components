@@ -24,7 +24,7 @@ export default function Input({
             {label && (
                 <label
                     htmlFor={inputId}
-                    className="text-[length:var(--text-sm)] leading-[var(--leading-tight)] tracking-[var(--tracking-body)] font-[number:var(--font-medium)] font-[family-name:var(--font-family)] text-[var(--md-sys-color-on-surface-variant)]"
+                    className="mott-body-small text-[var(--md-sys-color-on-surface-variant)]"
                 >
                     {label}
                 </label>
@@ -33,7 +33,7 @@ export default function Input({
                 id={inputId}
                 type={type}
                 className={twMerge(
-                    'w-full rounded-[var(--radius-lg)] bg-[var(--md-sys-color-surface-container)] text-[length:var(--text-base)] tracking-[var(--tracking-body)] font-[family-name:var(--font-family)] text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)] outline-none transition-colors duration-150 focus:bg-[color-mix(in_srgb,var(--md-sys-color-on-surface)_8%,var(--md-sys-color-surface-container))] disabled:opacity-50 disabled:cursor-not-allowed',
+                    'w-full rounded-[var(--radius-lg)] bg-[var(--md-sys-color-surface-container)] mott-body-large text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)] outline-none transition-colors duration-150 focus:bg-[color-mix(in_srgb,var(--md-sys-color-on-surface)_8%,var(--md-sys-color-surface-container))] disabled:opacity-50 disabled:cursor-not-allowed',
                     className
                 )}
                 value={value}

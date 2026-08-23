@@ -54,7 +54,7 @@ export default function Search({
             {label && (
                 <label
                     htmlFor={searchId}
-                    className="text-[length:var(--text-sm)] leading-[var(--leading-tight)] tracking-[var(--tracking-body)] font-[number:var(--font-medium)] font-[family-name:var(--font-family)] text-[var(--md-sys-color-on-surface-variant)]"
+                    className="mott-body-small text-[var(--md-sys-color-on-surface-variant)]"
                 >
                     {label}
                 </label>
@@ -73,7 +73,7 @@ export default function Search({
                     value={value}
                     onChange={handleChange}
                     placeholder={placeholder}
-                    className="w-full bg-transparent text-[length:var(--text-base)] tracking-[var(--tracking-body)] font-[family-name:var(--font-family)] text-[var(--md-sys-color-on-surface)] outline-none placeholder:text-[var(--md-sys-color-on-surface-variant)] [&::-webkit-search-cancel-button]:appearance-none"
+                    className="w-full bg-transparent mott-body-large text-[var(--md-sys-color-on-surface)] outline-none placeholder:text-[var(--md-sys-color-on-surface-variant)] [&::-webkit-search-cancel-button]:appearance-none"
                     {...props}
                 />
                 {value && (

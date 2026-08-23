@@ -18,6 +18,7 @@ export { default as Navbar } from './src/navbar/navbar.jsx';
 export { default as DragScroll, useDragScroll } from './src/dragScroll/dragScroll.jsx';
 export { default as Shape } from './src/shapes/shapes.jsx';
 export { default as Avatar } from './src/avatars/avatars.jsx';
+export { default as Text, TYPESCALE_ROLES } from './src/text/text.jsx';
 export { SHAPE_NAMES } from './src/shapes/shapePaths.js';
 
 export { ModalAnimation, MorphAnimation, AnchoredAnimation, morphAnimation, anchoredAnimation } from './src/animations/modalAnimation.js';

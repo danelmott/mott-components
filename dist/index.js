@@ -1,7 +1,7 @@
 // src/buttons/button.jsx
 import { forwardRef } from "react";
-import { cva } from "class-variance-authority";
-import { twMerge } from "tailwind-merge";
+import { cva as cva2 } from "class-variance-authority";
+import { twMerge as twMerge2 } from "tailwind-merge";
 
 // src/theme/roles.js
 var family = (fill, on, container, onContainer) => ({
@@ -311,6 +311,80 @@ var shapePath = (name, options) => {
   return typeof shape === "function" ? shape(options) : shape;
 };
 
+// src/text/text.jsx
+import { cva } from "class-variance-authority";
+import { twMerge } from "tailwind-merge";
+import { jsx } from "react/jsx-runtime";
+var TYPESCALE_ROLES = [
+  "display-large",
+  "display-medium",
+  "display-small",
+  "headline-large",
+  "headline-medium",
+  "headline-small",
+  "title-large",
+  "title-medium",
+  "title-small",
+  "body-large",
+  "body-medium",
+  "body-small",
+  "label-large",
+  "label-medium",
+  "label-small"
+];
+var textVariants = cva("", {
+  variants: {
+    variant: {
+      "display-large": "mott-display-large",
+      "display-medium": "mott-display-medium",
+      "display-small": "mott-display-small",
+      "headline-large": "mott-headline-large",
+      "headline-medium": "mott-headline-medium",
+      "headline-small": "mott-headline-small",
+      "title-large": "mott-title-large",
+      "title-medium": "mott-title-medium",
+      "title-small": "mott-title-small",
+      "body-large": "mott-body-large",
+      "body-medium": "mott-body-medium",
+      "body-small": "mott-body-small",
+      "label-large": "mott-label-large",
+      "label-medium": "mott-label-medium",
+      "label-small": "mott-label-small"
+    }
+  },
+  defaultVariants: {
+    variant: "body-medium"
+  }
+});
+var TONE = {
+  default: "var(--md-sys-color-on-surface)",
+  muted: "var(--md-sys-color-on-surface-variant)"
+};
+function Text({
+  children,
+  variant,
+  as: Tag = "p",
+  tone = "default",
+  className,
+  style,
+  ...props
+}) {
+  verifyTypesText({ variant, as: Tag, tone });
+  const role = TYPESCALE_ROLES.includes(variant) ? variant : void 0;
+  return /* @__PURE__ */ jsx(
+    Tag,
+    {
+      className: twMerge(textVariants({ variant: role }), className),
+      style: {
+        color: TONE[tone] ?? TONE.default,
+        ...style
+      },
+      ...props,
+      children
+    }
+  );
+}
+
 // src/utils/verifyTypes.js
 var prefixLog = "[MOTT-COMPONENTS]";
 var show = (value) => typeof value === "string" ? `"${value}"` : String(value);
@@ -479,6 +553,14 @@ function verifyTypesAvatar({ seed, styleDefinition, options, size, shape, alt } 
   assertPlainObject("Avatar", "options", options);
   return true;
 }
+function verifyTypesText({ variant, as, tone } = {}) {
+  assertOneOf("Text", "variant", variant, TYPESCALE_ROLES, "body-medium");
+  assertOneOf("Text", "tone", tone, ["default", "muted"], "default");
+  if (as !== void 0 && as !== null && typeof as !== "string" && typeof as !== "function" && typeof as !== "object") {
+    fail("Text", `\`as\` must be a tag name or a component, received ${typeof as}.`);
+  }
+  return true;
+}
 function verifyTypesSelect({ options, onChange, label, placeholder, disabled } = {}) {
   assertArrayOf("Select", "options", options, (item, path) => {
     assertPlainObject("Select", path, item);
@@ -636,8 +718,8 @@ function verifyTypesThemeProvider({ defaultSeed, defaultMode, themes } = {}) {
 }
 
 // src/buttons/button.jsx
-import { jsx } from "react/jsx-runtime";
-var buttonVariants = cva("mott-btn", {
+import { jsx as jsx2 } from "react/jsx-runtime";
+var buttonVariants = cva2("mott-btn", {
   variants: {
     shape: {
       rounded: "rounded-[var(--radius-lg)]",
@@ -672,13 +754,13 @@ var Button = forwardRef(function Button2({
 }, ref) {
   verifyTypesButton({ variant, quiet, shape, iconOnly, fullWidth, type });
   const tint = controlTint(variant, quiet) ?? controlTint("default", quiet);
-  return /* @__PURE__ */ jsx(
+  return /* @__PURE__ */ jsx2(
     "button",
     {
       ref,
       type,
       onClick,
-      className: twMerge(buttonVariants({ shape, iconOnly, fullWidth }), className),
+      className: twMerge2(buttonVariants({ shape, iconOnly, fullWidth }), className),
       style: {
         backgroundColor: tint.surface,
         color: tint.on,
@@ -692,8 +774,8 @@ var Button = forwardRef(function Button2({
 var button_default = Button;
 
 // src/icon/icon.jsx
-import { twMerge as twMerge2 } from "tailwind-merge";
-import { jsx as jsx2 } from "react/jsx-runtime";
+import { twMerge as twMerge3 } from "tailwind-merge";
+import { jsx as jsx3 } from "react/jsx-runtime";
 var SIZE_TOKEN = {
   sm: "var(--sm-icon)",
   md: "var(--md-icon)",
@@ -713,10 +795,10 @@ function Icon({
   verifyTypesIcon({ name, size, filled: filled2, weight, grade, opticalSize });
   if (!name) return null;
   const iconSize = SIZE_TOKEN[size] ?? size;
-  return /* @__PURE__ */ jsx2(
+  return /* @__PURE__ */ jsx3(
     "span",
     {
-      className: twMerge2("material-symbols-rounded select-none", className),
+      className: twMerge3("material-symbols-rounded select-none", className),
       "aria-hidden": "true",
       style: {
         fontSize: iconSize,
@@ -729,7 +811,7 @@ function Icon({
 }
 
 // src/buttons/fabButton.jsx
-import { jsx as jsx3 } from "react/jsx-runtime";
+import { jsx as jsx4 } from "react/jsx-runtime";
 var FAB_SIZE = {
   sm: { box: "var(--control-size-sm)", icon: "var(--lg-icon)" },
   md: { box: "var(--control-size-md)", icon: "var(--lg-icon)" },
@@ -748,7 +830,7 @@ function FabButton({
   verifyTypesIconButton("FabButton", { icon, variant, quiet, size, type });
   const dimensions = FAB_SIZE[size] ?? FAB_SIZE.md;
   const tint = controlTint(variant, quiet) ?? controlTint("action", quiet);
-  return /* @__PURE__ */ jsx3(
+  return /* @__PURE__ */ jsx4(
     "button",
     {
       type,
@@ -764,7 +846,7 @@ function FabButton({
         ...style
       },
       ...props,
-      children: /* @__PURE__ */ jsx3(Icon, { name: icon, size: dimensions.icon })
+      children: /* @__PURE__ */ jsx4(Icon, { name: icon, size: dimensions.icon })
     }
   );
 }
@@ -773,7 +855,7 @@ function FabButton({
 import { useRef, useState } from "react";
 import { useGSAP } from "@gsap/react";
 import gsap2 from "gsap";
-import { twMerge as twMerge3 } from "tailwind-merge";
+import { twMerge as twMerge4 } from "tailwind-merge";
 
 // src/animations/motion.js
 import gsap from "gsap";
@@ -806,7 +888,7 @@ var squircleRadius = () => longForm(
 var prefersReducedMotion = () => typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 // src/buttons/buttonGroup.jsx
-import { jsx as jsx4, jsxs } from "react/jsx-runtime";
+import { jsx as jsx5, jsxs } from "react/jsx-runtime";
 function ButtonGroup({ buttons, vertical = true, variant = "support", defaultSelected = null, value, allowDeselect = true, onChange }) {
   verifyTypesButtonGroup({ buttons, vertical, variant, allowDeselect, onChange, value, defaultSelected });
   const [internalSelected, setInternalSelected] = useState(defaultSelected);
@@ -843,7 +925,7 @@ function ButtonGroup({ buttons, vertical = true, variant = "support", defaultSel
     if (!isControlled) setInternalSelected(next);
     onChange == null ? void 0 : onChange(next, next === null ? null : buttons[i]);
   };
-  return /* @__PURE__ */ jsx4("div", { ref: containerRef, className: twMerge3("inline-flex gap-[var(--gap-group)]", vertical && "flex-col"), children: buttons.map((btn, i) => {
+  return /* @__PURE__ */ jsx5("div", { ref: containerRef, className: twMerge4("inline-flex gap-[var(--gap-group)]", vertical && "flex-col"), children: buttons.map((btn, i) => {
     const iconOnly = !btn.label;
     return /* @__PURE__ */ jsxs(
       "button",
@@ -867,8 +949,8 @@ function ButtonGroup({ buttons, vertical = true, variant = "support", defaultSel
           ...iconOnly ? { width: "var(--control-size-md)", padding: 0 } : { padding: "0 20px" }
         },
         children: [
-          btn.icon && (typeof btn.icon === "string" ? /* @__PURE__ */ jsx4(Icon, { name: btn.icon }) : btn.icon),
-          btn.label && /* @__PURE__ */ jsx4("span", { children: btn.label })
+          btn.icon && (typeof btn.icon === "string" ? /* @__PURE__ */ jsx5(Icon, { name: btn.icon }) : btn.icon),
+          btn.label && /* @__PURE__ */ jsx5("span", { children: btn.label })
         ]
       },
       btn.id ?? i
@@ -911,7 +993,7 @@ function getToastStack() {
 }
 
 // src/toast/toast.jsx
-import { jsx as jsx5, jsxs as jsxs2 } from "react/jsx-runtime";
+import { jsx as jsx6, jsxs as jsxs2 } from "react/jsx-runtime";
 gsap3.registerPlugin(Draggable, Flip);
 var VARIANT_ICONS = {
   info: "info",
@@ -1080,10 +1162,10 @@ function Toast({
           pointerEvents: "auto"
         },
         children: [
-          /* @__PURE__ */ jsx5(Icon, { name: glyph, size: "xl", className: "shrink-0", style: { color: accent } }),
+          /* @__PURE__ */ jsx6(Icon, { name: glyph, size: "xl", className: "shrink-0", style: { color: accent } }),
           /* @__PURE__ */ jsxs2("div", { className: "flex min-w-0 flex-col gap-0.5", children: [
-            title && /* @__PURE__ */ jsx5("span", { className: "text-[length:var(--text-sm)] font-[number:var(--font-medium)] text-[var(--md-sys-color-on-surface)]", children: title }),
-            /* @__PURE__ */ jsx5("span", { className: "text-[length:var(--text-sm)] text-[var(--md-sys-color-on-surface-variant)]", children })
+            title && /* @__PURE__ */ jsx6("span", { className: "mott-title-small text-[var(--md-sys-color-on-surface)]", children: title }),
+            /* @__PURE__ */ jsx6("span", { className: "mott-body-medium text-[var(--md-sys-color-on-surface-variant)]", children })
           ] })
         ]
       }
@@ -1094,7 +1176,7 @@ function Toast({
 
 // src/toast/toastContext.jsx
 import { createContext, useCallback, useContext, useMemo, useRef as useRef3, useState as useState3 } from "react";
-import { jsx as jsx6, jsxs as jsxs3 } from "react/jsx-runtime";
+import { jsx as jsx7, jsxs as jsxs3 } from "react/jsx-runtime";
 var ToastContext = createContext(null);
 var DEFAULT_DURATION = 5e3;
 var DEFAULT_DISMISS_THRESHOLD = 0.5;
@@ -1139,7 +1221,7 @@ function ToastProvider({
   }), [showToast, closeToast, closeAll]);
   return /* @__PURE__ */ jsxs3(ToastContext.Provider, { value: api, children: [
     children,
-    toasts.map((toast) => /* @__PURE__ */ jsx6(
+    toasts.map((toast) => /* @__PURE__ */ jsx7(
       Toast,
       {
         open: toast.open,
@@ -1277,7 +1359,7 @@ function buildPalette(seedHex, mode, variant = DEFAULT_VARIANT, tint = DEFAULT_T
 }
 
 // src/theme/themeContext.jsx
-import { jsx as jsx7 } from "react/jsx-runtime";
+import { jsx as jsx8 } from "react/jsx-runtime";
 var ThemeContext = createContext2(null);
 var DEFAULT_MODE = "system";
 var STORAGE_SEED = "mott-theme-color";
@@ -1368,7 +1450,7 @@ function ThemeProvider({
     resolvedMode,
     THEMES_AVAILABLE: themes
   }), [colorSeedHex, setColorSeedHex, variant, mode, setMode, resolvedMode, themes]);
-  return /* @__PURE__ */ jsx7(ThemeContext.Provider, { value, children });
+  return /* @__PURE__ */ jsx8(ThemeContext.Provider, { value, children });
 }
 function useTheme() {
   const context = useContext2(ThemeContext);
@@ -1387,7 +1469,7 @@ import gsap5 from "gsap";
 
 // src/customModal/customModal.jsx
 import { useEffect as useEffect3, useRef as useRef4 } from "react";
-import { twMerge as twMerge4 } from "tailwind-merge";
+import { twMerge as twMerge5 } from "tailwind-merge";
 
 // src/animations/modalAnimation.js
 import gsap4 from "gsap";
@@ -1840,7 +1922,7 @@ function unlockScroll() {
 }
 
 // src/customModal/customModal.jsx
-import { jsx as jsx8, jsxs as jsxs4 } from "react/jsx-runtime";
+import { jsx as jsx9, jsxs as jsxs4 } from "react/jsx-runtime";
 function CustomModal({ open, onClose, onCloseComplete, children, triggerRef, animation, className, style }) {
   verifyTypesCustomModal({ open, onClose, onCloseComplete, triggerRef, animation });
   const modalRef = useRef4(null);
@@ -1893,7 +1975,7 @@ function CustomModal({ open, onClose, onCloseComplete, children, triggerRef, ani
       onCancel: handleCancel,
       className: "default-modal",
       children: [
-        /* @__PURE__ */ jsx8(
+        /* @__PURE__ */ jsx9(
           "div",
           {
             ref: overlayRef,
@@ -1901,13 +1983,13 @@ function CustomModal({ open, onClose, onCloseComplete, children, triggerRef, ani
             className: "absolute inset-0 bg-[color-mix(in_srgb,var(--md-sys-color-scrim)_32%,transparent)]"
           }
         ),
-        /* @__PURE__ */ jsx8(
+        /* @__PURE__ */ jsx9(
           "div",
           {
             ref: panelRef,
-            className: twMerge4("relative m-auto max-w-[92vw] rounded-[var(--radius-modal)] bg-[var(--md-sys-color-surface-container-high)] p-[var(--pad-card)]", className),
+            className: twMerge5("relative m-auto max-w-[92vw] rounded-[var(--radius-modal)] bg-[var(--md-sys-color-surface-container-high)] p-[var(--pad-card)]", className),
             style,
-            children: /* @__PURE__ */ jsx8("div", { ref: contentRef, children })
+            children: /* @__PURE__ */ jsx9("div", { ref: contentRef, children })
           }
         )
       ]
@@ -1916,7 +1998,7 @@ function CustomModal({ open, onClose, onCloseComplete, children, triggerRef, ani
 }
 
 // src/themeModal/themeModal.jsx
-import { jsx as jsx9, jsxs as jsxs5 } from "react/jsx-runtime";
+import { jsx as jsx10, jsxs as jsxs5 } from "react/jsx-runtime";
 var MODES = [
   { value: "light", icon: "light_mode", label: "Claro" },
   { value: "dark", icon: "dark_mode", label: "Oscuro" },
@@ -1939,7 +2021,7 @@ function Swatch({ theme, selected, onSelect }) {
     }
     gsap5.to(ref.current, { ...shape, ...MORPH });
   }, { dependencies: [selected] });
-  return /* @__PURE__ */ jsx9(
+  return /* @__PURE__ */ jsx10(
     "button",
     {
       ref,
@@ -1964,19 +2046,19 @@ function ThemeModal({ open, onClose, triggerRef, title = "Apariencia" }) {
   const { colorSeedHex, variant, setColorSeedHex, mode, setMode, THEMES_AVAILABLE: THEMES_AVAILABLE2 } = useTheme();
   const isActive = (theme) => theme.hex.toLowerCase() === colorSeedHex.toLowerCase() && (theme.variant ?? variant) === variant;
   const modeIndex = MODES.findIndex((m) => m.value === mode);
-  return /* @__PURE__ */ jsx9(CustomModal, { open, onClose, triggerRef, className: "w-[360px]", children: /* @__PURE__ */ jsxs5("div", { className: "flex flex-col gap-[var(--gap-page)]", children: [
+  return /* @__PURE__ */ jsx10(CustomModal, { open, onClose, triggerRef, className: "w-[360px]", children: /* @__PURE__ */ jsxs5("div", { className: "flex flex-col gap-[var(--gap-page)]", children: [
     /* @__PURE__ */ jsxs5("div", { className: "flex items-center gap-[var(--gap-group)]", children: [
-      /* @__PURE__ */ jsx9(Icon, { name: "palette", size: "lg", style: { color: "var(--md-sys-color-primary)" } }),
-      /* @__PURE__ */ jsx9(
+      /* @__PURE__ */ jsx10(Icon, { name: "palette", size: "lg", style: { color: "var(--md-sys-color-primary)" } }),
+      /* @__PURE__ */ jsx10(
         "h2",
         {
-          className: "font-[number:var(--font-medium)] tracking-[var(--tracking-h3)]",
-          style: { fontSize: "var(--text-xl)", color: "var(--md-sys-color-on-surface)" },
+          className: "mott-headline-small",
+          style: { color: "var(--md-sys-color-on-surface)" },
           children: title
         }
       )
     ] }),
-    /* @__PURE__ */ jsx9("div", { className: "flex flex-wrap gap-[var(--gap-group)]", children: THEMES_AVAILABLE2.map((theme) => /* @__PURE__ */ jsx9(
+    /* @__PURE__ */ jsx10("div", { className: "flex flex-wrap gap-[var(--gap-group)]", children: THEMES_AVAILABLE2.map((theme) => /* @__PURE__ */ jsx10(
       Swatch,
       {
         theme,
@@ -1986,15 +2068,15 @@ function ThemeModal({ open, onClose, triggerRef, title = "Apariencia" }) {
       theme.name
     )) }),
     /* @__PURE__ */ jsxs5("div", { className: "flex flex-col gap-[var(--gap-section)]", children: [
-      /* @__PURE__ */ jsx9(
+      /* @__PURE__ */ jsx10(
         "p",
         {
-          className: "tracking-[var(--tracking-label)]",
-          style: { fontSize: "var(--text-sm)", color: "var(--md-sys-color-on-surface-variant)" },
+          className: "mott-body-medium",
+          style: { color: "var(--md-sys-color-on-surface-variant)" },
           children: "Modo"
         }
       ),
-      /* @__PURE__ */ jsx9(
+      /* @__PURE__ */ jsx10(
         ButtonGroup,
         {
           vertical: false,
@@ -2010,8 +2092,8 @@ function ThemeModal({ open, onClose, triggerRef, title = "Apariencia" }) {
 
 // src/input/input.jsx
 import { useId } from "react";
-import { twMerge as twMerge5 } from "tailwind-merge";
-import { jsx as jsx10, jsxs as jsxs6 } from "react/jsx-runtime";
+import { twMerge as twMerge6 } from "tailwind-merge";
+import { jsx as jsx11, jsxs as jsxs6 } from "react/jsx-runtime";
 function Input({
   label,
   type = "text",
@@ -2027,21 +2109,21 @@ function Input({
   const inputId = id ?? generatedId;
   verifyTypesInput({ label, placeholder, type });
   return /* @__PURE__ */ jsxs6("div", { className: "flex w-full flex-col gap-1", children: [
-    label && /* @__PURE__ */ jsx10(
+    label && /* @__PURE__ */ jsx11(
       "label",
       {
         htmlFor: inputId,
-        className: "text-[length:var(--text-sm)] leading-[var(--leading-tight)] tracking-[var(--tracking-body)] font-[number:var(--font-medium)] font-[family-name:var(--font-family)] text-[var(--md-sys-color-on-surface-variant)]",
+        className: "mott-body-small text-[var(--md-sys-color-on-surface-variant)]",
         children: label
       }
     ),
-    /* @__PURE__ */ jsx10(
+    /* @__PURE__ */ jsx11(
       "input",
       {
         id: inputId,
         type,
-        className: twMerge5(
-          "w-full rounded-[var(--radius-lg)] bg-[var(--md-sys-color-surface-container)] text-[length:var(--text-base)] tracking-[var(--tracking-body)] font-[family-name:var(--font-family)] text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)] outline-none transition-colors duration-150 focus:bg-[color-mix(in_srgb,var(--md-sys-color-on-surface)_8%,var(--md-sys-color-surface-container))] disabled:opacity-50 disabled:cursor-not-allowed",
+        className: twMerge6(
+          "w-full rounded-[var(--radius-lg)] bg-[var(--md-sys-color-surface-container)] mott-body-large text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)] outline-none transition-colors duration-150 focus:bg-[color-mix(in_srgb,var(--md-sys-color-on-surface)_8%,var(--md-sys-color-surface-container))] disabled:opacity-50 disabled:cursor-not-allowed",
           className
         ),
         value,
@@ -2056,8 +2138,8 @@ function Input({
 
 // src/textarea/textarea.jsx
 import { useId as useId2 } from "react";
-import { twMerge as twMerge6 } from "tailwind-merge";
-import { jsx as jsx11, jsxs as jsxs7 } from "react/jsx-runtime";
+import { twMerge as twMerge7 } from "tailwind-merge";
+import { jsx as jsx12, jsxs as jsxs7 } from "react/jsx-runtime";
 function Textarea({
   label,
   id,
@@ -2072,20 +2154,20 @@ function Textarea({
   const textareaId = id ?? generatedId;
   verifyTypesTextarea({ label, placeholder, width, height });
   return /* @__PURE__ */ jsxs7("div", { className: "flex flex-col gap-1", style: { width }, children: [
-    label && /* @__PURE__ */ jsx11(
+    label && /* @__PURE__ */ jsx12(
       "label",
       {
         htmlFor: textareaId,
-        className: "text-[length:var(--text-sm)] leading-[var(--leading-tight)] tracking-[var(--tracking-body)] font-[number:var(--font-medium)] font-[family-name:var(--font-family)] text-[var(--md-sys-color-on-surface-variant)]",
+        className: "mott-body-small text-[var(--md-sys-color-on-surface-variant)]",
         children: label
       }
     ),
-    /* @__PURE__ */ jsx11(
+    /* @__PURE__ */ jsx12(
       "textarea",
       {
         id: textareaId,
-        className: twMerge6(
-          "w-full rounded-[var(--radius-lg)] bg-[var(--md-sys-color-surface-container)] text-[length:var(--text-base)] tracking-[var(--tracking-body)] font-[family-name:var(--font-family)] text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)] outline-none transition-colors duration-150 focus:bg-[color-mix(in_srgb,var(--md-sys-color-on-surface)_8%,var(--md-sys-color-surface-container))] disabled:opacity-50 disabled:cursor-not-allowed",
+        className: twMerge7(
+          "w-full rounded-[var(--radius-lg)] bg-[var(--md-sys-color-surface-container)] mott-body-large text-[var(--md-sys-color-on-surface)] placeholder:text-[var(--md-sys-color-on-surface-variant)] outline-none transition-colors duration-150 focus:bg-[color-mix(in_srgb,var(--md-sys-color-on-surface)_8%,var(--md-sys-color-surface-container))] disabled:opacity-50 disabled:cursor-not-allowed",
           className
         ),
         style: {
@@ -2106,7 +2188,7 @@ import { useEffect as useEffect4, useId as useId3, useRef as useRef6, useState a
 import { createPortal as createPortal2 } from "react-dom";
 import { useGSAP as useGSAP4 } from "@gsap/react";
 import gsap6 from "gsap";
-import { jsx as jsx12, jsxs as jsxs8 } from "react/jsx-runtime";
+import { jsx as jsx13, jsxs as jsxs8 } from "react/jsx-runtime";
 function Select({ options = [], value, onChange, label, placeholder = "Seleccionar", disabled, id }) {
   verifyTypesSelect({ options, onChange, label, placeholder, disabled });
   const [open, setOpen] = useState5(false);
@@ -2187,11 +2269,11 @@ function Select({ options = [], value, onChange, label, placeholder = "Seleccion
     setOpen(false);
   };
   return /* @__PURE__ */ jsxs8("div", { ref: wrapperRef, className: "flex w-full flex-col gap-1", children: [
-    label && /* @__PURE__ */ jsx12(
+    label && /* @__PURE__ */ jsx13(
       "label",
       {
         htmlFor: selectId,
-        className: "text-[length:var(--text-sm)] leading-[var(--leading-tight)] tracking-[var(--tracking-body)] font-[number:var(--font-medium)] font-[family-name:var(--font-family)] text-[var(--md-sys-color-on-surface-variant)]",
+        className: "mott-body-small text-[var(--md-sys-color-on-surface-variant)]",
         children: label
       }
     ),
@@ -2203,16 +2285,16 @@ function Select({ options = [], value, onChange, label, placeholder = "Seleccion
         type: "button",
         disabled,
         onClick: () => setOpen((o) => !o),
-        className: "flex w-full items-center justify-between rounded-[var(--radius-lg)] bg-[var(--md-sys-color-surface-container)] text-[length:var(--text-base)] tracking-[var(--tracking-body)] font-[family-name:var(--font-family)] text-[var(--md-sys-color-on-surface)] outline-none transition-colors duration-150 focus:bg-[color-mix(in_srgb,var(--md-sys-color-on-surface)_8%,var(--md-sys-color-surface-container))] disabled:opacity-50 disabled:cursor-not-allowed",
+        className: "flex w-full items-center justify-between rounded-[var(--radius-lg)] bg-[var(--md-sys-color-surface-container)] mott-body-large text-[var(--md-sys-color-on-surface)] outline-none transition-colors duration-150 focus:bg-[color-mix(in_srgb,var(--md-sys-color-on-surface)_8%,var(--md-sys-color-surface-container))] disabled:opacity-50 disabled:cursor-not-allowed",
         style: { padding: "var(--pad-input)" },
         children: [
-          /* @__PURE__ */ jsx12("span", { className: selected ? "" : "text-[var(--md-sys-color-on-surface-variant)]", children: selected ? selected.label : placeholder }),
-          /* @__PURE__ */ jsx12(Icon, { name: "expand_more", size: "sm", className: `transition-transform duration-200 ${open ? "rotate-180" : ""}` })
+          /* @__PURE__ */ jsx13("span", { className: selected ? "" : "text-[var(--md-sys-color-on-surface-variant)]", children: selected ? selected.label : placeholder }),
+          /* @__PURE__ */ jsx13(Icon, { name: "expand_more", size: "sm", className: `transition-transform duration-200 ${open ? "rotate-180" : ""}` })
         ]
       }
     ),
     rendered && anchor && createPortal2(
-      /* @__PURE__ */ jsx12(
+      /* @__PURE__ */ jsx13(
         "div",
         {
           ref: panelRef,
@@ -2220,12 +2302,12 @@ function Select({ options = [], value, onChange, label, placeholder = "Seleccion
           style: { top: anchor.top, left: anchor.left, width: anchor.width },
           children: options.map((option) => {
             const isSelected = option.value === value;
-            return /* @__PURE__ */ jsx12(
+            return /* @__PURE__ */ jsx13(
               "button",
               {
                 type: "button",
                 onClick: () => handleSelect(option),
-                className: "rounded-[var(--radius-sm)] px-3 py-2 text-left text-[length:var(--text-base)] font-[family-name:var(--font-family)] transition-colors duration-150",
+                className: "rounded-[var(--radius-sm)] px-3 py-2 text-left mott-body-large transition-colors duration-150",
                 style: {
                   backgroundColor: isSelected ? "var(--md-sys-color-primary-container)" : "transparent",
                   color: isSelected ? "var(--md-sys-color-primary)" : "var(--md-sys-color-on-surface)"
@@ -2250,8 +2332,8 @@ function Select({ options = [], value, onChange, label, placeholder = "Seleccion
 
 // src/search/search.jsx
 import { useEffect as useEffect5, useId as useId4, useRef as useRef7, useState as useState6 } from "react";
-import { twMerge as twMerge7 } from "tailwind-merge";
-import { jsx as jsx13, jsxs as jsxs9 } from "react/jsx-runtime";
+import { twMerge as twMerge8 } from "tailwind-merge";
+import { jsx as jsx14, jsxs as jsxs9 } from "react/jsx-runtime";
 function Search({
   label,
   id,
@@ -2289,25 +2371,25 @@ function Search({
     onSearch == null ? void 0 : onSearch("");
   };
   return /* @__PURE__ */ jsxs9("div", { className: "flex w-full flex-col gap-1", children: [
-    label && /* @__PURE__ */ jsx13(
+    label && /* @__PURE__ */ jsx14(
       "label",
       {
         htmlFor: searchId,
-        className: "text-[length:var(--text-sm)] leading-[var(--leading-tight)] tracking-[var(--tracking-body)] font-[number:var(--font-medium)] font-[family-name:var(--font-family)] text-[var(--md-sys-color-on-surface-variant)]",
+        className: "mott-body-small text-[var(--md-sys-color-on-surface-variant)]",
         children: label
       }
     ),
     /* @__PURE__ */ jsxs9(
       "div",
       {
-        className: twMerge7(
+        className: twMerge8(
           "flex w-full items-center gap-2 rounded-[var(--radius-lg)] bg-[var(--md-sys-color-surface-container)] transition-colors duration-150 focus-within:bg-[color-mix(in_srgb,var(--md-sys-color-on-surface)_8%,var(--md-sys-color-surface-container))]",
           className
         ),
         style: { padding: "var(--pad-input)", ...style },
         children: [
-          /* @__PURE__ */ jsx13(Icon, { name: "search", size: "sm", className: "shrink-0 text-[var(--md-sys-color-on-surface-variant)]" }),
-          /* @__PURE__ */ jsx13(
+          /* @__PURE__ */ jsx14(Icon, { name: "search", size: "sm", className: "shrink-0 text-[var(--md-sys-color-on-surface-variant)]" }),
+          /* @__PURE__ */ jsx14(
             "input",
             {
               id: searchId,
@@ -2315,18 +2397,18 @@ function Search({
               value,
               onChange: handleChange,
               placeholder,
-              className: "w-full bg-transparent text-[length:var(--text-base)] tracking-[var(--tracking-body)] font-[family-name:var(--font-family)] text-[var(--md-sys-color-on-surface)] outline-none placeholder:text-[var(--md-sys-color-on-surface-variant)] [&::-webkit-search-cancel-button]:appearance-none",
+              className: "w-full bg-transparent mott-body-large text-[var(--md-sys-color-on-surface)] outline-none placeholder:text-[var(--md-sys-color-on-surface-variant)] [&::-webkit-search-cancel-button]:appearance-none",
               ...props
             }
           ),
-          value && /* @__PURE__ */ jsx13(
+          value && /* @__PURE__ */ jsx14(
             "button",
             {
               type: "button",
               onClick: handleClear,
               "aria-label": "Limpiar b\xFAsqueda",
               className: "flex shrink-0 items-center justify-center border-0 bg-transparent cursor-pointer",
-              children: /* @__PURE__ */ jsx13(Icon, { name: "close", size: "sm", className: "text-[var(--md-sys-color-on-surface-variant)]" })
+              children: /* @__PURE__ */ jsx14(Icon, { name: "close", size: "sm", className: "text-[var(--md-sys-color-on-surface-variant)]" })
             }
           )
         ]
@@ -2339,8 +2421,8 @@ function Search({
 import { useEffect as useEffect6, useRef as useRef8, useState as useState7 } from "react";
 import { useGSAP as useGSAP5 } from "@gsap/react";
 import gsap7 from "gsap";
-import { twMerge as twMerge8 } from "tailwind-merge";
-import { jsx as jsx14 } from "react/jsx-runtime";
+import { twMerge as twMerge9 } from "tailwind-merge";
+import { jsx as jsx15 } from "react/jsx-runtime";
 function Dropdown({ open, onClose, children, triggerRef, className, style, ...props }) {
   verifyTypesDropdown({ open, onClose, triggerRef });
   const [rendered, setRendered] = useState7(open);
@@ -2404,12 +2486,12 @@ function Dropdown({ open, onClose, children, triggerRef, className, style, ...pr
     };
   }, [open, onClose, triggerRef]);
   if (!rendered) return null;
-  return /* @__PURE__ */ jsx14(
+  return /* @__PURE__ */ jsx15(
     "div",
     {
       ref: panelRef,
       role: "menu",
-      className: twMerge8("z-[var(--z-floating)] rounded-[var(--radius-lg)] bg-[var(--md-sys-color-surface-container-high)] p-1 shadow-lg", className),
+      className: twMerge9("z-[var(--z-floating)] rounded-[var(--radius-lg)] bg-[var(--md-sys-color-surface-container-high)] p-1 shadow-lg", className),
       style: { ...style },
       ...props,
       children
@@ -2421,7 +2503,7 @@ function Dropdown({ open, onClose, children, triggerRef, className, style, ...pr
 import { useRef as useRef9 } from "react";
 import { useGSAP as useGSAP6 } from "@gsap/react";
 import gsap8 from "gsap";
-import { jsx as jsx15 } from "react/jsx-runtime";
+import { jsx as jsx16 } from "react/jsx-runtime";
 var SHAPES = [
   "50% 50% 50% 50% / 50% 50% 50% 50%",
   // circle
@@ -2455,7 +2537,7 @@ function Loading({ size = "sm", color = "primary", className, style, ...props })
     tl.to(el, { opacity: 0, scale: 0.85, duration: 0.2, ease: "power2.in" }, "+=0.3").set(el, { clipPath: "none", borderRadius: SHAPES[0] }).to(el, { opacity: 1, scale: 1.12, duration: 0.3, ease: "power2.out" }).to(el, { scale: 1, duration: 0.45, ease: "power2.in" });
     gsap8.to(el, { rotate: 360, duration: 5, repeat: -1, ease: "none" });
   }, []);
-  return /* @__PURE__ */ jsx15(
+  return /* @__PURE__ */ jsx16(
     "div",
     {
       ref: shapeRef,
@@ -2479,7 +2561,7 @@ function Loading({ size = "sm", color = "primary", className, style, ...props })
 import { useRef as useRef10 } from "react";
 import { useGSAP as useGSAP7 } from "@gsap/react";
 import gsap9 from "gsap";
-import { jsx as jsx16 } from "react/jsx-runtime";
+import { jsx as jsx17 } from "react/jsx-runtime";
 function Progress({ value, color = "primary", className, style, ...props }) {
   verifyTypesProgress({ value, color });
   const fillRef = useRef10(null);
@@ -2497,7 +2579,7 @@ function Progress({ value, color = "primary", className, style, ...props }) {
       else gsap9.to(fillRef.current, { width, duration: DURATION.slow, ease: EASE.standard });
     }
   }, { dependencies: [indeterminate, value] });
-  return /* @__PURE__ */ jsx16(
+  return /* @__PURE__ */ jsx17(
     "div",
     {
       ref: trackRef,
@@ -2508,7 +2590,7 @@ function Progress({ value, color = "primary", className, style, ...props }) {
       className,
       style: { width: "100%", height: 8, borderRadius: "var(--radius-full)", backgroundColor: "var(--md-sys-color-surface-container)", overflow: "hidden", position: "relative", ...style },
       ...props,
-      children: /* @__PURE__ */ jsx16(
+      children: /* @__PURE__ */ jsx17(
         "div",
         {
           ref: fillRef,
@@ -2523,13 +2605,13 @@ function Progress({ value, color = "primary", className, style, ...props }) {
 import { useRef as useRef11, useState as useState8 } from "react";
 import { useGSAP as useGSAP8 } from "@gsap/react";
 import gsap10 from "gsap";
-import { twMerge as twMerge9 } from "tailwind-merge";
-import { Fragment, jsx as jsx17, jsxs as jsxs10 } from "react/jsx-runtime";
+import { twMerge as twMerge10 } from "tailwind-merge";
+import { Fragment, jsx as jsx18, jsxs as jsxs10 } from "react/jsx-runtime";
 var DESKTOP_ALIGN = {
   center: "top-1/2 -translate-y-1/2",
   top: "top-8"
 };
-var ITEM_BASE = "inline-flex items-center justify-center gap-2 border-0 cursor-pointer p-0 text-[length:var(--text-md)] tracking-[var(--tracking-h4)] font-[number:var(--font-medium)] bg-[var(--md-sys-color-surface-container)] text-[var(--md-sys-color-on-surface-variant)] transition-[background-color,color] duration-[var(--duration-base)] ease-[var(--ease-emphasized)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--md-sys-color-primary)]";
+var ITEM_BASE = "inline-flex items-center justify-center gap-2 border-0 cursor-pointer p-0 mott-label-large mott-trim bg-[var(--md-sys-color-surface-container)] text-[var(--md-sys-color-on-surface-variant)] transition-[background-color,color] duration-[var(--duration-base)] ease-[var(--ease-emphasized)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--md-sys-color-primary)]";
 var ITEM_SELECTED = "bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)]";
 var attachRef = (node, store, i, forwarded) => {
   if (i === null) store.current = node;
@@ -2562,7 +2644,7 @@ function NavItems({ items, selectedItem, onSelect, vertical }) {
       if (el) gsap10.to(el, { ...shapeOf(i), ...MORPH });
     });
   }, { dependencies: [selectedItem, items.length], scope: containerRef });
-  return /* @__PURE__ */ jsx17("div", { ref: containerRef, className: twMerge9("inline-flex gap-[var(--gap-group)]", vertical && "flex-col"), children: items.map((item, i) => {
+  return /* @__PURE__ */ jsx18("div", { ref: containerRef, className: twMerge10("inline-flex gap-[var(--gap-group)]", vertical && "flex-col"), children: items.map((item, i) => {
     const iconOnly = !item.label;
     return /* @__PURE__ */ jsxs10(
       "button",
@@ -2571,15 +2653,15 @@ function NavItems({ items, selectedItem, onSelect, vertical }) {
         type: "button",
         onClick: () => onSelect(i),
         "aria-pressed": selectedItem === i,
-        className: twMerge9(ITEM_BASE, selectedItem === i && ITEM_SELECTED),
+        className: twMerge10(ITEM_BASE, selectedItem === i && ITEM_SELECTED),
         style: {
           borderRadius: CIRCLE_RADIUS,
           height: "var(--control-size-md)",
           ...iconOnly ? { width: "var(--control-size-md)" } : { padding: "0 20px" }
         },
         children: [
-          item.icon && (typeof item.icon === "string" ? /* @__PURE__ */ jsx17(Icon, { name: item.icon }) : item.icon),
-          item.label && /* @__PURE__ */ jsx17("span", { children: item.label })
+          item.icon && (typeof item.icon === "string" ? /* @__PURE__ */ jsx18(Icon, { name: item.icon }) : item.icon),
+          item.label && /* @__PURE__ */ jsx18("span", { children: item.label })
         ]
       },
       item.id ?? i
@@ -2602,7 +2684,7 @@ function LogoButton({ logo }) {
     }
     gsap10.to(ref.current, { ...shape, ...MORPH });
   }, { dependencies: [logo.active] });
-  return /* @__PURE__ */ jsx17(
+  return /* @__PURE__ */ jsx18(
     "button",
     {
       ref: (el) => attachRef(el, ref, null, logo.buttonRef),
@@ -2610,13 +2692,13 @@ function LogoButton({ logo }) {
       onClick: logo.onClick,
       "aria-pressed": !!logo.active,
       "aria-label": logo.label ?? "Inicio",
-      className: twMerge9(ITEM_BASE, logo.active && ITEM_SELECTED),
+      className: twMerge10(ITEM_BASE, logo.active && ITEM_SELECTED),
       style: {
         width: "var(--control-size-md)",
         height: "var(--control-size-md)",
         borderRadius: CIRCLE_RADIUS
       },
-      children: typeof logo.icon === "string" ? /* @__PURE__ */ jsx17(Icon, { name: logo.icon }) : logo.icon
+      children: typeof logo.icon === "string" ? /* @__PURE__ */ jsx18(Icon, { name: logo.icon }) : logo.icon
     }
   );
 }
@@ -2642,32 +2724,32 @@ function Navbar({
     /* @__PURE__ */ jsxs10(
       "nav",
       {
-        className: twMerge9(
+        className: twMerge10(
           "hidden md:flex fixed left-4 z-[var(--z-nav)] flex-col items-center gap-[var(--gap-group)]",
           DESKTOP_ALIGN[align] ?? DESKTOP_ALIGN.center,
           className
         ),
         style,
         children: [
-          logo && /* @__PURE__ */ jsx17(LogoButton, { logo }),
-          /* @__PURE__ */ jsx17(NavItems, { items, selectedItem, onSelect: handleSelect, vertical: true })
+          logo && /* @__PURE__ */ jsx18(LogoButton, { logo }),
+          /* @__PURE__ */ jsx18(NavItems, { items, selectedItem, onSelect: handleSelect, vertical: true })
         ]
       }
     ),
-    /* @__PURE__ */ jsx17(
+    /* @__PURE__ */ jsx18(
       "nav",
       {
-        className: twMerge9(
+        className: twMerge10(
           "flex md:hidden fixed bottom-4 left-1/2 z-[var(--z-nav)] -translate-x-1/2 items-center gap-3",
           className
         ),
         style,
-        children: /* @__PURE__ */ jsx17(
+        children: /* @__PURE__ */ jsx18(
           "div",
           {
             className: "flex items-center gap-1 rounded-[var(--radius-full)] bg-[var(--md-sys-color-surface)] p-1",
             style: { boxShadow: "var(--shadow-floating)" },
-            children: /* @__PURE__ */ jsx17(NavItems, { items, selectedItem, onSelect: handleSelect, vertical: false })
+            children: /* @__PURE__ */ jsx18(NavItems, { items, selectedItem, onSelect: handleSelect, vertical: false })
           }
         )
       }
@@ -2677,11 +2759,11 @@ function Navbar({
 
 // src/dragScroll/dragScroll.jsx
 import { useCallback as useCallback3, useEffect as useEffect7, useLayoutEffect, useRef as useRef12, useState as useState9 } from "react";
-import { twMerge as twMerge10 } from "tailwind-merge";
+import { twMerge as twMerge11 } from "tailwind-merge";
 import gsap11 from "gsap";
 import { Draggable as Draggable2 } from "gsap/Draggable";
 import { InertiaPlugin } from "gsap/InertiaPlugin";
-import { jsx as jsx18 } from "react/jsx-runtime";
+import { jsx as jsx19 } from "react/jsx-runtime";
 gsap11.registerPlugin(Draggable2, InertiaPlugin);
 var DRAG_TYPE = { y: "scrollTop", x: "scrollLeft", both: "scroll" };
 var EDGE_RESISTANCE = 0.85;
@@ -2764,11 +2846,11 @@ function DragScroll({
   const size = fadeSize ?? 32;
   const [fadeStart, fadeEnd] = useEdgeFade(scrollRef, axis, fade ? size : 0);
   const horizontal = axis === "x";
-  return /* @__PURE__ */ jsx18(
+  return /* @__PURE__ */ jsx19(
     "div",
     {
       ref: scrollRef,
-      className: twMerge10(fade && (horizontal ? "mott-fade-x" : "mott-fade-y"), className),
+      className: twMerge11(fade && (horizontal ? "mott-fade-x" : "mott-fade-y"), className),
       style: {
         overflowX: horizontal || axis === "both" ? "auto" : "hidden",
         overflowY: horizontal ? "hidden" : "auto",
@@ -2784,8 +2866,8 @@ function DragScroll({
 
 // src/shapes/shapes.jsx
 import { forwardRef as forwardRef2, useId as useId5 } from "react";
-import { twMerge as twMerge11 } from "tailwind-merge";
-import { Fragment as Fragment2, jsx as jsx19, jsxs as jsxs11 } from "react/jsx-runtime";
+import { twMerge as twMerge12 } from "tailwind-merge";
+import { Fragment as Fragment2, jsx as jsx20, jsxs as jsxs11 } from "react/jsx-runtime";
 var SIZE_TOKEN2 = {
   sm: "var(--control-size-sm)",
   md: "var(--control-size-md)",
@@ -2818,7 +2900,7 @@ var Shape = forwardRef2(function Shape2({
   const on = contentColor ?? ACCENT_ON[color] ?? "inherit";
   const decorative = !label && children == null;
   return /* @__PURE__ */ jsxs11(Fragment2, { children: [
-    /* @__PURE__ */ jsx19(
+    /* @__PURE__ */ jsx20(
       "svg",
       {
         "aria-hidden": "true",
@@ -2826,17 +2908,17 @@ var Shape = forwardRef2(function Shape2({
         width: "0",
         height: "0",
         style: { position: "absolute", width: 0, height: 0, overflow: "hidden" },
-        children: /* @__PURE__ */ jsx19("defs", { children: /* @__PURE__ */ jsx19("clipPath", { id: clipId, clipPathUnits: "objectBoundingBox", children: /* @__PURE__ */ jsx19("path", { d: shapePath(name, { points }), transform: `scale(0.01)${spin(rotate)}` }) }) })
+        children: /* @__PURE__ */ jsx20("defs", { children: /* @__PURE__ */ jsx20("clipPath", { id: clipId, clipPathUnits: "objectBoundingBox", children: /* @__PURE__ */ jsx20("path", { d: shapePath(name, { points }), transform: `scale(0.01)${spin(rotate)}` }) }) })
       }
     ),
-    /* @__PURE__ */ jsx19(
+    /* @__PURE__ */ jsx20(
       "div",
       {
         ref,
         role: label ? "img" : void 0,
         "aria-label": label,
         "aria-hidden": decorative || void 0,
-        className: twMerge11("inline-flex shrink-0 items-center justify-center", className),
+        className: twMerge12("inline-flex shrink-0 items-center justify-center", className),
         style: {
           width: box,
           height: box,
@@ -2857,7 +2939,7 @@ var shapes_default = Shape;
 import { useMemo as useMemo3 } from "react";
 import { Style, Avatar as Dicebear } from "@dicebear/core";
 import critters from "@dicebear/styles/critters.json";
-import { jsx as jsx20 } from "react/jsx-runtime";
+import { jsx as jsx21 } from "react/jsx-runtime";
 var SIZE_TOKEN3 = {
   sm: "var(--control-size-sm)",
   md: "var(--control-size-md)",
@@ -2963,7 +3045,7 @@ function Avatar({
   }), [styleDefinition, options, seed]);
   const box = SIZE_TOKEN3[size] ?? size;
   const unselectable = { userSelect: "none", WebkitUserSelect: "none", WebkitUserDrag: "none" };
-  const image = /* @__PURE__ */ jsx20(
+  const image = /* @__PURE__ */ jsx21(
     "img",
     {
       src: uri,
@@ -2975,7 +3057,7 @@ function Avatar({
     }
   );
   if (!shape) return image;
-  return /* @__PURE__ */ jsx20(shapes_default, { name: shape, size, className, style, ...props, children: image });
+  return /* @__PURE__ */ jsx21(shapes_default, { name: shape, size, className, style, ...props, children: image });
 }
 export {
   AnchoredAnimation,
@@ -3001,6 +3083,8 @@ export {
   Search,
   Select,
   shapes_default as Shape,
+  TYPESCALE_ROLES,
+  Text,
   Textarea,
   ThemeModal,
   ThemeProvider,

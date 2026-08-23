@@ -253,6 +253,7 @@ suave de la familia neutra y `ghost` no tiene superficie que suavizar, así que 
 | `DragScroll` / `useDragScroll` | scroll arrastrable con inercia y degradado en los bordes; el hook para tu propio elemento |
 | `Shape` | las cinco formas de Material 3 como contenedor que recorta: `triangle`, `diamond`, `arch`, `flower`, `cookie` |
 | `Avatar` | avatar de DiceBear a partir de un `seed`; `shape` lo recorta con cualquier forma de M3 |
+| `Text` | los quince roles de la escala tipográfica de M3, como componente |
 | `ModalAnimation`, `MorphAnimation`, `AnchoredAnimation` | las clases de animación, más las instancias ya armadas `morphAnimation` y `anchoredAnimation` |
 
 **Para las props exactas, los valores permitidos y los defaults, leé
@@ -315,6 +316,69 @@ Se llama `styleDefinition` y no `style` a propósito: acá `style` es el style i
 todos los demás componentes. El render se cachea y es determinista, así que una lista que scrollea no
 vuelve a dibujar las mismas caras.
 
+### Tipografía
+
+El texto usa la **escala tipográfica de Material 3**: quince roles — `display`, `headline`, `title`,
+`body` y `label`, cada uno en `large` / `medium` / `small`. Un rol dice *qué es* un texto, y trae
+junto su tamaño, interlineado, tracking y peso, así que el label de un botón es `label-large` en
+todos lados y no puede desviarse de un componente a otro.
+
+```jsx
+import { Text } from '@danelmott/mott-design-components';
+
+<Text variant="headline-small" as="h2">Título</Text>
+<Text variant="body-medium" tone="muted">Texto de apoyo</Text>
+
+<span className="mott-label-large">o la clase utility</span>
+```
+
+`variant` es cómo se ve y `as` es qué es — separados, porque si no terminás eligiendo `h1` porque
+era el grande.
+
+**La fuente se nombra en un solo lugar.** Los quince roles apuntan a dos tokens de referencia, así
+que mudar el sistema a otra fuente son dos líneas:
+
+```css
+--md-ref-typeface-brand: 'DM Sans', sans-serif;   /* display, headline, title-large */
+--md-ref-typeface-plain: 'DM Sans', sans-serif;   /* body, label, title */
+```
+
+Los tamaños, interlineados y pesos salen del archivo de tokens de `@material/web`. **El tracking es
+lo único que se aparta de M3** — y se aparta, sobre todo, quitándose del medio.
+
+Los números de tracking de M3 están medidos sobre Roboto, una fuente sin eje óptico, donde el
+letter-spacing es la única palanca que hay para compensar el tamaño. DM Sans trae esa palanca adentro
+del archivo: un eje `opsz` de 9 a 40 que dibujó el propio diseñador y que, al mismo tamaño nominal,
+renderiza un titular de 45px **9.5% más angosto** y el texto de 11px **0.6% más abierto** que la
+misma fuente clavada en su default de 14px. Es la misma corrección que persigue el tracking, pero
+redibujando las letras en vez de separarlas a la fuerza.
+
+Así que la hace el eje. `display`, `headline`, `title` y `body-large` quedan en `0` de tracking; solo
+los roles chicos conservan un valor positivo suave, donde el texto de interfaz pide más aire del que
+da el eje por sí solo. Lo que queda va en `em` y no en el `rem` de M3, para que escale con el tamaño
+al que el texto se renderiza de verdad.
+
+**El eje solo llega si la URL de la fuente lo pide.** Ojo con el `opsz,wght@9..40` del import:
+
+```css
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,100..1000&display=swap');
+```
+
+Una URL `wght@400;500;700` pelada devuelve un archivo de 37 KB con el eje ya instanciado: todos los
+tamaños se dibujan desde el diseño de 14px y el ajuste de arriba, sencillamente, no pasa. El archivo
+variable pesa 63 KB y cubre todos los pesos, así que es una sola petición igual.
+`font-optical-sizing: auto` en `body` prende el eje; las clases `mott-*` lo tienen sí o sí, porque el
+shorthand `font` que usan resetea esa propiedad a `auto`.
+
+Una advertencia si usás los tokens a mano: el compuesto `--md-sys-typescale-<rol>` es un shorthand
+`font`, y esa propiedad no tiene lugar para el letter-spacing, así que hay que aplicar
+`--md-sys-typescale-<rol>-tracking` al lado. Las clases `mott-*` y `<Text>` ya lo hacen.
+
+Los controles con texto centrado (`mott-btn`, y lo que lleve `mott-trim`) además recortan el
+medio-interlineado con `text-box`, así el label queda ópticamente centrado en vez de apoyado abajo.
+Está detrás de un `@supports` — Firefox todavía no lo soporta — y el padding está puesto para
+funcionar en los dos casos.
+
 ### Toasts
 
 ```jsx
@@ -355,7 +419,7 @@ define:
 
 | grupo | tokens |
 |---|---|
-| Tipografía | `--font-family`, `--font-regular/medium`, `--text-xs` → `--text-4xl`, `--leading-*`, `--tracking-*` |
+| Tipografía | `--md-ref-typeface-brand/plain`, `--md-ref-typeface-weight-*`, `--md-sys-typescale-<rol>-{font,size,line-height,tracking,weight}` para los quince roles, `--font-family`, `--tracking-caps` |
 | Radios | `--radius-sm`, `--radius-lg`, `--radius-default`, `--radius-full`, `--radius-modal`, `--control-radius` |
 | Espaciado | `--pad-button`, `--pad-input`, `--pad-card`, `--pad-badge-*`, `--gap-tight` → `--gap-page` |
 | Tamaños | `--sm-icon` → `--xl-icon`, `--control-size-sm/md/lg` |

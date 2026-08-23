@@ -1,41 +1,128 @@
 /*design tokens for mott*/
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,100..1000&display=swap');
 @import 'material-symbols/rounded.css';
 @import "tailwindcss";
 @source "../src";
 
 
 :root {
-    --font-family: 'DM Sans', sans-serif;
-    --font-regular: 400;
-    --font-medium: 500;
-    --leading-tight: 1.1;   /* large headings */
-    --leading-snug: 1.25;  /* medium headings */
-    --leading-normal: 1.5;   /* body */
-    --leading-relaxed: 1.6;   /* long body / paragraphs */
-    --tracking-display: -0.02em;  /* 48px+ */
-    --tracking-h1: -0.015em; /* 30-36px */
-    --tracking-h3: -0.01em;  /* 24px */
-    --tracking-h4: -0.005em; /* 18-20px */
-    --tracking-body: 0em;     /* 14-16px */
-    --tracking-label: 0.02em;  /* 12px */
-    --tracking-caps: 0.06em;  /* uppercase, any small size */
-    --text-xs: 0.75rem;   /* 12px */
-    --text-sm: 0.875rem;  /* 14px */
-    --text-base: 1rem;      /* 16px - body */
-    --text-md: 1.125rem;  /* 18px */
-    --text-lg: 1.25rem;   /* 20px */
-    --text-xl: 1.5rem;    /* 24px */
-    --text-2xl: 1.875rem;  /* 30px */
-    --text-3xl: 2.25rem;   /* 36px */
-    --text-4xl: 3rem;      /* 48px */
+    --md-ref-typeface-brand: 'DM Sans', sans-serif;
+    --md-ref-typeface-plain: 'DM Sans', sans-serif;
+    --md-ref-typeface-weight-regular: 400;
+    --md-ref-typeface-weight-medium: 500;
+    --md-ref-typeface-weight-bold: 700;
+
+    --font-family: var(--md-ref-typeface-plain);
+
+    /* The typescale, one block per role. Sizes and line-heights are M3's; the tracking is not. */
+    /* M3's numbers were measured on Roboto, and DM Sans already solves the same problem better: */
+    /* its `opsz` axis narrows display text by up to 8.6% and opens 11px text by 0.5% on its own. */
+    /* Layering M3's tracking on top would pay for that compensation twice, so display, headline, */
+    /* title and body-large sit at 0 and let the font do it. What is left is a light positive */
+    /* touch on the small roles, where UI micro-copy wants more air than the axis alone gives. */
+    --md-sys-typescale-display-large-font: var(--md-ref-typeface-brand);
+    --md-sys-typescale-display-large-size: 3.5625rem;            /* 57px */
+    --md-sys-typescale-display-large-line-height: 4rem;
+    --md-sys-typescale-display-large-tracking: 0em;
+    --md-sys-typescale-display-large-weight: var(--md-ref-typeface-weight-regular);
+    --md-sys-typescale-display-medium-font: var(--md-ref-typeface-brand);
+    --md-sys-typescale-display-medium-size: 2.8125rem;            /* 45px */
+    --md-sys-typescale-display-medium-line-height: 3.25rem;
+    --md-sys-typescale-display-medium-tracking: 0em;
+    --md-sys-typescale-display-medium-weight: var(--md-ref-typeface-weight-regular);
+    --md-sys-typescale-display-small-font: var(--md-ref-typeface-brand);
+    --md-sys-typescale-display-small-size: 2.25rem;            /* 36px */
+    --md-sys-typescale-display-small-line-height: 2.75rem;
+    --md-sys-typescale-display-small-tracking: 0em;
+    --md-sys-typescale-display-small-weight: var(--md-ref-typeface-weight-regular);
+    --md-sys-typescale-headline-large-font: var(--md-ref-typeface-brand);
+    --md-sys-typescale-headline-large-size: 2rem;            /* 32px */
+    --md-sys-typescale-headline-large-line-height: 2.5rem;
+    --md-sys-typescale-headline-large-tracking: 0em;
+    --md-sys-typescale-headline-large-weight: var(--md-ref-typeface-weight-regular);
+    --md-sys-typescale-headline-medium-font: var(--md-ref-typeface-brand);
+    --md-sys-typescale-headline-medium-size: 1.75rem;            /* 28px */
+    --md-sys-typescale-headline-medium-line-height: 2.25rem;
+    --md-sys-typescale-headline-medium-tracking: 0em;
+    --md-sys-typescale-headline-medium-weight: var(--md-ref-typeface-weight-regular);
+    --md-sys-typescale-headline-small-font: var(--md-ref-typeface-brand);
+    --md-sys-typescale-headline-small-size: 1.5rem;            /* 24px */
+    --md-sys-typescale-headline-small-line-height: 2rem;
+    --md-sys-typescale-headline-small-tracking: 0em;
+    --md-sys-typescale-headline-small-weight: var(--md-ref-typeface-weight-regular);
+    --md-sys-typescale-title-large-font: var(--md-ref-typeface-brand);
+    --md-sys-typescale-title-large-size: 1.375rem;            /* 22px */
+    --md-sys-typescale-title-large-line-height: 1.75rem;
+    --md-sys-typescale-title-large-tracking: 0em;
+    --md-sys-typescale-title-large-weight: var(--md-ref-typeface-weight-regular);
+    --md-sys-typescale-title-medium-font: var(--md-ref-typeface-plain);
+    --md-sys-typescale-title-medium-size: 1rem;            /* 16px */
+    --md-sys-typescale-title-medium-line-height: 1.5rem;
+    --md-sys-typescale-title-medium-tracking: 0em;
+    --md-sys-typescale-title-medium-weight: var(--md-ref-typeface-weight-medium);
+    --md-sys-typescale-title-small-font: var(--md-ref-typeface-plain);
+    --md-sys-typescale-title-small-size: 0.875rem;            /* 14px */
+    --md-sys-typescale-title-small-line-height: 1.25rem;
+    --md-sys-typescale-title-small-tracking: 0em;
+    --md-sys-typescale-title-small-weight: var(--md-ref-typeface-weight-medium);
+    --md-sys-typescale-body-large-font: var(--md-ref-typeface-plain);
+    --md-sys-typescale-body-large-size: 1rem;            /* 16px */
+    --md-sys-typescale-body-large-line-height: 1.5rem;
+    --md-sys-typescale-body-large-tracking: 0em;
+    --md-sys-typescale-body-large-weight: var(--md-ref-typeface-weight-regular);
+    --md-sys-typescale-body-medium-font: var(--md-ref-typeface-plain);
+    --md-sys-typescale-body-medium-size: 0.875rem;            /* 14px */
+    --md-sys-typescale-body-medium-line-height: 1.25rem;
+    --md-sys-typescale-body-medium-tracking: 0.003em;
+    --md-sys-typescale-body-medium-weight: var(--md-ref-typeface-weight-regular);
+    --md-sys-typescale-body-small-font: var(--md-ref-typeface-plain);
+    --md-sys-typescale-body-small-size: 0.75rem;            /* 12px */
+    --md-sys-typescale-body-small-line-height: 1rem;
+    --md-sys-typescale-body-small-tracking: 0.006em;
+    --md-sys-typescale-body-small-weight: var(--md-ref-typeface-weight-regular);
+    --md-sys-typescale-label-large-font: var(--md-ref-typeface-plain);
+    --md-sys-typescale-label-large-size: 0.875rem;            /* 14px */
+    --md-sys-typescale-label-large-line-height: 1.25rem;
+    --md-sys-typescale-label-large-tracking: 0.004em;
+    --md-sys-typescale-label-large-weight: var(--md-ref-typeface-weight-medium);
+    --md-sys-typescale-label-medium-font: var(--md-ref-typeface-plain);
+    --md-sys-typescale-label-medium-size: 0.75rem;            /* 12px */
+    --md-sys-typescale-label-medium-line-height: 1rem;
+    --md-sys-typescale-label-medium-tracking: 0.008em;
+    --md-sys-typescale-label-medium-weight: var(--md-ref-typeface-weight-medium);
+    --md-sys-typescale-label-small-font: var(--md-ref-typeface-plain);
+    --md-sys-typescale-label-small-size: 0.6875rem;            /* 11px */
+    --md-sys-typescale-label-small-line-height: 1rem;
+    --md-sys-typescale-label-small-tracking: 0.010em;
+    --md-sys-typescale-label-small-weight: var(--md-ref-typeface-weight-medium);
+
+    --md-sys-typescale-display-large: var(--md-sys-typescale-display-large-weight) var(--md-sys-typescale-display-large-size)/var(--md-sys-typescale-display-large-line-height) var(--md-sys-typescale-display-large-font);
+    --md-sys-typescale-display-medium: var(--md-sys-typescale-display-medium-weight) var(--md-sys-typescale-display-medium-size)/var(--md-sys-typescale-display-medium-line-height) var(--md-sys-typescale-display-medium-font);
+    --md-sys-typescale-display-small: var(--md-sys-typescale-display-small-weight) var(--md-sys-typescale-display-small-size)/var(--md-sys-typescale-display-small-line-height) var(--md-sys-typescale-display-small-font);
+    --md-sys-typescale-headline-large: var(--md-sys-typescale-headline-large-weight) var(--md-sys-typescale-headline-large-size)/var(--md-sys-typescale-headline-large-line-height) var(--md-sys-typescale-headline-large-font);
+    --md-sys-typescale-headline-medium: var(--md-sys-typescale-headline-medium-weight) var(--md-sys-typescale-headline-medium-size)/var(--md-sys-typescale-headline-medium-line-height) var(--md-sys-typescale-headline-medium-font);
+    --md-sys-typescale-headline-small: var(--md-sys-typescale-headline-small-weight) var(--md-sys-typescale-headline-small-size)/var(--md-sys-typescale-headline-small-line-height) var(--md-sys-typescale-headline-small-font);
+    --md-sys-typescale-title-large: var(--md-sys-typescale-title-large-weight) var(--md-sys-typescale-title-large-size)/var(--md-sys-typescale-title-large-line-height) var(--md-sys-typescale-title-large-font);
+    --md-sys-typescale-title-medium: var(--md-sys-typescale-title-medium-weight) var(--md-sys-typescale-title-medium-size)/var(--md-sys-typescale-title-medium-line-height) var(--md-sys-typescale-title-medium-font);
+    --md-sys-typescale-title-small: var(--md-sys-typescale-title-small-weight) var(--md-sys-typescale-title-small-size)/var(--md-sys-typescale-title-small-line-height) var(--md-sys-typescale-title-small-font);
+    --md-sys-typescale-body-large: var(--md-sys-typescale-body-large-weight) var(--md-sys-typescale-body-large-size)/var(--md-sys-typescale-body-large-line-height) var(--md-sys-typescale-body-large-font);
+    --md-sys-typescale-body-medium: var(--md-sys-typescale-body-medium-weight) var(--md-sys-typescale-body-medium-size)/var(--md-sys-typescale-body-medium-line-height) var(--md-sys-typescale-body-medium-font);
+    --md-sys-typescale-body-small: var(--md-sys-typescale-body-small-weight) var(--md-sys-typescale-body-small-size)/var(--md-sys-typescale-body-small-line-height) var(--md-sys-typescale-body-small-font);
+    --md-sys-typescale-label-large: var(--md-sys-typescale-label-large-weight) var(--md-sys-typescale-label-large-size)/var(--md-sys-typescale-label-large-line-height) var(--md-sys-typescale-label-large-font);
+    --md-sys-typescale-label-medium: var(--md-sys-typescale-label-medium-weight) var(--md-sys-typescale-label-medium-size)/var(--md-sys-typescale-label-medium-line-height) var(--md-sys-typescale-label-medium-font);
+    --md-sys-typescale-label-small: var(--md-sys-typescale-label-small-weight) var(--md-sys-typescale-label-small-size)/var(--md-sys-typescale-label-small-line-height) var(--md-sys-typescale-label-small-font);
+
+    --tracking-caps: 0.06em;
+
     /*padding and border tokens*/
     --radius-sm: 10px;
     --radius-lg: 16px;
     --radius-default: 24px;
     --radius-full: 9999px;
     --radius-modal: 24px;
-    --pad-button: 18px 32px;
+    /* 10 + 20 (label-large line-height) + 10 = the 40px tall button M3 draws. Sized for the */
+    /* label it now carries: at the old 18px 32px the 14px text sat marooned in the middle. */
+    --pad-button: 10px 24px;
     --pad-button-icon: 12px;
     --pad-input: 13px 18px;
     --pad-card: 24px;
@@ -230,6 +317,13 @@
 
 body {
     font-family: var(--font-family);
+    /* DM Sans carries an `opsz` axis, 9-40: the designer drew the letterforms differently for the */
+    /* size they will be read at. `auto` sets that axis from the actual font-size, and is the CSS */
+    /* initial value - declared anyway because the file Google serves defaults the axis to 9, so a */
+    /* reset that says `none` would draw a 57px headline with the shapes meant for 9px. Text in a */
+    /* `mott-*` role is covered either way: the `font:` shorthand those classes use resets */
+    /* font-optical-sizing to auto. This line is for everything else that only inherits the family. */
+    font-optical-sizing: auto;
     background-color: var(--md-sys-color-surface);
     color: var(--md-sys-color-on-surface);
 }
@@ -251,12 +345,84 @@ body {
     initial-value: 0px;
 }
 
+
+
+@supports (text-box: trim-both cap alphabetic) {
+    .mott-btn,
+    .mott-btn-in-group,
+    .mott-trim {
+        text-box: trim-both cap alphabetic;
+    }
+}
+
 @property --mott-fade-end {
     syntax: '<length>';
     inherits: false;
     initial-value: 0px;
 }
 
+
+/*texts classes*/
+@utility mott-display-large {
+  font: var(--md-sys-typescale-display-large);
+  letter-spacing: var(--md-sys-typescale-display-large-tracking);
+}
+@utility mott-display-medium {
+  font: var(--md-sys-typescale-display-medium);
+  letter-spacing: var(--md-sys-typescale-display-medium-tracking);
+}
+@utility mott-display-small {
+  font: var(--md-sys-typescale-display-small);
+  letter-spacing: var(--md-sys-typescale-display-small-tracking);
+}
+@utility mott-headline-large {
+  font: var(--md-sys-typescale-headline-large);
+  letter-spacing: var(--md-sys-typescale-headline-large-tracking);
+}
+@utility mott-headline-medium {
+  font: var(--md-sys-typescale-headline-medium);
+  letter-spacing: var(--md-sys-typescale-headline-medium-tracking);
+}
+@utility mott-headline-small {
+  font: var(--md-sys-typescale-headline-small);
+  letter-spacing: var(--md-sys-typescale-headline-small-tracking);
+}
+@utility mott-title-large {
+  font: var(--md-sys-typescale-title-large);
+  letter-spacing: var(--md-sys-typescale-title-large-tracking);
+}
+@utility mott-title-medium {
+  font: var(--md-sys-typescale-title-medium);
+  letter-spacing: var(--md-sys-typescale-title-medium-tracking);
+}
+@utility mott-title-small {
+  font: var(--md-sys-typescale-title-small);
+  letter-spacing: var(--md-sys-typescale-title-small-tracking);
+}
+@utility mott-body-large {
+  font: var(--md-sys-typescale-body-large);
+  letter-spacing: var(--md-sys-typescale-body-large-tracking);
+}
+@utility mott-body-medium {
+  font: var(--md-sys-typescale-body-medium);
+  letter-spacing: var(--md-sys-typescale-body-medium-tracking);
+}
+@utility mott-body-small {
+  font: var(--md-sys-typescale-body-small);
+  letter-spacing: var(--md-sys-typescale-body-small-tracking);
+}
+@utility mott-label-large {
+  font: var(--md-sys-typescale-label-large);
+  letter-spacing: var(--md-sys-typescale-label-large-tracking);
+}
+@utility mott-label-medium {
+  font: var(--md-sys-typescale-label-medium);
+  letter-spacing: var(--md-sys-typescale-label-medium-tracking);
+}
+@utility mott-label-small {
+  font: var(--md-sys-typescale-label-small);
+  letter-spacing: var(--md-sys-typescale-label-small-tracking);
+}
 
 @utility mott-fade-y {
     mask-image: linear-gradient(
@@ -319,9 +485,9 @@ body {
   border: 0;
   cursor: pointer;
 
-  font-size: var(--text-md);
-  letter-spacing: var(--tracking-h4);
-  font-weight: var(--font-medium);
+  /* the M3 role for a button label - size, line-height and weight arrive together */
+  font: var(--md-sys-typescale-label-large);
+  letter-spacing: var(--md-sys-typescale-label-large-tracking);
 
 
   transition-property: background-color, color;
@@ -356,9 +522,9 @@ body {
   border: 0;
   cursor: pointer;
 
-  font-size: var(--text-md);
-  letter-spacing: var(--tracking-h4);
-  font-weight: var(--font-medium);
+  /* the M3 role for a button label - size, line-height and weight arrive together */
+  font: var(--md-sys-typescale-label-large);
+  letter-spacing: var(--md-sys-typescale-label-large-tracking);
 
   transition-property: background-color, color, transform;
   transition-duration: var(--duration-instant);
@@ -421,10 +587,8 @@ body {
 @media (min-width: 1280px) { }
 @media (min-width: 1536px) { }
 
-/* Anyone who asked their OS for less motion gets the same states, arrived at instantly. 1ms rather
-   than 0s on purpose: a zero-length transition never fires transitionend, and code that waits on
-   it would hang. The GSAP half of the library is handled separately by `dur()` in
-   src/animations/motion.js - CSS cannot reach those tweens. */
+
+
 @media (prefers-reduced-motion: reduce) {
     *,
     *::before,

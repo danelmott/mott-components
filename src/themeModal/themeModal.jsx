@@ -82,8 +82,8 @@ export default function ThemeModal({ open, onClose, triggerRef, title = 'Aparien
                 <div className="flex items-center gap-[var(--gap-group)]">
                     <Icon name="palette" size="lg" style={{ color: 'var(--md-sys-color-primary)' }} />
                     <h2
-                        className="font-[number:var(--font-medium)] tracking-[var(--tracking-h3)]"
-                        style={{ fontSize: 'var(--text-xl)', color: 'var(--md-sys-color-on-surface)' }}
+                        className="mott-headline-small"
+                        style={{ color: 'var(--md-sys-color-on-surface)' }}
                     >
                         {title}
                     </h2>
@@ -104,8 +104,8 @@ export default function ThemeModal({ open, onClose, triggerRef, title = 'Aparien
                 {/*CONTAINER FOR THEME MODES*/}
                 <div className="flex flex-col gap-[var(--gap-section)]">
                     <p
-                        className="tracking-[var(--tracking-label)]"
-                        style={{ fontSize: 'var(--text-sm)', color: 'var(--md-sys-color-on-surface-variant)' }}
+                        className="mott-body-medium"
+                        style={{ color: 'var(--md-sys-color-on-surface-variant)' }}
                     >
                         Modo
                     </p>
