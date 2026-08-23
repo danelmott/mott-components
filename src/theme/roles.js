@@ -109,3 +109,17 @@ export const ACCENTS = {
     warning: FAMILIES.warning.fill,
     danger: FAMILIES.danger.fill,
 };
+
+// The other half of ACCENTS - for each of those fills, the colour Material already contrast-checked
+// against it. A decorative surface that carries something on top (a Shape with an icon or a letter
+// inside) reads from here, so the consumer never has to pick a readable colour by hand. Keyed the
+// same as ACCENTS on purpose: whatever `color` resolves to a surface up there resolves to its
+// counterpart down here.
+export const ACCENT_ON = {
+    primary: FAMILIES.primary.on,
+    info: FAMILIES.primary.on,
+    secondary: FAMILIES.secondary.on,
+    success: FAMILIES.success.on,
+    warning: FAMILIES.warning.on,
+    danger: FAMILIES.danger.on,
+};

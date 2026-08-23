@@ -16,6 +16,9 @@ export { default as Loading } from './src/loading/loading.jsx';
 export { default as Progress } from './src/loading/progress.jsx';
 export { default as Navbar } from './src/navbar/navbar.jsx';
 export { default as DragScroll, useDragScroll } from './src/dragScroll/dragScroll.jsx';
+export { default as Shape } from './src/shapes/shapes.jsx';
+export { default as Avatar } from './src/avatars/avatars.jsx';
+export { SHAPE_NAMES } from './src/shapes/shapePaths.js';
 
 export { ModalAnimation, MorphAnimation, AnchoredAnimation, morphAnimation, anchoredAnimation } from './src/animations/modalAnimation.js';
 export { DURATION, EASE, MORPH, CIRCLE_RADIUS, squircleRadius, prefersReducedMotion } from './src/animations/motion.js';

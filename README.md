@@ -249,12 +249,69 @@ soft step of the neutral family and `ghost` has no surface to soften, so on thos
 | `Progress` | determinate bar, or indeterminate when `value` is omitted |
 | `Navbar` | rail with items, optional logo, `top` or `center` alignment |
 | `DragScroll` / `useDragScroll` | drag-to-scroll with inertia and edge fade; hook form for your own element |
+| `Shape` | the five Material 3 shapes as a clipping container: `triangle`, `diamond`, `arch`, `flower`, `cookie` |
+| `Avatar` | seeded DiceBear avatar; `shape` clips it to any Material 3 shape |
 | `ModalAnimation`, `MorphAnimation`, `AnchoredAnimation` | the animation classes, plus the ready-made `morphAnimation` and `anchoredAnimation` instances |
 
 **For exact props, allowed values, and defaults, read
 [`src/utils/verifyTypes.js`](./src/utils/verifyTypes.js).** Every component validates its props
 through it at runtime, so that file *is* the specification — and a wrong prop tells you so in the
 console rather than failing silently.
+
+### Shapes
+
+`Shape` is a **clip**, not a drawing: the outline is applied to the element itself, so whatever you
+put inside takes the shape too — an image cut to a diamond instead of a rectangle sitting on top of
+one.
+
+```jsx
+import { Shape, Icon } from '@danelmott/mott-design-components';
+
+<Shape name="cookie" color="secondary">
+  <Icon name="favorite" size="lg" />
+</Shape>
+
+// any CSS colour, a custom size, and a shape rotated without tilting its content
+<Shape name="diamond" color="#7c3aed" size="120px" rotate={15}>
+  <img src={photo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+</Shape>
+
+// `flower` and `cookie` take a point count
+<Shape name="flower" points={12} color="warning" />
+```
+
+`color` follows the same rule as `Loading` and `Progress`: an accent name (`primary`, `info`,
+`secondary`, `success`, `warning`, `danger`) keeps following the theme, while any CSS colour is
+passed straight through. When the name comes from the palette, the content inside is painted with
+the `on-*` colour Material already contrast-checked against it — pass `contentColor` to override.
+
+### Avatars
+
+`Avatar` draws a [DiceBear](https://www.dicebear.com) avatar from a `seed`. The same seed always
+produces the same face, on every device and every reload, with nothing stored anywhere — a user with
+no picture still gets something recognisably theirs.
+
+```jsx
+import { Avatar } from '@danelmott/mott-design-components';
+
+<Avatar seed="danel" />
+<Avatar seed="danel" shape="cookie" size="120px" />   // clipped to the shape, not sitting on it
+```
+
+It ships with one style (`critters`) so the package does not drag every DiceBear style into your
+bundle — the definitions are large and imported statically. Any other style is one import away, and
+passing one drops the built-in critters options, since another style has different pieces:
+
+```jsx
+import lorelei from '@dicebear/styles/lorelei.json' with { type: 'json' };
+
+<Avatar seed="danel" styleDefinition={lorelei} shape="diamond" />
+<Avatar seed="ana" options={{ mouthProbability: 100 }} />   // any option the style defines
+```
+
+`styleDefinition` rather than `style` is deliberate: `style` means React's inline style here, as in
+every other component. Rendering is cached and deterministic, so a list that scrolls does not redraw
+the same faces.
 
 ### Toasts
 

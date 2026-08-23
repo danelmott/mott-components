@@ -107,6 +107,209 @@ var ACCENTS = {
   warning: FAMILIES.warning.fill,
   danger: FAMILIES.danger.fill
 };
+var ACCENT_ON = {
+  primary: FAMILIES.primary.on,
+  info: FAMILIES.primary.on,
+  secondary: FAMILIES.secondary.on,
+  success: FAMILIES.success.on,
+  warning: FAMILIES.warning.on,
+  danger: FAMILIES.danger.on
+};
+
+// src/shapes/shapePaths.js
+var TAU = Math.PI * 2;
+var BOX = 100;
+var GAP = 0.92;
+var round = (n) => Math.round(n * 100) / 100;
+var distance = ([ax, ay], [bx, by]) => Math.hypot(bx - ax, by - ay);
+var along = ([fx, fy], [tx, ty], length) => {
+  const span = distance([fx, fy], [tx, ty]) || 1;
+  return [fx + (tx - fx) / span * length, fy + (ty - fy) / span * length];
+};
+var polar = (angle, radius, [cx, cy] = [50, 50]) => [
+  cx + Math.cos(angle) * radius,
+  cy + Math.sin(angle) * radius
+];
+var lineTo = (to) => ({ type: "L", to });
+var arcTo = (to, radius, center, sweep) => ({ type: "A", to, radius, center, sweep });
+function turned(segment, from) {
+  const { center, sweep } = segment;
+  const start = Math.atan2(from[1] - center[1], from[0] - center[0]);
+  const end = Math.atan2(segment.to[1] - center[1], segment.to[0] - center[0]);
+  let delta = end - start;
+  if (sweep === 1 && delta < 0) delta += TAU;
+  if (sweep === 0 && delta > 0) delta -= TAU;
+  return { start, delta };
+}
+var STEPS = 12;
+function samples(segment, from) {
+  if (segment.type === "L") return [segment.to];
+  const { start, delta } = turned(segment, from);
+  const points = [];
+  for (let i = 1; i <= STEPS; i += 1) {
+    points.push(polar(start + delta * i / STEPS, segment.radius, segment.center));
+  }
+  return points;
+}
+function advances(start, segments) {
+  let cursor = start;
+  let previous2 = Math.atan2(start[1] - 50, start[0] - 50);
+  for (const segment of segments) {
+    for (const point of samples(segment, cursor)) {
+      const angle = Math.atan2(point[1] - 50, point[0] - 50);
+      let step = angle - previous2;
+      while (step > Math.PI) step -= TAU;
+      while (step < -Math.PI) step += TAU;
+      if (step < -1e-9) return false;
+      previous2 = angle;
+    }
+    cursor = segment.to;
+  }
+  return true;
+}
+function fit(start, segments) {
+  let cursor = start;
+  const points = [start];
+  for (const segment of segments) {
+    points.push(...samples(segment, cursor));
+    cursor = segment.to;
+  }
+  const xs = points.map(([x]) => x);
+  const ys = points.map(([, y]) => y);
+  const minX = Math.min(...xs);
+  const minY = Math.min(...ys);
+  const scaleX = BOX / (Math.max(...xs) - minX);
+  const scaleY = BOX / (Math.max(...ys) - minY);
+  const move = ([x, y]) => [(x - minX) * scaleX, (y - minY) * scaleY];
+  return [
+    move(start),
+    segments.map((segment) => segment.type === "L" ? lineTo(move(segment.to)) : {
+      ...segment,
+      to: move(segment.to),
+      // the two radii part company here - that is the ellipse the stretch creates
+      radius: [segment.radius * scaleX, segment.radius * scaleY]
+    })
+  ];
+}
+function serialize(start, segments) {
+  const xy = ([x, y]) => `${round(x)} ${round(y)}`;
+  const body = segments.map((segment) => {
+    if (segment.type === "L") return `L ${xy(segment.to)}`;
+    const [rx, ry] = segment.radius;
+    return `A ${round(Math.abs(rx))} ${round(Math.abs(ry))} 0 ${segment.large} ${segment.sweep} ${xy(segment.to)}`;
+  });
+  return `M ${xy(start)} ${body.join(" ")} Z`;
+}
+function build(start, segments) {
+  let cursor = start;
+  const flagged = segments.map((segment) => {
+    if (segment.type === "L") {
+      cursor = segment.to;
+      return segment;
+    }
+    const { delta } = turned(segment, cursor);
+    cursor = segment.to;
+    return { ...segment, large: Math.abs(delta) > Math.PI ? 1 : 0 };
+  });
+  return serialize(...fit(start, flagged));
+}
+function roundedPolygon(vertices, radius) {
+  const total = vertices.length;
+  const corners = vertices.map((vertex, index) => {
+    const previous2 = vertices[(index - 1 + total) % total];
+    const next = vertices[(index + 1) % total];
+    const incoming = Math.atan2(vertex[1] - previous2[1], vertex[0] - previous2[0]);
+    const outgoing = Math.atan2(next[1] - vertex[1], next[0] - vertex[0]);
+    let turn = outgoing - incoming;
+    while (turn <= -Math.PI) turn += TAU;
+    while (turn > Math.PI) turn -= TAU;
+    const half = (Math.PI - Math.abs(turn)) / 2;
+    const limit = Math.min(distance(previous2, vertex), distance(vertex, next)) / 2;
+    const cut = Math.min(radius / Math.tan(half), limit);
+    const start = along(vertex, previous2, cut);
+    const end = along(vertex, next, cut);
+    const bisector = Math.atan2(
+      (start[1] + end[1]) / 2 - vertex[1],
+      (start[0] + end[0]) / 2 - vertex[0]
+    );
+    return {
+      start,
+      end,
+      // the corner circle sits on the bisector, one hypotenuse away from the vertex
+      center: polar(bisector, cut / Math.cos(half), vertex),
+      radius: cut * Math.tan(half),
+      sweep: turn > 0 ? 1 : 0
+    };
+  });
+  const segments = [];
+  corners.forEach((corner, index) => {
+    if (index > 0) segments.push(lineTo(corner.start));
+    segments.push(arcTo(corner.end, corner.radius, corner.center, corner.sweep));
+  });
+  return build(corners[0].start, segments);
+}
+function scallop(points, { innerRadius, bumpRadius }) {
+  const step = TAU / points;
+  const start = -Math.PI / 2;
+  const k = Math.cos(Math.PI / points);
+  const clearance = Math.sin(Math.PI / points);
+  const widest = Math.min(bumpRadius, GAP * (50 * clearance) / (1 + clearance));
+  const filleted = (bump, inner) => {
+    const centre = 50 - bump;
+    const valley = (bump * bump - centre * centre - inner * inner + 2 * centre * k * inner) / (2 * (inner - centre * k - bump));
+    if (valley < 0.5) return null;
+    const bumpCentre = (i) => polar(start + step * i, centre);
+    const valleyCentre = (i) => polar(start + step * (i + 0.5), inner + valley);
+    const touch = (i, j) => along(bumpCentre(i), valleyCentre(j), bump);
+    const segments = [];
+    for (let i = 0; i < points; i += 1) {
+      segments.push(arcTo(touch(i, i), bump, bumpCentre(i), 1));
+      segments.push(arcTo(touch(i + 1, i), valley, valleyCentre(i), 0));
+    }
+    return { first: touch(0, -1), segments };
+  };
+  const onCore = (bump, inner) => {
+    const centre = 50 - bump;
+    const cosine = (inner * inner + centre * centre - bump * bump) / (2 * inner * centre);
+    if (cosine < -1 || cosine > 1) return null;
+    const reach = Math.acos(cosine);
+    if (reach >= step / 2) return null;
+    const segments = [];
+    for (let i = 0; i < points; i += 1) {
+      const angle = start + step * i;
+      segments.push(arcTo(polar(angle + reach, inner), bump, polar(angle, centre), 1));
+      segments.push(arcTo(polar(angle + step - reach, inner), inner, [50, 50], 1));
+    }
+    return { first: polar(start - reach, inner), segments };
+  };
+  for (let bump = widest; bump > 1; bump *= 0.9) {
+    for (let inner = innerRadius; inner < 50; inner += 1) {
+      for (const attempt of [filleted(bump, inner), onCore(bump, inner)]) {
+        if (attempt && advances(attempt.first, attempt.segments)) {
+          return build(attempt.first, attempt.segments);
+        }
+      }
+    }
+  }
+  return "M 50 0 A 50 50 0 1 1 49.99 0 Z";
+}
+var ARCH = "M 0 50 A 50 50 0 0 1 100 50 L 100 84 A 16 16 0 0 1 84 100 L 16 100 A 16 16 0 0 1 0 84 Z";
+var SHAPE_PATHS = {
+  triangle: roundedPolygon([[50, 0], [100, 100], [0, 100]], 17),
+  diamond: roundedPolygon([[50, 0], [100, 50], [50, 100], [0, 50]], 26),
+  arch: ARCH,
+  // deep valleys and a fat bump: each petal swings well past a half circle, so it comes out an
+  // oval joined to its neighbours by a narrow notch
+  flower: ({ points = 8 } = {}) => scallop(points, { innerRadius: 34, bumpRadius: 12.5 }),
+  // shallow valleys and a small bump: the wave barely dips, which is what a scalloped biscuit is
+  cookie: ({ points = 12 } = {}) => scallop(points, { innerRadius: 46, bumpRadius: 11 })
+};
+var SHAPE_NAMES = Object.keys(SHAPE_PATHS);
+var SCALLOPED_SHAPES = ["flower", "cookie"];
+var shapePath = (name, options) => {
+  const shape = SHAPE_PATHS[name];
+  return typeof shape === "function" ? shape(options) : shape;
+};
 
 // src/utils/verifyTypes.js
 var prefixLog = "[MOTT-COMPONENTS]";
@@ -247,6 +450,33 @@ function verifyTypesIcon({ name, size, filled: filled2, weight, grade, opticalSi
   assertRange("Icon", "weight", weight, 100, 700);
   assertRange("Icon", "grade", grade, -50, 200);
   assertRange("Icon", "opticalSize", opticalSize, 20, 48);
+  return true;
+}
+function verifyTypesShape({ name, size, color, contentColor, points, rotate, label } = {}) {
+  assertRequired("Shape", "name", name);
+  assertOneOf("Shape", "name", name, SHAPE_NAMES);
+  assertType("Shape", "size", size, "string");
+  assertType("Shape", "color", color, "string");
+  assertType("Shape", "contentColor", contentColor, "string");
+  assertType("Shape", "label", label, "string");
+  assertRange("Shape", "points", points, 3, 24);
+  assertRange("Shape", "rotate", rotate, -360, 360);
+  if (typeof color === "string" && !ACCENTS[color] && CONTROL_NAMES.includes(color)) {
+    warn("Shape", `\`color\` takes an accent (${Object.keys(ACCENTS).join(", ")}) or any CSS colour, not the button intent ${show(color)}.`);
+  }
+  if (points !== void 0 && points !== null && !SCALLOPED_SHAPES.includes(name)) {
+    warn("Shape", `\`points\` only applies to ${SCALLOPED_SHAPES.join(" and ")}: it does nothing on ${show(name)}.`);
+  }
+  return true;
+}
+function verifyTypesAvatar({ seed, styleDefinition, options, size, shape, alt } = {}) {
+  assertRequired("Avatar", "seed", seed);
+  assertType("Avatar", "seed", seed, "string");
+  assertType("Avatar", "size", size, "string");
+  assertType("Avatar", "alt", alt, "string");
+  assertOneOf("Avatar", "shape", shape, SHAPE_NAMES);
+  assertPlainObject("Avatar", "styleDefinition", styleDefinition);
+  assertPlainObject("Avatar", "options", options);
   return true;
 }
 function verifyTypesSelect({ options, onChange, label, placeholder, disabled } = {}) {
@@ -1558,10 +1788,10 @@ var AnchoredAnimation = class extends MorphAnimation {
   // Sits the panel `cover` px above and left of the trigger so it overlaps it, clamped to the viewport.
   computeAnchoredPosition(triggerRect, panelRect) {
     const margin = 8;
-    const fit = (value, size, viewport) => Math.max(margin, Math.min(value, viewport - size - margin));
+    const fit2 = (value, size, viewport) => Math.max(margin, Math.min(value, viewport - size - margin));
     return {
-      left: fit(triggerRect.left - this.cover, panelRect.width, window.innerWidth),
-      top: fit(triggerRect.top - this.cover, panelRect.height, window.innerHeight)
+      left: fit2(triggerRect.left - this.cover, panelRect.width, window.innerWidth),
+      top: fit2(triggerRect.top - this.cover, panelRect.height, window.innerHeight)
     };
   }
   place(panel, trigger) {
@@ -2551,8 +2781,205 @@ function DragScroll({
     }
   );
 }
+
+// src/shapes/shapes.jsx
+import { forwardRef as forwardRef2, useId as useId5 } from "react";
+import { twMerge as twMerge11 } from "tailwind-merge";
+import { Fragment as Fragment2, jsx as jsx19, jsxs as jsxs11 } from "react/jsx-runtime";
+var SIZE_TOKEN2 = {
+  sm: "var(--control-size-sm)",
+  md: "var(--control-size-md)",
+  lg: "var(--control-size-lg)"
+};
+var spin = (degrees) => {
+  if (!degrees) return "";
+  const radians = degrees * Math.PI / 180;
+  const inscribe = Math.round(1 / (Math.abs(Math.cos(radians)) + Math.abs(Math.sin(radians))) * 1e4) / 1e4;
+  return ` translate(50 50) scale(${inscribe}) rotate(${degrees}) translate(-50 -50)`;
+};
+var Shape = forwardRef2(function Shape2({
+  name,
+  children,
+  size = "lg",
+  color = "primary",
+  contentColor,
+  points,
+  rotate = 0,
+  label,
+  className,
+  style,
+  ...props
+}, ref) {
+  verifyTypesShape({ name, size, color, contentColor, points, rotate, label });
+  const clipId = `mott-shape-${useId5().replace(/:/g, "")}`;
+  if (!SHAPE_PATHS[name]) return null;
+  const box = SIZE_TOKEN2[size] ?? size;
+  const surface = ACCENTS[color] ?? color;
+  const on = contentColor ?? ACCENT_ON[color] ?? "inherit";
+  const decorative = !label && children == null;
+  return /* @__PURE__ */ jsxs11(Fragment2, { children: [
+    /* @__PURE__ */ jsx19(
+      "svg",
+      {
+        "aria-hidden": "true",
+        focusable: "false",
+        width: "0",
+        height: "0",
+        style: { position: "absolute", width: 0, height: 0, overflow: "hidden" },
+        children: /* @__PURE__ */ jsx19("defs", { children: /* @__PURE__ */ jsx19("clipPath", { id: clipId, clipPathUnits: "objectBoundingBox", children: /* @__PURE__ */ jsx19("path", { d: shapePath(name, { points }), transform: `scale(0.01)${spin(rotate)}` }) }) })
+      }
+    ),
+    /* @__PURE__ */ jsx19(
+      "div",
+      {
+        ref,
+        role: label ? "img" : void 0,
+        "aria-label": label,
+        "aria-hidden": decorative || void 0,
+        className: twMerge11("inline-flex shrink-0 items-center justify-center", className),
+        style: {
+          width: box,
+          height: box,
+          backgroundColor: surface,
+          color: on,
+          clipPath: `url(#${clipId})`,
+          ...style
+        },
+        ...props,
+        children
+      }
+    )
+  ] });
+});
+var shapes_default = Shape;
+
+// src/avatars/avatars.jsx
+import { useMemo as useMemo3 } from "react";
+import { Style, Avatar as Dicebear } from "@dicebear/core";
+import critters from "@dicebear/styles/critters.json";
+import { jsx as jsx20 } from "react/jsx-runtime";
+var SIZE_TOKEN3 = {
+  sm: "var(--control-size-sm)",
+  md: "var(--control-size-md)",
+  lg: "var(--control-size-lg)"
+};
+var CRITTERS_OPTIONS = {
+  backgroundColor: [
+    "b6e3f4",
+    "c0aede",
+    "d1d4f9",
+    "ffd5dc",
+    "ffdfbf",
+    "d9f2d9",
+    "0369a1",
+    "4338ca",
+    "a21caf",
+    "be123c",
+    "047857"
+  ],
+  backgroundColorAngle: -324,
+  backgroundColorFillStops: 5,
+  mouthProbability: 90,
+  topProbability: 80,
+  eyesVariant: [
+    "angry",
+    "bigPupils",
+    "close",
+    "closedLine",
+    "dots",
+    "happy",
+    "inward",
+    "mono",
+    "monoSleepy",
+    "round",
+    "sideeye",
+    "sleepy",
+    "squint",
+    "threeRow",
+    "trio",
+    "uneven",
+    "wide",
+    "wink"
+  ],
+  mouthVariant: [
+    "blep",
+    "catMouth",
+    "dot",
+    "grin",
+    "laugh",
+    "line",
+    "ooh",
+    "open",
+    "smile",
+    "smirk",
+    "teeth",
+    "tinySmile",
+    "tongue",
+    "tooth"
+  ],
+  // Explicitly off rather than simply unlisted: critters defines an `animation` component with no
+  // probability of its own, so leaving it out would hand the decision to whatever DiceBear
+  // defaults to. A probability of 0 is the only way to say "never" and have it stay said.
+  animationProbability: 0
+};
+var styles = /* @__PURE__ */ new WeakMap();
+var seen = 0;
+var styleFor = (definition) => {
+  let entry = styles.get(definition);
+  if (!entry) {
+    const style = new Style(definition);
+    entry = { style, id: style.id() ?? `style-${seen += 1}` };
+    styles.set(definition, entry);
+  }
+  return entry;
+};
+var LIMIT = 200;
+var drawn = /* @__PURE__ */ new Map();
+function render(definition, options) {
+  const { style, id } = styleFor(definition);
+  const key = JSON.stringify([id, options]);
+  if (drawn.has(key)) return drawn.get(key);
+  const uri = new Dicebear(style, options).toDataUri();
+  drawn.set(key, uri);
+  if (drawn.size > LIMIT) drawn.delete(drawn.keys().next().value);
+  return uri;
+}
+function Avatar({
+  seed,
+  styleDefinition = critters,
+  options,
+  size = "md",
+  shape,
+  alt,
+  className,
+  style,
+  ...props
+}) {
+  verifyTypesAvatar({ seed, styleDefinition, options, size, shape, alt });
+  const uri = useMemo3(() => render(styleDefinition, {
+    ...styleDefinition === critters ? CRITTERS_OPTIONS : null,
+    ...options,
+    seed
+  }), [styleDefinition, options, seed]);
+  const box = SIZE_TOKEN3[size] ?? size;
+  const unselectable = { userSelect: "none", WebkitUserSelect: "none", WebkitUserDrag: "none" };
+  const image = /* @__PURE__ */ jsx20(
+    "img",
+    {
+      src: uri,
+      alt: alt ?? seed,
+      draggable: false,
+      className: shape ? void 0 : className,
+      style: shape ? { width: "100%", height: "100%", objectFit: "cover", ...unselectable } : { width: box, height: box, display: "block", objectFit: "cover", ...unselectable, ...style },
+      ...shape ? null : props
+    }
+  );
+  if (!shape) return image;
+  return /* @__PURE__ */ jsx20(shapes_default, { name: shape, size, className, style, ...props, children: image });
+}
 export {
   AnchoredAnimation,
+  Avatar,
   button_default as Button,
   ButtonGroup,
   CIRCLE_RADIUS,
@@ -2570,8 +2997,10 @@ export {
   MorphAnimation,
   Navbar,
   Progress,
+  SHAPE_NAMES,
   Search,
   Select,
+  shapes_default as Shape,
   Textarea,
   ThemeModal,
   ThemeProvider,

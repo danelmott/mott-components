@@ -15,6 +15,9 @@ import Dropdown from '../src/dropdown/dropdown.jsx';
 import CustomModal from '../src/customModal/customModal.jsx';
 import { anchoredAnimation } from '../src/animations/modalAnimation.js';
 import Navbar from '../src/navbar/navbar.jsx';
+import Shape from '../src/shapes/shapes.jsx';
+import Avatar from '../src/avatars/avatars.jsx';
+import { SHAPE_NAMES } from '../src/shapes/shapePaths.js';
 import DragScroll from '../src/dragScroll/dragScroll.jsx';
 import { useTheme } from '../src/theme/themeContext.jsx';
 import ThemeModal from '../src/themeModal/themeModal.jsx';
@@ -585,6 +588,129 @@ export default function App() {
               <Button variant="default" onClick={() => setLogoPopoverOpen(false)}>Cerrar</Button>
             </div>
           </CustomModal>
+        </Section>
+
+        <Section title="Shape — las 5 formas de M3" wide>
+          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--md-sys-color-on-surface-variant)' }}>
+            El shape es un recorte, no un dibujo: el <code>clip-path</code> corta también a los children,
+            así que lo que va adentro toma la forma en vez de desbordarla. El color acepta un nombre del
+            tema o cualquier color CSS.
+          </p>
+          <Row>
+            {SHAPE_NAMES.map((name) => (
+              <div key={name} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+                <Shape name={name} label={name}>
+                  <Icon name="favorite" size="lg" />
+                </Shape>
+                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--md-sys-color-on-surface-variant)' }}>{name}</span>
+              </div>
+            ))}
+          </Row>
+        </Section>
+
+        <Section title="Avatar — seeded, y recortado por cada shape" wide>
+          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--md-sys-color-on-surface-variant)' }}>
+            El mismo <code>seed</code> dibuja siempre la misma cara, sin guardar nada en ningún lado. Acá está
+            el mismo seed pasado por las cinco formas: el avatar se corta con el contorno en vez de quedar
+            encima de él.
+          </p>
+          <Row>
+            {SHAPE_NAMES.map((name) => (
+              <div key={name} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+                <Avatar seed="danel" shape={name} size="120px" />
+                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--md-sys-color-on-surface-variant)' }}>{name}</span>
+              </div>
+            ))}
+          </Row>
+          <Row>
+            {['ana', 'brenda', 'carlos', 'delfina', 'eze', 'flor'].map((seed) => (
+              <div key={seed} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+                <Avatar seed={seed} shape="cookie" size="120px" />
+                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--md-sys-color-on-surface-variant)' }}>{seed}</span>
+              </div>
+            ))}
+          </Row>
+          <Row>
+            {['ana', 'brenda', 'carlos', 'delfina', 'eze', 'flor'].map((seed) => (
+              <Avatar key={seed} seed={seed} shape="flower" size="120px" />
+            ))}
+          </Row>
+        </Section>
+
+        <Section title="Avatar — tamaños y sin forma" wide>
+          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--md-sys-color-on-surface-variant)' }}>
+            Sin <code>shape</code> es una imagen cuadrada. Las fotos no se pueden seleccionar ni arrastrar: las
+            dos cosas dibujan el cuadrado que el recorte está tapando.
+          </p>
+          <Row>
+            <Avatar seed="danel" size="sm" />
+            <Avatar seed="danel" size="md" />
+            <Avatar seed="danel" size="lg" />
+            <Avatar seed="danel" size="120px" />
+            <Avatar seed="danel" size="120px" style={{ borderRadius: 'var(--radius-full)' }} />
+          </Row>
+          <Row>
+            {['ana', 'brenda', 'carlos', 'delfina'].map((seed) => (
+              <Avatar key={seed} seed={seed} shape="diamond" size="120px" />
+            ))}
+          </Row>
+        </Section>
+
+        <Section title="Shape — color, tamaño, points y rotate" wide>
+          <p style={{ fontSize: 'var(--text-sm)', color: 'var(--md-sys-color-on-surface-variant)' }}>
+            Los primeros cuatro siguen el tema (cambiá la semilla arriba y se repintan); el del hex crudo
+            no, y por eso su contenido hereda el color en vez de resolver uno legible solo.
+          </p>
+          <Row>
+            <Shape name="cookie" color="primary" size="sm" />
+            <Shape name="cookie" color="secondary" size="md" />
+            <Shape name="cookie" color="success" size="lg" />
+            <Shape name="cookie" color="danger" size="120px" />
+            <Shape name="cookie" color="#7c3aed" size="120px" />
+          </Row>
+          <Row>
+            <Shape name="cookie" points={6} color="warning">
+              <span style={{ fontWeight: 700 }}>6</span>
+            </Shape>
+            <Shape name="cookie" points={20} color="warning">
+              <span style={{ fontWeight: 700 }}>20</span>
+            </Shape>
+            <Shape name="flower" points={5} color="secondary">
+              <span style={{ fontWeight: 700 }}>5</span>
+            </Shape>
+            <Shape name="flower" points={12} color="secondary">
+              <span style={{ fontWeight: 700 }}>12</span>
+            </Shape>
+            {/* la forma gira, el ícono de adentro no */}
+            <Shape name="triangle" rotate={30} color="primary">
+              <Icon name="north" size="lg" />
+            </Shape>
+            <Shape name="arch" rotate={180} color="primary">
+              <Icon name="north" size="lg" />
+            </Shape>
+          </Row>
+          <Row>
+            {/* la prueba de que el recorte agarra a los children: una imagen rectangular adentro */}
+            <Shape name="diamond" size="120px">
+              <img
+                src="https://picsum.photos/200"
+                alt=""
+                draggable={false}
+                style={{ width: '100%', height: '100%', objectFit: 'cover', userSelect: 'none' }}
+              />
+            </Shape>
+            <Shape name="flower" size="120px">
+              <img
+                src="https://picsum.photos/201"
+                alt=""
+                draggable={false}
+                style={{ width: '100%', height: '100%', objectFit: 'cover', userSelect: 'none' }}
+              />
+            </Shape>
+            <Shape name="arch" size="120px" color="secondary">
+              <span style={{ fontSize: 'var(--text-2xl)', fontWeight: 700 }}>DM</span>
+            </Shape>
+          </Row>
         </Section>
 
         <Section title="Toast — API imperativa con useToast()" wide>

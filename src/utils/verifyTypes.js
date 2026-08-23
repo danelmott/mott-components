@@ -1,4 +1,5 @@
-import { CONTROL_NAMES } from '../theme/roles.js';
+import { CONTROL_NAMES, ACCENTS } from '../theme/roles.js';
+import { SHAPE_NAMES, SCALLOPED_SHAPES } from '../shapes/shapePaths.js';
 
 const prefixLog = '[MOTT-COMPONENTS]';
 
@@ -167,6 +168,47 @@ export function verifyTypesIcon({ name, size, filled, weight, grade, opticalSize
     assertRange('Icon', 'weight', weight, 100, 700);
     assertRange('Icon', 'grade', grade, -50, 200);
     assertRange('Icon', 'opticalSize', opticalSize, 20, 48);
+    return true;
+}
+
+export function verifyTypesShape({ name, size, color, contentColor, points, rotate, label } = {}) {
+    assertRequired('Shape', 'name', name);
+    assertOneOf('Shape', 'name', name, SHAPE_NAMES);
+    // `size`, `color` and `contentColor` resolve with `PRESETS[x] ?? x`, so they are open sets - see
+    // the note above CONTROL_SIZES. Only their type can be checked here.
+    assertType('Shape', 'size', size, 'string');
+    assertType('Shape', 'color', color, 'string');
+    assertType('Shape', 'contentColor', contentColor, 'string');
+    assertType('Shape', 'label', label, 'string');
+    // under 3 there is no star left to draw, and past 24 the tips are thinner than the border of the
+    // element they sit in
+    assertRange('Shape', 'points', points, 3, 24);
+    assertRange('Shape', 'rotate', rotate, -360, 360);
+    /*`action`, `support`, `default`... are the *button* vocabulary: intents for something you click.
+      A shape is decoration, so it takes an accent or a CSS colour instead - and since that is an open
+      set, an intent slipped in here would sail through as an invalid background and the shape would
+      come out transparent with nothing to explain why.*/
+    if (typeof color === 'string' && !ACCENTS[color] && CONTROL_NAMES.includes(color)) {
+        warn('Shape', `\`color\` takes an accent (${Object.keys(ACCENTS).join(', ')}) or any CSS colour, not the button intent ${show(color)}.`);
+    }
+    // silently ignoring it would look like the shape is broken, not like the prop is
+    if (points !== undefined && points !== null && !SCALLOPED_SHAPES.includes(name)) {
+        warn('Shape', `\`points\` only applies to ${SCALLOPED_SHAPES.join(' and ')}: it does nothing on ${show(name)}.`);
+    }
+    return true;
+}
+
+export function verifyTypesAvatar({ seed, styleDefinition, options, size, shape, alt } = {}) {
+    // without a seed there is nothing to draw *from*: every avatar would be the same one
+    assertRequired('Avatar', 'seed', seed);
+    assertType('Avatar', 'seed', seed, 'string');
+    // `size` is the open set the rest of the library uses - a token or any CSS length
+    assertType('Avatar', 'size', size, 'string');
+    assertType('Avatar', 'alt', alt, 'string');
+    assertOneOf('Avatar', 'shape', shape, SHAPE_NAMES);
+    // a DiceBear style definition and its options are both plain JSON
+    assertPlainObject('Avatar', 'styleDefinition', styleDefinition);
+    assertPlainObject('Avatar', 'options', options);
     return true;
 }
 

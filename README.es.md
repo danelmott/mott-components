@@ -251,12 +251,69 @@ suave de la familia neutra y `ghost` no tiene superficie que suavizar, así que 
 | `Progress` | barra determinada, o indeterminada si omitís `value` |
 | `Navbar` | rail con items, logo opcional, alineación `top` o `center` |
 | `DragScroll` / `useDragScroll` | scroll arrastrable con inercia y degradado en los bordes; el hook para tu propio elemento |
+| `Shape` | las cinco formas de Material 3 como contenedor que recorta: `triangle`, `diamond`, `arch`, `flower`, `cookie` |
+| `Avatar` | avatar de DiceBear a partir de un `seed`; `shape` lo recorta con cualquier forma de M3 |
 | `ModalAnimation`, `MorphAnimation`, `AnchoredAnimation` | las clases de animación, más las instancias ya armadas `morphAnimation` y `anchoredAnimation` |
 
 **Para las props exactas, los valores permitidos y los defaults, leé
 [`src/utils/verifyTypes.js`](./src/utils/verifyTypes.js).** Cada componente valida sus props ahí en
 tiempo de ejecución, así que ese archivo *es* la especificación — y una prop mal puesta te lo dice en
 la consola en vez de fallar en silencio.
+
+### Shapes
+
+`Shape` es un **recorte**, no un dibujo: la forma se aplica al elemento mismo, así que lo que le
+pongas adentro también la toma — una imagen cortada en rombo, no un rombo con una imagen rectangular
+encima.
+
+```jsx
+import { Shape, Icon } from '@danelmott/mott-design-components';
+
+<Shape name="cookie" color="secondary">
+  <Icon name="favorite" size="lg" />
+</Shape>
+
+// cualquier color CSS, un tamaño propio, y la forma girada sin inclinar el contenido
+<Shape name="diamond" color="#7c3aed" size="120px" rotate={15}>
+  <img src={photo} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+</Shape>
+
+// `flower` y `cookie` aceptan cantidad de puntas
+<Shape name="flower" points={12} color="warning" />
+```
+
+`color` sigue la misma regla que `Loading` y `Progress`: un nombre de acento (`primary`, `info`,
+`secondary`, `success`, `warning`, `danger`) sigue al tema, y cualquier color CSS pasa tal cual.
+Cuando el nombre viene de la paleta, el contenido se pinta con el color `on-*` que Material ya
+verificó que se lee encima — `contentColor` lo sobreescribe.
+
+### Avatars
+
+`Avatar` dibuja un avatar de [DiceBear](https://www.dicebear.com) a partir de un `seed`. El mismo
+seed da siempre la misma cara, en cualquier dispositivo y en cualquier recarga, sin guardar nada en
+ningún lado — un usuario sin foto igual tiene algo que es suyo.
+
+```jsx
+import { Avatar } from '@danelmott/mott-design-components';
+
+<Avatar seed="danel" />
+<Avatar seed="danel" shape="cookie" size="120px" />   // recortado por la forma, no apoyado encima
+```
+
+Viene con un solo estilo (`critters`) para no arrastrar todos los de DiceBear a tu bundle: las
+definiciones son grandes y se importan estáticas. Cualquier otro estilo es un import, y pasarlo
+descarta las opciones de critters, porque otro estilo tiene otras piezas:
+
+```jsx
+import lorelei from '@dicebear/styles/lorelei.json' with { type: 'json' };
+
+<Avatar seed="danel" styleDefinition={lorelei} shape="diamond" />
+<Avatar seed="ana" options={{ mouthProbability: 100 }} />   // cualquier opción que defina el estilo
+```
+
+Se llama `styleDefinition` y no `style` a propósito: acá `style` es el style inline de React, como en
+todos los demás componentes. El render se cachea y es determinista, así que una lista que scrollea no
+vuelve a dibujar las mismas caras.
 
 ### Toasts
 
