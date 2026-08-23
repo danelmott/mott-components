@@ -17,18 +17,24 @@
     /* The typescale, one block per role. Sizes and line-heights are M3's; the tracking is not. */
     /* M3's numbers were measured on Roboto, and DM Sans already solves the same problem better: */
     /* its `opsz` axis narrows display text by up to 8.6% and opens 11px text by 0.5% on its own. */
-    /* Layering M3's tracking on top would pay for that compensation twice, so display, headline, */
-    /* title and body-large sit at 0 and let the font do it. What is left is a light positive */
-    /* touch on the small roles, where UI micro-copy wants more air than the axis alone gives. */
+    /* Layering M3's tracking on top would pay for that compensation twice, so headline, title and */
+    /* body-large sit at 0 and let the font do it, and the small roles keep a light positive touch */
+    /* where UI micro-copy wants more air than the axis alone gives. */
+    /* The two display roles are the exception, because the axis stops at 40 and they are past it: */
+    /* 45px sits 5 points outside its reach and 57px sits 17, so both would otherwise be drawn */
+    /* identically despite the 12px between them. They get a small negative value in proportion. */
+    /* Small on purpose - continuing the axis's own slope would land at -0.05em, and at that width */
+    /* the letters collide. opsz 40 is the display drawing the designer meant for everything above */
+    /* 40, not a curve that was cut short. */
     --md-sys-typescale-display-large-font: var(--md-ref-typeface-brand);
     --md-sys-typescale-display-large-size: 3.5625rem;            /* 57px */
     --md-sys-typescale-display-large-line-height: 4rem;
-    --md-sys-typescale-display-large-tracking: 0em;
+    --md-sys-typescale-display-large-tracking: -0.010em;
     --md-sys-typescale-display-large-weight: var(--md-ref-typeface-weight-regular);
     --md-sys-typescale-display-medium-font: var(--md-ref-typeface-brand);
     --md-sys-typescale-display-medium-size: 2.8125rem;            /* 45px */
     --md-sys-typescale-display-medium-line-height: 3.25rem;
-    --md-sys-typescale-display-medium-tracking: 0em;
+    --md-sys-typescale-display-medium-tracking: -0.003em;
     --md-sys-typescale-display-medium-weight: var(--md-ref-typeface-weight-regular);
     --md-sys-typescale-display-small-font: var(--md-ref-typeface-brand);
     --md-sys-typescale-display-small-size: 2.25rem;            /* 36px */

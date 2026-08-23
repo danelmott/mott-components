@@ -22,6 +22,9 @@ import { SHAPE_NAMES } from '../src/shapes/shapePaths.js';
 import DragScroll from '../src/dragScroll/dragScroll.jsx';
 import { useTheme } from '../src/theme/themeContext.jsx';
 import ThemeModal from '../src/themeModal/themeModal.jsx';
+import LoginModal from '../src/authModals/loginModal.jsx';
+import RegisterModal from '../src/authModals/registerModal.jsx';
+import OtpModal from '../src/authModals/otpModal.jsx';
 
 function Section({ title, wide, children }) {
   return (
@@ -192,6 +195,82 @@ function ScrollBox({ id, horizontal, dragScrollProps, children }) {
     >
       <div style={{ padding: 'var(--gap-block)' }}>{children}</div>
     </DragScroll>
+  );
+}
+
+// The three auth modals. Every field is controlled from here on purpose - that is the API, and this
+// is what using it actually looks like: one useState per field, one handler that gets the value.
+function AuthDemo() {
+  const [screen, setScreen] = useState(null);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirm, setConfirm] = useState('');
+  const [code, setCode] = useState('');
+  const [error, setError] = useState('');
+
+  const loginRef = useRef(null);
+  const registerRef = useRef(null);
+  const otpRef = useRef(null);
+
+  const close = () => { setScreen(null); setError(''); };
+
+  const brand = { brand: 'aguilarIA', logo: <Shape name="flower" size="20px" color="primary" /> };
+
+  return (
+    <>
+      <Row>
+        <Button ref={loginRef} variant="action" onClick={() => setScreen('login')}>Iniciar sesión</Button>
+        <Button ref={registerRef} variant="default" onClick={() => setScreen('register')}>Crear cuenta</Button>
+        <Button ref={otpRef} variant="default" onClick={() => setScreen('otp')}>Verificar código</Button>
+      </Row>
+
+      <LoginModal
+        {...brand}
+        open={screen === 'login'}
+        onClose={close}
+        triggerRef={loginRef}
+        email={email}
+        onEmailChange={setEmail}
+        password={password}
+        onPasswordChange={setPassword}
+        error={error}
+        onSubmit={() => setError(email && password ? '' : 'Completá los dos campos.')}
+        onGoogle={() => setError('')}
+        onSwitch={() => { setError(''); setScreen('register'); }}
+      />
+
+      <RegisterModal
+        {...brand}
+        open={screen === 'register'}
+        onClose={close}
+        triggerRef={registerRef}
+        email={email}
+        onEmailChange={setEmail}
+        password={password}
+        onPasswordChange={setPassword}
+        confirmPassword={confirm}
+        onConfirmPasswordChange={setConfirm}
+        error={error}
+        // the rule lives out here, not in the modal: the modal has no idea what this product
+        // considers a valid password
+        onSubmit={() => setError(password === confirm ? '' : 'Las contraseñas no coinciden.')}
+        onGoogle={() => setError('')}
+        onSwitch={() => { setError(''); setScreen('login'); }}
+      />
+
+      <OtpModal
+        {...brand}
+        open={screen === 'otp'}
+        onClose={close}
+        triggerRef={otpRef}
+        email={email || 'tucorreo@gmail.com'}
+        code={code}
+        onCodeChange={setCode}
+        error={error}
+        onSubmit={() => setError(code.length === 6 ? '' : 'El código va completo.')}
+        onResend={() => { setCode(''); setError(''); }}
+      />
+    </>
   );
 }
 
@@ -537,6 +616,16 @@ export default function App() {
               <Button variant="ghost" onClick={() => setAutoModalOpen(false)}>Cancelar</Button>
             </Row>
           </CustomModal>
+        </Section>
+
+        <Section title="Modales de auth — login, registro y OTP" wide>
+          <Text variant="body-medium" tone="muted">
+            Los campos los controla quien usa la modal: un useState por campo y un handler que recibe el valor.
+            El correo y la contraseña se comparten entre login y registro acá a propósito, para que se vea que
+            el valor sobrevive al switch. El botón de Google sale del ícono nuevo, y es lo único de la librería
+            que no sigue el tema.
+          </Text>
+          <AuthDemo />
         </Section>
 
         <Section title="Navbar — rail en desktop, barra inferior en mobile" wide>

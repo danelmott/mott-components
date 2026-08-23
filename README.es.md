@@ -246,7 +246,9 @@ suave de la familia neutra y `ghost` no tiene superficie que suavizar, así que 
 | `Search` | campo de búsqueda con debounce y `onSearch` |
 | `Dropdown` | panel anclado, sin backdrop; cierra con Escape o un clic afuera |
 | `CustomModal` | `<dialog>` nativo con animaciones de apertura y cierre intercambiables |
+| `LoginModal` / `RegisterModal` / `OtpModal` | modales de auth ya armadas: campos controlados, botón de Google, botón de cerrar y línea de switch |
 | `Icon` | Material Symbols Rounded con `fill`, `weight`, `grade`, `opticalSize` |
+| `GoogleIcon` | la marca de Google con sus cuatro colores propios — lo único acá que no sigue el tema |
 | `Loading` | spinner, tamaños `sm`/`md`/`lg` |
 | `Progress` | barra determinada, o indeterminada si omitís `value` |
 | `Navbar` | rail con items, logo opcional, alineación `top` o `center` |
@@ -353,10 +355,19 @@ renderiza un titular de 45px **9.5% más angosto** y el texto de 11px **0.6% má
 misma fuente clavada en su default de 14px. Es la misma corrección que persigue el tracking, pero
 redibujando las letras en vez de separarlas a la fuerza.
 
-Así que la hace el eje. `display`, `headline`, `title` y `body-large` quedan en `0` de tracking; solo
-los roles chicos conservan un valor positivo suave, donde el texto de interfaz pide más aire del que
-da el eje por sí solo. Lo que queda va en `em` y no en el `rem` de M3, para que escale con el tamaño
-al que el texto se renderiza de verdad.
+Así que la hace el eje. `headline`, `title` y `body-large` quedan en `0` de tracking, y los roles
+chicos conservan un valor positivo suave donde el texto de interfaz pide más aire del que da el eje
+por sí solo.
+
+Los dos roles `display` son la excepción, porque **el eje se detiene en 40 y ellos quedan por
+encima**: 45px cae cinco puntos afuera de su alcance y 57px cae diecisiete, así que los dos se
+dibujarían idénticos pese a los 12px que los separan. Llevan un valor negativo chico y proporcional
+— `-0.003em` y `-0.010em`. Chico a propósito: seguir la pendiente del propio eje más allá de su
+último master da `-0.05em`, y a ese ancho las letras se chocan. `opsz 40` es el dibujo de display
+que el diseñador pensó para todo lo que pase de 40, no una curva que quedó cortada.
+
+Lo que queda va en `em` y no en el `rem` de M3, para que escale con el tamaño al que el texto se
+renderiza de verdad.
 
 **El eje solo llega si la URL de la fuente lo pide.** Ojo con el `opsz,wght@9..40` del import:
 
@@ -409,6 +420,57 @@ function SaveButton() {
   <App />
 </ToastProvider>
 ```
+
+---
+
+### Modales de auth
+
+`LoginModal`, `RegisterModal` y `OtpModal` son el mismo panel con distinto contenido: línea de marca,
+título, campos, botón primario, botón de Google y la línea de switch abajo. Las tres se componen con
+los componentes que ya están en esta librería, así que heredan la escala tipográfica y los roles de
+color en vez de repetirlos.
+
+**Los campos los controlás vos.** La modal renderiza lo que le pasás y avisa lo que se escribió; nunca
+se queda con el valor. Eso es lo que te deja validar mientras el usuario escribe, conservar lo tipeado
+después de un submit fallido, o precargar desde otro lado. Como en toda la librería, el handler de
+cambio recibe el **valor**, no el evento.
+
+```jsx
+const [email, setEmail] = useState('');
+const [password, setPassword] = useState('');
+const [error, setError] = useState('');
+
+<LoginModal
+  open={open}
+  onClose={() => setOpen(false)}
+  triggerRef={buttonRef}
+  brand="aguilarIA"
+  logo={<Shape name="flower" size="20px" />}
+  email={email} onEmailChange={setEmail}
+  password={password} onPasswordChange={setPassword}
+  error={error}
+  onSubmit={() => signIn(email, password).catch((e) => setError(e.message))}
+  onGoogle={signInWithGoogle}
+  onSwitch={() => setScreen('register')}
+/>
+```
+
+Acá adentro no se autentica nada. La modal llama a `onSubmit` y a `onGoogle` y no sabe qué pasa
+después — validar el correo, pegarle a una API, guardar un token y decidir qué es una contraseña
+válida quedan con quien sepa la respuesta. Pasarle un `error` como string es cómo el resultado vuelve
+a la pantalla.
+
+`loading` deshabilita los botones y los campos mientras el pedido está en vuelo. `triggerRef` va
+derecho a `CustomModal`, así el panel sale morfeando del botón que lo abrió.
+
+`OtpModal` renderiza un solo string como seis casillas: escribir avanza, Backspace en una casilla
+vacía retrocede y borra la anterior, las flechas mueven, y pegar un código completo lo reparte desde
+la casilla en la que estés. Lo que no sea dígito se descarta, y un código más largo que el campo se
+corta en vez de desbordar.
+
+**La marca de Google conserva sus colores.** `GoogleIcon` son cuatro hex de marca fijos y no sigue la
+semilla — es el logo de otro, y repintarlo lo convertiría en otro logo. Se exporta aparte por si
+querés armar el botón vos mismo.
 
 ---
 

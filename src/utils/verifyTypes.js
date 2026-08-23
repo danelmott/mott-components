@@ -275,6 +275,64 @@ export function verifyTypesCustomModal({ open, onClose, onCloseComplete, trigger
     return true;
 }
 
+// Every auth modal funnels through AuthShell, so the shared half of the contract is checked once
+// here and each modal only validates the fields it adds.
+export function verifyTypesAuthShell({
+    open, onClose, triggerRef, logo, brand, title, submitLabel,
+    onSubmit, onGoogle, googleLabel, switchText, switchAction, onSwitch, error, loading,
+} = {}) {
+    assertType('AuthShell', 'open', open, 'boolean');
+    assertType('AuthShell', 'onClose', onClose, 'function');
+    assertRef('AuthShell', 'triggerRef', triggerRef);
+    assertNode('AuthShell', 'logo', logo);
+    assertType('AuthShell', 'brand', brand, 'string');
+    assertType('AuthShell', 'title', title, 'string');
+    assertType('AuthShell', 'submitLabel', submitLabel, 'string');
+    assertType('AuthShell', 'onSubmit', onSubmit, 'function');
+    assertType('AuthShell', 'onGoogle', onGoogle, 'function');
+    assertType('AuthShell', 'googleLabel', googleLabel, 'string');
+    assertType('AuthShell', 'switchText', switchText, 'string');
+    assertType('AuthShell', 'switchAction', switchAction, 'string');
+    assertType('AuthShell', 'onSwitch', onSwitch, 'function');
+    assertType('AuthShell', 'error', error, 'string');
+    assertType('AuthShell', 'loading', loading, 'boolean');
+    return true;
+}
+
+export function verifyTypesLoginModal({ email, password, onEmailChange, onPasswordChange, onSubmit } = {}) {
+    assertType('LoginModal', 'email', email, 'string');
+    assertType('LoginModal', 'password', password, 'string');
+    assertType('LoginModal', 'onEmailChange', onEmailChange, 'function');
+    assertType('LoginModal', 'onPasswordChange', onPasswordChange, 'function');
+    assertType('LoginModal', 'onSubmit', onSubmit, 'function');
+    return true;
+}
+
+export function verifyTypesRegisterModal({
+    email, password, confirmPassword,
+    onEmailChange, onPasswordChange, onConfirmPasswordChange, onSubmit,
+} = {}) {
+    assertType('RegisterModal', 'email', email, 'string');
+    assertType('RegisterModal', 'password', password, 'string');
+    assertType('RegisterModal', 'confirmPassword', confirmPassword, 'string');
+    assertType('RegisterModal', 'onEmailChange', onEmailChange, 'function');
+    assertType('RegisterModal', 'onPasswordChange', onPasswordChange, 'function');
+    assertType('RegisterModal', 'onConfirmPasswordChange', onConfirmPasswordChange, 'function');
+    assertType('RegisterModal', 'onSubmit', onSubmit, 'function');
+    return true;
+}
+
+export function verifyTypesOtpModal({ code, onCodeChange, length, onSubmit, email, onResend } = {}) {
+    assertType('OtpModal', 'code', code, 'string');
+    assertType('OtpModal', 'onCodeChange', onCodeChange, 'function');
+    // one box is not a code and past eight nobody reads it back from a phone screen
+    assertRange('OtpModal', 'length', length, 2, 8);
+    assertType('OtpModal', 'onSubmit', onSubmit, 'function');
+    assertType('OtpModal', 'email', email, 'string');
+    assertType('OtpModal', 'onResend', onResend, 'function');
+    return true;
+}
+
 export function verifyTypesNavbar({ items, logo, selected, defaultSelected, onChange, align } = {}) {
     assertArrayOf('Navbar', 'items', items, (item, path) => {
         assertPlainObject('Navbar', path, item);

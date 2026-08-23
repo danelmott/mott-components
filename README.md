@@ -244,7 +244,9 @@ soft step of the neutral family and `ghost` has no surface to soften, so on thos
 | `Search` | debounced search field with `onSearch` |
 | `Dropdown` | anchored panel, no backdrop; closes on Escape or an outside click |
 | `CustomModal` | native `<dialog>` with pluggable open/close animations |
+| `LoginModal` / `RegisterModal` / `OtpModal` | ready-made auth modals: controlled fields, Google button, close button and switch line |
 | `Icon` | Material Symbols Rounded with `fill`, `weight`, `grade`, `opticalSize` |
+| `GoogleIcon` | the Google mark in its own four brand colours — the one thing here that does not follow the theme |
 | `Loading` | spinner, sizes `sm`/`md`/`lg` |
 | `Progress` | determinate bar, or indeterminate when `value` is omitted |
 | `Navbar` | rail with items, optional logo, `top` or `center` alignment |
@@ -351,10 +353,18 @@ headline **9.5% narrower** and 11px text **0.6% wider** than the font pinned at 
 That is the same correction tracking is reaching for, done by redrawing the letterforms instead of
 prying them apart.
 
-So the axis does it. `display`, `headline`, `title` and `body-large` sit at `0` tracking; only the
-small roles keep a light positive value, where UI micro-copy wants more air than the axis alone
-gives. What remains is in `em` rather than M3's `rem`, so it scales with the size the text is
-actually rendered at.
+So the axis does it. `headline`, `title` and `body-large` sit at `0` tracking, and the small roles
+keep a light positive value where UI micro-copy wants more air than the axis alone gives.
+
+The two `display` roles are the exception, because **the axis stops at 40 and they are past it**:
+45px sits five points outside its reach and 57px sits seventeen, so both would be drawn identically
+despite the 12px between them. They carry a small negative value in proportion — `-0.003em` and
+`-0.010em`. Small on purpose: continuing the axis's own slope past its last master lands at
+`-0.05em`, and at that width the letters collide. `opsz 40` is the display drawing the designer
+meant for everything above 40, not a curve that was cut short.
+
+What remains is in `em` rather than M3's `rem`, so it scales with the size the text is actually
+rendered at.
 
 **The axis only arrives if the font URL asks for it.** Note the `opsz,wght@9..40` in the import:
 
@@ -407,6 +417,56 @@ function SaveButton() {
   <App />
 </ToastProvider>
 ```
+
+---
+
+### Auth modals
+
+`LoginModal`, `RegisterModal` and `OtpModal` are the same panel with different contents: brand line,
+title, fields, primary button, Google button, and a switch line at the bottom. All three compose the
+components already in this library, so they inherit the typescale and the colour roles rather than
+restating them.
+
+**Every field is controlled by you.** The modal renders what it is given and reports what was typed;
+it never holds the value. That is what lets you validate as the user types, keep what was entered
+across a failed submit, or prefill from somewhere else. As everywhere in this library, the change
+handler receives the **value**, not the event.
+
+```jsx
+const [email, setEmail] = useState('');
+const [password, setPassword] = useState('');
+const [error, setError] = useState('');
+
+<LoginModal
+  open={open}
+  onClose={() => setOpen(false)}
+  triggerRef={buttonRef}
+  brand="aguilarIA"
+  logo={<Shape name="flower" size="20px" />}
+  email={email} onEmailChange={setEmail}
+  password={password} onPasswordChange={setPassword}
+  error={error}
+  onSubmit={() => signIn(email, password).catch((e) => setError(e.message))}
+  onGoogle={signInWithGoogle}
+  onSwitch={() => setScreen('register')}
+/>
+```
+
+No authentication happens in here. The modal calls `onSubmit` and `onGoogle` and has no idea what
+comes after — checking the email, calling an API, storing a token, and deciding what makes a password
+valid all stay with whoever knows the answer. Handing it an `error` string is how the result gets
+back on screen.
+
+`loading` disables the buttons and the fields while a request is in flight. `triggerRef` is passed
+straight through to `CustomModal`, so the panel morphs out of the button that opened it.
+
+`OtpModal` renders one string as six boxes: typing advances, Backspace in an empty box steps back and
+clears the previous one, arrows move, and pasting a whole code fills it from the box you are on.
+Non-digits are dropped, and a code longer than the field is truncated rather than spilling.
+
+**The Google mark keeps its own colours.** `GoogleIcon` is four fixed brand hexes and does not follow
+the seed — it is somebody else's logo, and repainting it would make it a different logo. It is
+exported on its own if you want to build the button yourself.
 
 ---
 
