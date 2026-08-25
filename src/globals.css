@@ -163,6 +163,7 @@
     --duration-base: 280ms;
     --duration-slow: 400ms;
     --duration-modal: 550ms;
+    --duration-sweep: 900ms;
 
     --ease-standard: cubic-bezier(0.2, 0, 0, 1);
     --ease-emphasized: cubic-bezier(0.32, 0.72, 0, 1);
@@ -342,6 +343,13 @@ body {
 
 ::-webkit-scrollbar {
     display: none;
+}
+
+
+@property --mott-swatch-ring {
+    syntax: '<number>';
+    inherits: false;
+    initial-value: 0.1;
 }
 
 
@@ -568,6 +576,100 @@ body {
 
   &:disabled:active {
     transform: scale(1);
+  }
+}
+
+
+/*A specular sweep, not a state layer. The ::after of `mott-btn` tints the whole control to say
+  "you are touching me"; this is a band of light crossing a surface that is meant to read as
+  material. Different jobs, so it is a separate utility - and it takes ::before, so one control can
+  wear both without the two fighting over the same pseudo-element.*/
+@utility mott-shine {
+  position: relative;
+  isolation: isolate;   /* keeps the highlight's z-index from reaching past this control */
+  /* Clips the glow to the control's own shape. GSAP writes border-radius inline while it morphs,
+     so the sweep follows a circle turning into a squircle without being animated a second time. */
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    /*Square, and much larger than the control. Square is the load-bearing part: `ellipse R R` is
+      only a real circle when the box it is measured against is square, and any box that is wider
+      than tall turns the same two percentages into a vertical oval. Large so both layers reach
+      full transparency well inside it - that is what removes the need for a mask, and a mask is
+      the one thing here that cannot help being straight.*/
+    inset: -125%;
+    pointer-events: none;
+    /* Over the content, not under it - the opposite of `mott-btn`'s ::after, which is a state
+       layer and sits at z-index -1. A reflection passing BEHIND a control's own mark would claim
+       there is a pane of glass in front of it that is not there. */
+    z-index: 1;
+    /*A wake has a head and a tail, so: a small bright circle riding forward and a wider dim one
+      trailing behind it. Both are true circles.
+
+      What makes an edge look STRAIGHT here is not the gradient type, it is the radius. Every
+      boundary that crosses the bead is an arc, and the arc of a circle far larger than the bead is
+      indistinguishable from a straight line. Measured as the bow across the bead's height on a
+      56px swatch: the mask this replaces bowed 3.4px and read as a ruled line; this tail bows
+      8.5px and reads as round. Keep the tail near 0.9x the control's own width - grow it and the
+      glow floods more but flattens back out.*/
+    background:
+      radial-gradient(ellipse 20% 20% at 60% 50%,
+        rgb(255 255 255 / var(--mott-shine-head, 0.55)) 0%,
+        rgb(255 255 255 / calc(var(--mott-shine-head, 0.55) * 0.45)) 45%,
+        transparent 100%),
+      radial-gradient(ellipse 26% 26% at 46% 50%,
+        rgb(255 255 255 / var(--mott-shine-tail, 0.32)) 0%,
+        rgb(255 255 255 / calc(var(--mott-shine-tail, 0.32) * 0.5)) 45%,
+        transparent 100%);
+    /*±44% of this box is exactly the distance at which the tail's far edge clears the bead, so the
+      sweep starts and ends on an untouched face. It is a smaller number than it looks: the box is
+      3.5x the control, so 44% of it is still a travel of one and a half beads.*/
+    transform: translateX(-44%);
+    opacity: 0;
+    /*Leaving is not the sweep played backwards: the band fades out wherever it stands, and only
+      once it is invisible - that is what the delay buys - does the transform snap back to the
+      start, ready for the next hover. A symmetric `transition: transform` would drag the light
+      back across the control every time the pointer left, which reads as a mistake.*/
+    transition:
+      opacity var(--duration-base) var(--ease-standard),
+      transform 0s linear var(--duration-base);
+  }
+
+  /* 200ms to appear, 900ms to cross */
+  &:hover::before {
+    transform: translateX(44%);
+    opacity: 1;
+    /*`linear` on purpose, and it matters more than the number. Every ease loads the journey
+      towards one end, and on a reflection that lands as a visible lurch - --ease-standard left
+      here shot the band off the mark and then let it crawl the last third. Light crossing a
+      surface travels at one speed.*/
+    transition:
+      opacity var(--duration-fast) linear,
+      transform var(--duration-sweep) linear;
+  }
+}
+
+
+/*The ring lives INSIDE the control - an inset shadow over its own background - so nothing sticks
+  out past the circle and the swatch still measures exactly the width it declares. Its brightness
+  is the selection state rather than a separate mark: 10% at rest, 30% once chosen.*/
+@utility mott-swatch {
+  box-shadow: inset 0 0 0 3px rgb(255 255 255 / var(--mott-swatch-ring));
+  /*The custom property is what transitions, not the box-shadow: registered above as a <number> it
+    interpolates, and mott-fade-y/x already lean on the same trick in this file. The tokens are
+    MORPH's own, so the ring brightens on the frame GSAP finishes morphing the shape.*/
+  transition: --mott-swatch-ring var(--duration-base) var(--ease-emphasized);
+
+  &:focus-visible {
+    outline: none;
+    /*The inset has to be restated: a second box-shadow declaration replaces the first outright,
+      and leaving it out would blink the ring away for as long as the swatch holds focus.*/
+    box-shadow:
+      inset 0 0 0 3px rgb(255 255 255 / var(--mott-swatch-ring)),
+      0 0 0 2px var(--md-sys-color-surface-container-high),
+      0 0 0 4px var(--md-sys-color-primary);
   }
 }
 

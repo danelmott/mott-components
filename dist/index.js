@@ -935,7 +935,11 @@ var DURATION = {
   fast: 0.2,
   base: 0.28,
   slow: 0.4,
-  modal: 0.55
+  modal: 0.55,
+  // The odd one out: every value above answers a click, so it is measured in how fast a control
+  // can respond. This one is the length of a journey across a surface - a highlight sweeping a
+  // control - and a travel that reads as light has to take its time.
+  sweep: 0.9
 };
 var EASE = {
   standard: CustomEase.create("mottStandard", "0.2, 0, 0, 1"),
@@ -1321,6 +1325,7 @@ import { createContext as createContext2, useCallback as useCallback2, useContex
 
 // src/theme/palette.js
 import {
+  Contrast,
   Hct,
   argbFromHex,
   hexFromArgb,
@@ -1341,6 +1346,13 @@ var VARIANTS = {
 };
 var DEFAULT_VARIANT = "content";
 var DEFAULT_SEED = "#000000";
+function onColorFor(hex) {
+  const argb = argbFromHex(hex);
+  const tone = Hct.fromInt(argb).tone;
+  const mark = Hct.fromInt(argb);
+  mark.tone = Contrast.ratioOfTones(tone, 10) >= Contrast.ratioOfTones(tone, 100) ? 10 : 100;
+  return hexFromArgb(mark.toInt());
+}
 var SPEC_VERSION = "2021";
 var SUCCESS_SEED = "#16a34a";
 var WARNING_SEED = "#d97706";
@@ -1435,10 +1447,16 @@ var STORAGE_SEED = "mott-theme-color";
 var STORAGE_MODE = "mott-theme-mode";
 var STORAGE_VARIANT = "mott-theme-variant";
 var THEMES_AVAILABLE = [
-  { name: "negro", hex: "#000000", variant: "content" },
-  { name: "gris", hex: "#8E8E93", variant: "content" },
-  { name: "rosa", hex: "#d97cb9", variant: "content" },
-  { name: "azul", hex: "#005eeb", variant: "content" }
+  { name: "black", hex: "#000000", variant: "content" },
+  { name: "grey", hex: "#8E8E93", variant: "content" },
+  { name: "purple", hex: "#a78bfa", variant: "content" },
+  { name: "rose", hex: "#d97cb9", variant: "content" },
+  { name: "pink", hex: "#ff6482", variant: "content" },
+  { name: "red", hex: "#ff5c5c", variant: "content" },
+  { name: "blue", hex: "#005eeb", variant: "content" },
+  { name: "cyan", hex: "#5ac8fa", variant: "content" },
+  { name: "green", hex: "#4CD964", variant: "content" },
+  { name: "teal", hex: "#2dd4bf", variant: "content" }
 ];
 var readStored = (key, isValid) => {
   try {
@@ -1514,8 +1532,6 @@ function ThemeProvider({
     variant,
     mode,
     setMode,
-    // what `system` currently resolves to — the theme actually on screen. Use it to pick the
-    // icon on a toggle; `mode` is what the user chose, `resolvedMode` is what they see.
     resolvedMode,
     THEMES_AVAILABLE: themes
   }), [colorSeedHex, setColorSeedHex, variant, mode, setMode, resolvedMode, themes]);
@@ -2074,8 +2090,10 @@ var MODES = [
   { value: "system", icon: "brightness_4", label: "Sistema" }
 ];
 var SWATCH = 56;
+var SWATCH_CLASS = "mott-shine mott-swatch flex items-center justify-center cursor-pointer border-0 p-0";
 function Swatch({ theme, selected, onSelect }) {
   const ref = useRef5(null);
+  const checkRef = useRef5(null);
   const didMountRef = useRef5(false);
   useGSAP3(() => {
     if (!ref.current) return;
@@ -2083,12 +2101,15 @@ function Swatch({ theme, selected, onSelect }) {
       borderRadius: selected ? squircleRadius() : CIRCLE_RADIUS,
       scale: selected ? 1.1 : 1
     };
+    const mark = { autoAlpha: selected ? 1 : 0, scale: selected ? 1 : 0.6 };
     if (!didMountRef.current) {
       didMountRef.current = true;
       gsap5.set(ref.current, shape);
+      gsap5.set(checkRef.current, mark);
       return;
     }
     gsap5.to(ref.current, { ...shape, ...MORPH });
+    gsap5.to(checkRef.current, { ...mark, ...MORPH });
   }, { dependencies: [selected] });
   return /* @__PURE__ */ jsx10(
     "button",
@@ -2099,14 +2120,31 @@ function Swatch({ theme, selected, onSelect }) {
       "aria-pressed": selected,
       "aria-label": theme.name,
       title: theme.name,
-      className: "cursor-pointer border-0 p-0 transition-shadow duration-[var(--duration-base)] ease-[var(--ease-emphasized)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--md-sys-color-primary)]",
+      className: SWATCH_CLASS,
       style: {
         width: SWATCH,
         height: SWATCH,
         borderRadius: CIRCLE_RADIUS,
-        background: theme.hex,
-        boxShadow: selected ? "0 0 0 2px var(--md-sys-color-surface-container-high), 0 0 0 4px var(--md-sys-color-on-surface)" : "none"
-      }
+        /*Measured off the reference rather than guessed: the fill runs from the raw colour
+          to that colour under 20% white, along a 98deg axis. That - not a shadow - is what
+          reads as a gloss running down the right-hand side. The last stop eases back down
+          instead of holding the peak to the edge; that small dip is what keeps the far rim
+          from looking flat-lit, and it is in the reference too.*/
+        background: `linear-gradient(98deg, rgb(255 255 255 / 0) 22%, rgb(255 255 255 / 0.20) 76%, rgb(255 255 255 / 0.12) 100%), ${theme.hex}`,
+        /*Only the alpha travels inline; the shadow itself lives in `mott-swatch`. An inline
+          boxShadow would beat the class and take the focus ring down with it, which is the
+          exact bug this file already had once.*/
+        "--mott-swatch-ring": selected ? "0.3" : "0.1"
+      },
+      children: /* @__PURE__ */ jsx10("span", { ref: checkRef, className: "flex", children: /* @__PURE__ */ jsx10(
+        Icon,
+        {
+          name: "check",
+          size: "lg",
+          weight: 700,
+          style: { color: onColorFor(theme.hex) }
+        }
+      ) })
     }
   );
 }

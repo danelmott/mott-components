@@ -15,6 +15,10 @@ export const DURATION = {
     base: 0.28,
     slow: 0.4,
     modal: 0.55,
+    // The odd one out: every value above answers a click, so it is measured in how fast a control
+    // can respond. This one is the length of a journey across a surface - a highlight sweeping a
+    // control - and a travel that reads as light has to take its time.
+    sweep: 0.9,
 };
 
 /*`emphasized` is a fast head that settles slowly - right for a control answering a click, where
