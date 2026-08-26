@@ -17,7 +17,6 @@ export { default as OtpModal } from './src/authModals/otpModal.jsx';
 export { default as Icon } from './src/icon/icon.jsx';
 export { default as GoogleIcon } from './src/icon/googleIcon.jsx';
 export { default as Loading } from './src/loading/loading.jsx';
-export { default as Progress } from './src/loading/progress.jsx';
 export { default as Navbar } from './src/navbar/navbar.jsx';
 export { default as DragScroll, useDragScroll } from './src/dragScroll/dragScroll.jsx';
 export { default as Shape } from './src/shapes/shapes.jsx';

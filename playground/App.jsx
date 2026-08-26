@@ -10,7 +10,6 @@ import { useToast } from '../src/toast/toastContext.jsx';
 import Select from '../src/select/select.jsx';
 import Search from '../src/search/search.jsx';
 import Loading from '../src/loading/loading.jsx';
-import Progress from '../src/loading/progress.jsx';
 import Dropdown from '../src/dropdown/dropdown.jsx';
 import CustomModal from '../src/customModal/customModal.jsx';
 import { anchoredAnimation } from '../src/animations/modalAnimation.js';
@@ -543,12 +542,6 @@ export default function App() {
 
         <Section title="Progress">
           <div>
-            <p style={{ font: 'var(--md-sys-typescale-body-medium)', letterSpacing: 'var(--md-sys-typescale-body-medium-tracking)', color: 'var(--md-sys-color-on-surface-variant)', marginBottom: '0.5rem' }}>Indeterminado</p>
-            <Progress color="primary" />
-          </div>
-          <div>
-            <p style={{ font: 'var(--md-sys-typescale-body-medium)', letterSpacing: 'var(--md-sys-typescale-body-medium-tracking)', color: 'var(--md-sys-color-on-surface-variant)', marginBottom: '0.5rem' }}>Determinado ({progressValue}%)</p>
-            <Progress color="success" value={progressValue} />
             <Row>
               <Button variant="default" onClick={() => setProgressValue((v) => Math.max(0, v - 10))}>-10</Button>
               <Button variant="default" onClick={() => setProgressValue((v) => Math.min(100, v + 10))}>+10</Button>
