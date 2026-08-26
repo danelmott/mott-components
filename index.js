@@ -26,4 +26,4 @@ export { default as Text, TYPESCALE_ROLES } from './src/text/text.jsx';
 export { SHAPE_NAMES } from './src/shapes/shapePaths.js';
 
 export { ModalAnimation, MorphAnimation, AnchoredAnimation, morphAnimation, anchoredAnimation } from './src/animations/modalAnimation.js';
-export { DURATION, EASE, MORPH, CIRCLE_RADIUS, squircleRadius, prefersReducedMotion } from './src/animations/motion.js';
+export { DURATION, EASE, MORPH, MORPH_SCALE, morphTo, pressHandlers, PRESS_SCALE, CIRCLE_RADIUS, squircleRadius, prefersReducedMotion } from './src/animations/motion.js';

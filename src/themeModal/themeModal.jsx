@@ -7,7 +7,7 @@ import ButtonGroup from '../buttons/buttonGroup.jsx';
 import Icon from '../icon/icon.jsx';
 import { useTheme } from '../theme/themeContext.jsx';
 import { onColorFor } from '../theme/palette.js';
-import { MORPH, CIRCLE_RADIUS, squircleRadius } from '../animations/motion.js';
+import { MORPH_SCALE, morphTo, pressHandlers, CIRCLE_RADIUS, squircleRadius } from '../animations/motion.js';
 import { verifyTypesThemeModal } from '../utils/verifyTypes.js';
 
 
@@ -36,24 +36,17 @@ function Swatch({ theme, selected, onSelect }) {
         if (!ref.current) return;
         const shape = {
             borderRadius: selected ? squircleRadius() : CIRCLE_RADIUS,
-            scale: selected ? 1.1 : 1,
+            scale: selected ? MORPH_SCALE : 1,
         };
-        /*The mark rides the same numbers as the shape rather than a tween of its own, so the bead
-          cannot finish morphing while the check is still on its way in. `autoAlpha` instead of
-          `opacity` because at 0 it also sets visibility: hidden, which takes the unselected mark
-          out of hit-testing and out of the accessibility tree instead of leaving it there at zero.*/
         const mark = { autoAlpha: selected ? 1 : 0, scale: selected ? 1 : 0.6 };
-        /*Settle rather than play on the first pass: the modal mounts with one swatch already
-          selected, and morphing it while the panel is still running its own opening animation is
-          most of what made this modal feel stuck.*/
         if (!didMountRef.current) {
             didMountRef.current = true;
             gsap.set(ref.current, shape);
             gsap.set(checkRef.current, mark);
             return;
         }
-        gsap.to(ref.current, { ...shape, ...MORPH });
-        gsap.to(checkRef.current, { ...mark, ...MORPH });
+        morphTo(ref.current, shape, { entering: selected });
+        morphTo(checkRef.current, mark, { entering: selected });
     }, { dependencies: [selected] });
 
     return (
@@ -65,31 +58,19 @@ function Swatch({ theme, selected, onSelect }) {
             aria-label={theme.name}
             title={theme.name}
             className={SWATCH_CLASS}
+            {...pressHandlers(selected ? MORPH_SCALE : 1)}
             style={{
                 width: SWATCH,
                 height: SWATCH,
                 borderRadius: CIRCLE_RADIUS,
-                /*Measured off the reference rather than guessed: the fill runs from the raw colour
-                  to that colour under 20% white, along a 98deg axis. That - not a shadow - is what
-                  reads as a gloss running down the right-hand side. The last stop eases back down
-                  instead of holding the peak to the edge; that small dip is what keeps the far rim
-                  from looking flat-lit, and it is in the reference too.*/
                 background: `linear-gradient(98deg, rgb(255 255 255 / 0) 22%, rgb(255 255 255 / 0.20) 76%, rgb(255 255 255 / 0.12) 100%), ${theme.hex}`,
-                /*Only the alpha travels inline; the shadow itself lives in `mott-swatch`. An inline
-                  boxShadow would beat the class and take the focus ring down with it, which is the
-                  exact bug this file already had once.*/
                 '--mott-swatch-ring': selected ? '0.3' : '0.1',
             }}
         >
-            {/*The span exists to carry the ref - Icon is a plain function component, it does not
-               forward one. The mark's colour is derived from the swatch itself, since a hex the
-               consumer chose has no `on-` role to read.*/}
             <span ref={checkRef} className="flex">
                 <Icon
                     name="check"
                     size="lg"
-                    /*heavier than the library default: a 500 stroke at 24px looks timid sitting on
-                      a 56px bead*/
                     weight={700}
                     style={{ color: onColorFor(theme.hex) }}
                 />

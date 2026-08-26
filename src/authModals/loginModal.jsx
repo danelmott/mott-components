@@ -36,7 +36,7 @@ export default function LoginModal({
     loading = false,
 }) {
     verifyTypesLoginModal({ email, password, onEmailChange, onPasswordChange, onSubmit });
-
+    //authshell 
     return (
         <AuthShell
             open={open}
@@ -73,5 +73,5 @@ export default function LoginModal({
                 disabled={loading}
             />
         </AuthShell>
-    )
+    );
 }

@@ -5,10 +5,7 @@ import { verifyTypesOtpModal } from '../utils/verifyTypes.js';
 
 const BOX = 'flex-1 min-w-0 aspect-square rounded-[var(--radius-lg)] bg-[var(--md-sys-color-surface-container)] mott-title-large text-center text-[var(--md-sys-color-on-surface)] outline-none transition-colors duration-150 focus:bg-[color-mix(in_srgb,var(--md-sys-color-on-surface)_8%,var(--md-sys-color-surface-container))] disabled:opacity-50 disabled:cursor-not-allowed';
 
-// A gap is a space, not an empty string. Joining ['', '', '4'] gives "4" and the digit has silently
-// moved to the front - which happens the moment someone clicks the fourth box and types there. A
-// space holds the position. Only trailing ones are trimmed on the way out, so a half-typed code
-// reads "12" rather than "12    " and the consumer's `code.length === 6` still means what it says.
+
 const GAP = ' ';
 
 export default function OtpModal({
@@ -50,12 +47,6 @@ export default function OtpModal({
     const handleChange = (index) => (event) => {
         const raw = event.target.value;
         const digit = raw.replace(/\D/g, '').slice(-1);
-
-        // A letter is not a request to empty the box - it is just not a digit, and the digit that
-        // was already there should survive it. Only a genuinely empty field means "clear this one",
-        // which is how Backspace over a filled box arrives. The field is put back by hand because
-        // refusing the keystroke leaves no state change, and with no re-render React would not
-        // restore the DOM on its own.
         if (raw && !digit) {
             event.target.value = charAt(index);
             return;
@@ -64,8 +55,6 @@ export default function OtpModal({
         const chars = slots();
         chars[index] = digit || GAP;
         commit(chars);
-        // only move on when something was actually entered - clearing a box should leave the caret
-        // where it is, or backspacing through the code would run away forward
         if (digit) focus(index + 1);
     };
 

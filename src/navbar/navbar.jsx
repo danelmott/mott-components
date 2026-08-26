@@ -4,7 +4,7 @@ import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
 import { twMerge } from 'tailwind-merge';
 import Icon from '../icon/icon.jsx';
-import { MORPH, CIRCLE_RADIUS, squircleRadius } from '../animations/motion.js';
+import { MORPH_SCALE, morphTo, pressHandlers, CIRCLE_RADIUS, squircleRadius } from '../animations/motion.js';
 import { verifyTypesNavbar } from '../utils/verifyTypes.js';
 
 const DESKTOP_ALIGN = {
@@ -19,17 +19,20 @@ const DESKTOP_ALIGN = {
   GSAP writes what it animates into the element's inline style: tweening backgroundColor would bake a
   literal hex over the var() and the button would stop following the theme from its first click
   onwards. GEOMETRY (borderRadius + scale) stays in GSAP because those two have to move as one, and
-  splitting them across two engines with two different curves is what makes a morph look broken.
+  splitting them across two engines with two different curves is what makes a morph look broken. It
+  goes through `morphTo`, which promotes the item to its own layer while the tween runs - otherwise
+  the browser re-rasterises the icon at a new size every frame and the glyph shivers.
+
   The resting radius feeds the modal too: `resolveRadius` in modalAnimation.js reads the trigger's
   computed radius to build the clip-path the panel morphs out of. It now resolves percentages per
   axis and clamps to half the box, so Tailwind's full-round utility no longer corrupts the morph
   the way it used to - but a percentage is still what makes a control read as a true circle at any
   --control-size, so keep it.*/
 const ITEM_BASE =
-    'inline-flex items-center justify-center gap-2 border-0 cursor-pointer p-0' +
+    'mott-state-layer inline-flex items-center justify-center gap-2 border-0 cursor-pointer p-0' +
     ' mott-label-large mott-trim' +
     ' bg-[var(--md-sys-color-surface-container)] text-[var(--md-sys-color-on-surface-variant)]' +
-    ' transition-[background-color,color] duration-[var(--duration-base)] ease-[var(--ease-emphasized)]' +
+    ' transition-[background-color,color] duration-[var(--duration-morph)] ease-[var(--ease-morph)]' +
     ' focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--md-sys-color-primary)]';
 
 const ITEM_SELECTED = 'bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)]';
@@ -54,7 +57,7 @@ function NavItems({ items, selectedItem, onSelect, vertical }) {
 
         const squircle = squircleRadius();
         const shapeOf = (i) => (i === selectedItem
-            ? { borderRadius: squircle, scale: 1.1 }
+            ? { borderRadius: squircle, scale: MORPH_SCALE }
             : { borderRadius: CIRCLE_RADIUS, scale: 1 });
 
         // mounting, or the set of items itself changed: put the resting state in place, do not play it
@@ -72,7 +75,7 @@ function NavItems({ items, selectedItem, onSelect, vertical }) {
 
         changed.forEach((i) => {
             const el = itemRefs.current[i];
-            if (el) gsap.to(el, { ...shapeOf(i), ...MORPH });
+            if (el) morphTo(el, shapeOf(i), { entering: i === selectedItem });
         });
     }, { dependencies: [selectedItem, items.length], scope: containerRef });
 
@@ -88,6 +91,7 @@ function NavItems({ items, selectedItem, onSelect, vertical }) {
                         onClick={() => onSelect(i)}
                         aria-pressed={selectedItem === i}
                         className={twMerge(ITEM_BASE, selectedItem === i && ITEM_SELECTED)}
+                        {...pressHandlers(selectedItem === i ? MORPH_SCALE : 1)}
                         style={{
                             borderRadius: CIRCLE_RADIUS,
                             height: 'var(--control-size-md)',
@@ -113,14 +117,14 @@ function LogoButton({ logo }) {
         if (!ref.current) return;
         const shape = {
             borderRadius: logo.active ? squircleRadius() : CIRCLE_RADIUS,
-            scale: logo.active ? 1.1 : 1,
+            scale: logo.active ? MORPH_SCALE : 1,
         };
         if (!didMountRef.current) {
             didMountRef.current = true;
             gsap.set(ref.current, shape);
             return;
         }
-        gsap.to(ref.current, { ...shape, ...MORPH });
+        morphTo(ref.current, shape, { entering: !!logo.active });
     }, { dependencies: [logo.active] });
 
     return (
@@ -131,6 +135,7 @@ function LogoButton({ logo }) {
             aria-pressed={!!logo.active}
             aria-label={logo.label ?? 'Inicio'}
             className={twMerge(ITEM_BASE, logo.active && ITEM_SELECTED)}
+            {...pressHandlers(logo.active ? MORPH_SCALE : 1)}
             style={{
                 width: 'var(--control-size-md)',
                 height: 'var(--control-size-md)',

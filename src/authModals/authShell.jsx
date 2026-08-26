@@ -5,12 +5,7 @@ import Icon from '../icon/icon.jsx';
 import GoogleIcon from '../icon/googleIcon.jsx';
 import { verifyTypesAuthShell } from '../utils/verifyTypes.js';
 
-// The three auth modals are the same box with different contents, so the box is written once. Not
-// exported from index.js on purpose: it is the shared implementation, not a promise of an API. If a
-// fourth flow ever needs it, it is one line away - but until then, changing it stays cheap.
 
-// A link, not a control: no surface, no padding, no `mott-btn`. It is still a real <button> so the
-// keyboard reaches it, which a <span onClick> would not.
 function SwitchLink({ children, onClick, disabled }) {
     return (
         <button
@@ -19,9 +14,6 @@ function SwitchLink({ children, onClick, disabled }) {
             disabled={disabled}
             className="cursor-pointer border-0 bg-transparent p-0 underline-offset-4 hover:underline focus-visible:underline focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
             style={{
-                // buttons do not inherit type from the page - browsers hand them their own 13px
-                // system font - so the <p> around this one has to be adopted explicitly. `font` is
-                // a shorthand, so the two lines after it have to come after it, or it wipes them.
                 font: 'inherit',
                 letterSpacing: 'var(--md-sys-typescale-body-medium-tracking)',
                 fontWeight: 'var(--md-ref-typeface-weight-medium)',

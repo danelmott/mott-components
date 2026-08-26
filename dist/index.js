@@ -936,6 +936,13 @@ var DURATION = {
   base: 0.28,
   slow: 0.4,
   modal: 0.55,
+  /*El morph de seleccion pide la suya. Con --duration-base y la curva vieja el 78% del
+    recorrido cabia en los primeros 70ms y los 210 restantes no ensenaban nada: se leia como un
+    salto, no como un movimiento. Repartida la curva, este numero ES el tiempo que se ve - por eso
+    es mas corto de lo que parece que deberia. A 380ms se sentia lento, y ademas dejaba el arco
+    del border-radius repintandose 80ms sin avanzar de forma visible, que es donde el
+    antialiasing del borde parpadea.*/
+  morph: 0.3,
   // The odd one out: every value above answers a click, so it is measured in how fast a control
   // can respond. This one is the length of a journey across a surface - a highlight sweeping a
   // control - and a travel that reads as light has to take its time.
@@ -945,20 +952,61 @@ var EASE = {
   standard: CustomEase.create("mottStandard", "0.2, 0, 0, 1"),
   emphasized: CustomEase.create("mottEmphasized", "0.32, 0.72, 0, 1"),
   inOut: CustomEase.create("mottInOut", "0.65, 0, 0.35, 1"),
-  exit: CustomEase.create("mottExit", "0.3, 0, 0.8, 0.15")
+  exit: CustomEase.create("mottExit", "0.3, 0, 0.8, 0.15"),
+  morph: CustomEase.create("mottMorph", "0.35, 0, 0.45, 1")
 };
 var MORPH = {
-  duration: DURATION.base,
-  ease: EASE.emphasized,
+  duration: DURATION.morph,
+  ease: EASE.morph,
   overwrite: "auto",
   force3D: true
 };
+var MORPH_SCALE = 62 / 56;
+var HANDOFF = { out: 0.8, lead: 0.1 };
+var morphTo = (el, shape, { entering = false } = {}) => {
+  gsap.set(el, { willChange: "transform" });
+  return gsap.to(el, {
+    ...shape,
+    ...MORPH,
+    // dur() lo colapsa a 0 con prefers-reduced-motion; onComplete sigue disparando, asi que el
+    // will-change se limpia igual y el control simplemente llega en el primer cuadro.
+    duration: dur(entering ? DURATION.morph : DURATION.morph * HANDOFF.out),
+    delay: entering ? dur(DURATION.morph * HANDOFF.lead) : 0,
+    onComplete: () => gsap.set(el, { clearProps: "willChange" })
+  });
+};
+var PRESS_SCALE = 0.94;
+var pressing = /* @__PURE__ */ new WeakSet();
+var release = (base) => (event) => {
+  if (!pressing.delete(event.currentTarget)) return;
+  gsap.to(event.currentTarget, {
+    scale: base,
+    duration: dur(DURATION.fast),
+    ease: EASE.standard,
+    overwrite: "auto"
+  });
+};
+var pressHandlers = (base) => ({
+  onPointerDown: (event) => {
+    pressing.add(event.currentTarget);
+    gsap.to(event.currentTarget, {
+      scale: base * PRESS_SCALE,
+      duration: dur(DURATION.instant),
+      ease: EASE.standard,
+      overwrite: "auto"
+    });
+  },
+  onPointerUp: release(base),
+  onPointerLeave: release(base),
+  onPointerCancel: release(base)
+});
 var longForm = (value) => `${value} ${value} ${value} ${value} / ${value} ${value} ${value} ${value}`;
 var CIRCLE_RADIUS = longForm("50%");
 var squircleRadius = () => longForm(
   typeof document !== "undefined" && getComputedStyle(document.documentElement).getPropertyValue("--control-radius").trim() || "28%"
 );
 var prefersReducedMotion = () => typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+var dur = (seconds) => prefersReducedMotion() ? 0 : seconds;
 
 // src/buttons/buttonGroup.jsx
 import { jsx as jsx5, jsxs } from "react/jsx-runtime";
@@ -976,7 +1024,7 @@ function ButtonGroup({ buttons, vertical = true, variant = "support", defaultSel
   useGSAP(() => {
     itemRefs.current.length = buttons.length;
     const squircle = squircleRadius();
-    const shapeOf = (i) => i === selectedButton ? { borderRadius: squircle, scale: 1.1 } : { borderRadius: CIRCLE_RADIUS, scale: 1 };
+    const shapeOf = (i) => i === selectedButton ? { borderRadius: squircle, scale: MORPH_SCALE } : { borderRadius: CIRCLE_RADIUS, scale: 1 };
     const settleOnly = prevCountRef.current !== buttons.length;
     prevCountRef.current = buttons.length;
     if (settleOnly) {
@@ -990,7 +1038,7 @@ function ButtonGroup({ buttons, vertical = true, variant = "support", defaultSel
     prevSelectedRef.current = selectedButton;
     changed.forEach((i) => {
       const el = itemRefs.current[i];
-      if (el) gsap2.to(el, { ...shapeOf(i), ...MORPH });
+      if (el) morphTo(el, shapeOf(i), { entering: i === selectedButton });
     });
   }, { dependencies: [selectedButton, buttons.length], scope: containerRef });
   const handleSelect = (i) => {
@@ -1013,7 +1061,8 @@ function ButtonGroup({ buttons, vertical = true, variant = "support", defaultSel
         "aria-pressed": selectedButton === i,
         "aria-label": btn.ariaLabel,
         title: btn.ariaLabel,
-        className: "mott-btn-in-group",
+        className: "mott-btn-in-group mott-state-layer",
+        ...pressHandlers(i === selectedButton ? MORPH_SCALE : 1),
         style: {
           backgroundColor: i === selectedButton ? selected.surface : resting.container,
           color: i === selectedButton ? selected.on : resting.onContainer,
@@ -2099,7 +2148,7 @@ function Swatch({ theme, selected, onSelect }) {
     if (!ref.current) return;
     const shape = {
       borderRadius: selected ? squircleRadius() : CIRCLE_RADIUS,
-      scale: selected ? 1.1 : 1
+      scale: selected ? MORPH_SCALE : 1
     };
     const mark = { autoAlpha: selected ? 1 : 0, scale: selected ? 1 : 0.6 };
     if (!didMountRef.current) {
@@ -2108,8 +2157,8 @@ function Swatch({ theme, selected, onSelect }) {
       gsap5.set(checkRef.current, mark);
       return;
     }
-    gsap5.to(ref.current, { ...shape, ...MORPH });
-    gsap5.to(checkRef.current, { ...mark, ...MORPH });
+    morphTo(ref.current, shape, { entering: selected });
+    morphTo(checkRef.current, mark, { entering: selected });
   }, { dependencies: [selected] });
   return /* @__PURE__ */ jsx10(
     "button",
@@ -2121,6 +2170,7 @@ function Swatch({ theme, selected, onSelect }) {
       "aria-label": theme.name,
       title: theme.name,
       className: SWATCH_CLASS,
+      ...pressHandlers(selected ? MORPH_SCALE : 1),
       style: {
         width: SWATCH,
         height: SWATCH,
@@ -2684,9 +2734,6 @@ function SwitchLink({ children, onClick, disabled }) {
       disabled,
       className: "cursor-pointer border-0 bg-transparent p-0 underline-offset-4 hover:underline focus-visible:underline focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50",
       style: {
-        // buttons do not inherit type from the page - browsers hand them their own 13px
-        // system font - so the <p> around this one has to be adopted explicitly. `font` is
-        // a shorthand, so the two lines after it have to come after it, or it wipes them.
         font: "inherit",
         letterSpacing: "var(--md-sys-typescale-body-medium-tracking)",
         fontWeight: "var(--md-ref-typeface-weight-medium)",
@@ -3257,7 +3304,7 @@ var DESKTOP_ALIGN = {
   center: "top-1/2 -translate-y-1/2",
   top: "top-8"
 };
-var ITEM_BASE = "inline-flex items-center justify-center gap-2 border-0 cursor-pointer p-0 mott-label-large mott-trim bg-[var(--md-sys-color-surface-container)] text-[var(--md-sys-color-on-surface-variant)] transition-[background-color,color] duration-[var(--duration-base)] ease-[var(--ease-emphasized)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--md-sys-color-primary)]";
+var ITEM_BASE = "mott-state-layer inline-flex items-center justify-center gap-2 border-0 cursor-pointer p-0 mott-label-large mott-trim bg-[var(--md-sys-color-surface-container)] text-[var(--md-sys-color-on-surface-variant)] transition-[background-color,color] duration-[var(--duration-morph)] ease-[var(--ease-morph)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--md-sys-color-primary)]";
 var ITEM_SELECTED = "bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)]";
 var attachRef = (node, store, i, forwarded) => {
   if (i === null) store.current = node;
@@ -3273,7 +3320,7 @@ function NavItems({ items, selectedItem, onSelect, vertical }) {
   useGSAP8(() => {
     itemRefs.current.length = items.length;
     const squircle = squircleRadius();
-    const shapeOf = (i) => i === selectedItem ? { borderRadius: squircle, scale: 1.1 } : { borderRadius: CIRCLE_RADIUS, scale: 1 };
+    const shapeOf = (i) => i === selectedItem ? { borderRadius: squircle, scale: MORPH_SCALE } : { borderRadius: CIRCLE_RADIUS, scale: 1 };
     const settleOnly = prevCountRef.current !== items.length;
     prevCountRef.current = items.length;
     if (settleOnly) {
@@ -3287,7 +3334,7 @@ function NavItems({ items, selectedItem, onSelect, vertical }) {
     prevSelectedRef.current = selectedItem;
     changed.forEach((i) => {
       const el = itemRefs.current[i];
-      if (el) gsap10.to(el, { ...shapeOf(i), ...MORPH });
+      if (el) morphTo(el, shapeOf(i), { entering: i === selectedItem });
     });
   }, { dependencies: [selectedItem, items.length], scope: containerRef });
   return /* @__PURE__ */ jsx24("div", { ref: containerRef, className: twMerge11("inline-flex gap-[var(--gap-group)]", vertical && "flex-col"), children: items.map((item, i) => {
@@ -3300,6 +3347,7 @@ function NavItems({ items, selectedItem, onSelect, vertical }) {
         onClick: () => onSelect(i),
         "aria-pressed": selectedItem === i,
         className: twMerge11(ITEM_BASE, selectedItem === i && ITEM_SELECTED),
+        ...pressHandlers(selectedItem === i ? MORPH_SCALE : 1),
         style: {
           borderRadius: CIRCLE_RADIUS,
           height: "var(--control-size-md)",
@@ -3321,14 +3369,14 @@ function LogoButton({ logo }) {
     if (!ref.current) return;
     const shape = {
       borderRadius: logo.active ? squircleRadius() : CIRCLE_RADIUS,
-      scale: logo.active ? 1.1 : 1
+      scale: logo.active ? MORPH_SCALE : 1
     };
     if (!didMountRef.current) {
       didMountRef.current = true;
       gsap10.set(ref.current, shape);
       return;
     }
-    gsap10.to(ref.current, { ...shape, ...MORPH });
+    morphTo(ref.current, shape, { entering: !!logo.active });
   }, { dependencies: [logo.active] });
   return /* @__PURE__ */ jsx24(
     "button",
@@ -3339,6 +3387,7 @@ function LogoButton({ logo }) {
       "aria-pressed": !!logo.active,
       "aria-label": logo.label ?? "Inicio",
       className: twMerge11(ITEM_BASE, logo.active && ITEM_SELECTED),
+      ...pressHandlers(logo.active ? MORPH_SCALE : 1),
       style: {
         width: "var(--control-size-md)",
         height: "var(--control-size-md)",
@@ -3723,10 +3772,12 @@ export {
   Loading,
   LoginModal,
   MORPH,
+  MORPH_SCALE,
   ModalAnimation,
   MorphAnimation,
   Navbar,
   OtpModal,
+  PRESS_SCALE,
   Progress,
   RegisterModal,
   SHAPE_NAMES,
@@ -3742,7 +3793,9 @@ export {
   ToastProvider,
   anchoredAnimation,
   morphAnimation,
+  morphTo,
   prefersReducedMotion,
+  pressHandlers,
   squircleRadius,
   useDragScroll,
   useTheme,

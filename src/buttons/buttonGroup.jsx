@@ -5,7 +5,7 @@ import gsap from 'gsap';
 import { twMerge } from 'tailwind-merge';
 import Icon from '../icon/icon.jsx';
 import { selectionTint, FAMILIES } from '../theme/roles.js';
-import { MORPH, CIRCLE_RADIUS, squircleRadius } from '../animations/motion.js';
+import { MORPH_SCALE, morphTo, pressHandlers, CIRCLE_RADIUS, squircleRadius } from '../animations/motion.js';
 import { verifyTypesButtonGroup } from '../utils/verifyTypes.js';
 
 
@@ -14,7 +14,9 @@ import { verifyTypesButtonGroup } from '../utils/verifyTypes.js';
   style, and tweening backgroundColor would bake a literal hex over the role token - the button
   would stop following the theme from its first click onwards. GEOMETRY stays in GSAP because the
   radius and the scale have to move as one. Both halves run on --duration-base / --ease-emphasized,
-  so they still land on the same frame.*/
+  so they still land on the same frame. `morphTo` is what runs the geometry: it promotes the button
+  to its own layer for the length of the tween, without which the browser re-rasterises the icon at
+  a new size on every frame and the glyph visibly shivers - see the note on it in motion.js.*/
 
 
 export default function ButtonGroup({ buttons, vertical = true, variant = 'support', defaultSelected = null, value, allowDeselect = true, onChange }) {
@@ -35,7 +37,7 @@ export default function ButtonGroup({ buttons, vertical = true, variant = 'suppo
 
         const squircle = squircleRadius();
         const shapeOf = (i) => (i === selectedButton
-            ? { borderRadius: squircle, scale: 1.1 }
+            ? { borderRadius: squircle, scale: MORPH_SCALE }
             : { borderRadius: CIRCLE_RADIUS, scale: 1 });
 
         /*The first pass - and any pass where the set of buttons itself changed - only puts the
@@ -58,7 +60,7 @@ export default function ButtonGroup({ buttons, vertical = true, variant = 'suppo
 
         changed.forEach((i) => {
             const el = itemRefs.current[i];
-            if (el) gsap.to(el, { ...shapeOf(i), ...MORPH });
+            if (el) morphTo(el, shapeOf(i), { entering: i === selectedButton });
         });
     }, { dependencies: [selectedButton, buttons.length], scope: containerRef });
 
@@ -85,7 +87,11 @@ export default function ButtonGroup({ buttons, vertical = true, variant = 'suppo
                         aria-pressed={selectedButton === i}
                         aria-label={btn.ariaLabel}
                         title={btn.ariaLabel}
-                        className='mott-btn-in-group'
+                        className='mott-btn-in-group mott-state-layer'
+                        /*The press has to travel through GSAP - it owns `transform` on this button, so a
+                          CSS :active scale could never win. `base` is where the control rests, so the
+                          press composes with the selection instead of fighting it.*/
+                        {...pressHandlers(i === selectedButton ? MORPH_SCALE : 1)}
                         style={{
                             backgroundColor: i === selectedButton ? selected.surface : resting.container,
                             color: i === selectedButton ? selected.on : resting.onContainer,

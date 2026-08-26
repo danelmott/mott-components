@@ -13,19 +13,6 @@
     --md-ref-typeface-weight-bold: 700;
 
     --font-family: var(--md-ref-typeface-plain);
-
-    /* The typescale, one block per role. Sizes and line-heights are M3's; the tracking is not. */
-    /* M3's numbers were measured on Roboto, and DM Sans already solves the same problem better: */
-    /* its `opsz` axis narrows display text by up to 8.6% and opens 11px text by 0.5% on its own. */
-    /* Layering M3's tracking on top would pay for that compensation twice, so headline, title and */
-    /* body-large sit at 0 and let the font do it, and the small roles keep a light positive touch */
-    /* where UI micro-copy wants more air than the axis alone gives. */
-    /* The two display roles are the exception, because the axis stops at 40 and they are past it: */
-    /* 45px sits 5 points outside its reach and 57px sits 17, so both would otherwise be drawn */
-    /* identically despite the 12px between them. They get a small negative value in proportion. */
-    /* Small on purpose - continuing the axis's own slope would land at -0.05em, and at that width */
-    /* the letters collide. opsz 40 is the display drawing the designer meant for everything above */
-    /* 40, not a curve that was cut short. */
     --md-sys-typescale-display-large-font: var(--md-ref-typeface-brand);
     --md-sys-typescale-display-large-size: 3.5625rem;            /* 57px */
     --md-sys-typescale-display-large-line-height: 4rem;
@@ -163,14 +150,20 @@
     --duration-base: 280ms;
     --duration-slow: 400ms;
     --duration-modal: 550ms;
+    --duration-morph: 300ms;
     --duration-sweep: 900ms;
 
     --ease-standard: cubic-bezier(0.2, 0, 0, 1);
     --ease-emphasized: cubic-bezier(0.32, 0.72, 0, 1);
     --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
     --ease-exit: cubic-bezier(0.3, 0, 0.8, 0.15);
-    /* kept as an alias so everything already written against it keeps working */
-    --ease-morph: var(--ease-emphasized);
+    /* The selection morph's own curve, mirrored by EASE.morph. Not --ease-emphasized: that one
+       completes 78% of the journey inside the first 25% of the time, which on a control that only
+       grows 6px reads as a jump followed by nothing. This one is at 19% a quarter of the way
+       through and 63% at the halfway mark. It also LANDS rather than creeping - border-radius is
+       repainted, not composited, so a long tail leaves the corner redrawing hundredths of a pixel
+       per frame, and that is where the edge's antialiasing shimmers. */
+    --ease-morph: cubic-bezier(0.35, 0, 0.45, 1);
     --shadow-floating:
         0 1px 2px rgb(15 23 42 / 0.05),
         0 6px 16px -4px rgb(15 23 42 / 0.08),
@@ -489,6 +482,42 @@ body {
 }
 
 
+/*The tint that says "you are touching me" - the same 8%/12% of currentColor that mott-btn paints
+  through its own ::after, pulled out as a utility because the controls in a group and in the navbar
+  had no press or hover feedback at all: you moved onto one and nothing happened, you pressed and
+  nothing happened, and then the whole selection change arrived at once. Most of what read as dry
+  was the silence before the morph, not the morph.
+
+  ::after and not ::before, so a control can wear this and mott-shine at the same time without the
+  two fighting over one pseudo-element.*/
+@utility mott-state-layer {
+  position: relative;
+  isolation: isolate;   /* clamps the layer's negative z-index inside this control */
+
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;        /* under the label, over the control's own background */
+    /*GSAP writes border-radius inline while it morphs, so the layer follows a circle turning into
+      a squircle for free - the same trick mott-shine leans on further down this file.*/
+    border-radius: inherit;
+    background-color: currentColor;
+    opacity: 0;
+    transition: opacity var(--duration-instant);
+    pointer-events: none;
+  }
+
+  /*Guarded, unlike mott-btn's: without (hover: hover) a touch device keeps :hover stuck on the last
+    control tapped. mott-btn has that bug today - not fixing it here, but not copying it either.*/
+  @media (hover: hover) {
+    &:hover::after { opacity: 0.08; }
+  }
+
+  &:active::after { opacity: 0.12; }
+}
+
+
 /*basic style for single btn in btn groups*/
 @utility mott-btn-in-group {
   display: inline-flex;
@@ -504,9 +533,11 @@ body {
   letter-spacing: var(--md-sys-typescale-label-large-tracking);
 
 
+  /*The morph's own tokens, not --duration-base: colour and shape have to land on the same frame,
+    and the shape moved to 380ms when the curve was spread out.*/
   transition-property: background-color, color;
-  transition-duration: var(--duration-base);
-  transition-timing-function: var(--ease-emphasized);
+  transition-duration: var(--duration-morph);
+  transition-timing-function: var(--ease-morph);
 
   &:focus-visible {
     outline: none;
@@ -660,7 +691,7 @@ body {
   /*The custom property is what transitions, not the box-shadow: registered above as a <number> it
     interpolates, and mott-fade-y/x already lean on the same trick in this file. The tokens are
     MORPH's own, so the ring brightens on the frame GSAP finishes morphing the shape.*/
-  transition: --mott-swatch-ring var(--duration-base) var(--ease-emphasized);
+  transition: --mott-swatch-ring var(--duration-morph) var(--ease-morph);
 
   &:focus-visible {
     outline: none;
