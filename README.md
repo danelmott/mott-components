@@ -245,6 +245,7 @@ soft step of the neutral family and `ghost` has no surface to soften, so on thos
 | `Dropdown` | anchored panel, no backdrop; closes on Escape or an outside click |
 | `CustomModal` | native `<dialog>` with pluggable open/close animations |
 | `LoginModal` / `RegisterModal` / `OtpModal` | ready-made auth modals: controlled fields, Google button, close button and switch line |
+| `RecoverPasswordModal` | password recovery in two steps — the code, then the new password — in one panel |
 | `Icon` | Material Symbols Rounded with `fill`, `weight`, `grade`, `opticalSize` |
 | `GoogleIcon` | the Google mark in its own four brand colours — the one thing here that does not follow the theme |
 | `Loading` | spinner, sizes `sm`/`md`/`lg` |
@@ -422,10 +423,10 @@ function SaveButton() {
 
 ### Auth modals
 
-`LoginModal`, `RegisterModal` and `OtpModal` are the same panel with different contents: brand line,
-title, fields, primary button, Google button, and a switch line at the bottom. All three compose the
-components already in this library, so they inherit the typescale and the colour roles rather than
-restating them.
+`LoginModal`, `RegisterModal`, `OtpModal` and `RecoverPasswordModal` are the same panel with different
+contents: brand line, title, fields, primary button, Google button, and a switch line at the bottom.
+They compose the components already in this library, so they inherit the typescale and the colour
+roles rather than restating them.
 
 **Every field is controlled by you.** The modal renders what it is given and reports what was typed;
 it never holds the value. That is what lets you validate as the user types, keep what was entered
@@ -464,9 +465,74 @@ straight through to `CustomModal`, so the panel morphs out of the button that op
 clears the previous one, arrows move, and pasting a whole code fills it from the box you are on.
 Non-digits are dropped, and a code longer than the field is truncated rather than spilling.
 
+#### Recovering a password
+
+`RecoverPasswordModal` is that same code field and then a pair of password fields, in one panel that
+never closes in between. **Which step is showing is a prop, not internal state**: moving on means the
+code was accepted, and only you can ask the server that. `onVerifyCode` runs on the first step,
+`onSubmitPassword` on the second, and you move `step` when the answer comes back.
+
+```jsx
+const [step, setStep] = useState('code');   // 'code' | 'password'
+
+<RecoverPasswordModal
+  open={open}
+  onClose={() => setOpen(false)}
+  triggerRef={buttonRef}
+  step={step}
+  email={email}
+  code={code} onCodeChange={setCode}
+  onVerifyCode={() => verifyCode(code).then(() => setStep('password'), (e) => setError(e.message))}
+  onResend={() => sendCode(email)}
+  password={password} onPasswordChange={setPassword}
+  confirmPassword={confirm} onConfirmPasswordChange={setConfirm}
+  onSubmitPassword={() => resetPassword(password).then(() => setScreen('login'))}
+  error={error}
+  onSwitch={() => setScreen('login')}
+/>
+```
+
+Saving is the end of it — there is no success step. `onSubmitPassword` runs and you hand the user
+back to the login modal to come in with what they just set; the switch line on that step points there
+too, for someone who remembered their password halfway through. Nothing in here compares the two
+password fields: as everywhere else, the rule belongs to whoever knows it, and the verdict comes back
+as `error`.
+
+The way in is `onForgotPassword` on `LoginModal` — an optional callback that renders a link under the
+password field. Leave it out and no link appears.
+
 **The Google mark keeps its own colours.** `GoogleIcon` is four fixed brand hexes and does not follow
 the seed — it is somebody else's logo, and repainting it would make it a different logo. It is
 exported on its own if you want to build the button yourself.
+
+---
+
+### Navbar
+
+Icons on a vertical rail on desktop, a floating pill bar on mobile — `Navbar` renders both and lets
+CSS pick one with a `md:` breakpoint. `items` is the array of buttons, `logo` is an optional one that
+opens separately (a menu, a home link), and `align` (`'center'` | `'top'`) only affects the desktop
+rail — the mobile bar is always at the bottom.
+
+**The desktop rail reserves its own column; it does not float over your page.** It is `position:
+sticky`, not `fixed` — a `fixed` element paints above ordinary flow content no matter what z-index you
+give it, because that is how CSS's painting order works, so a rail that has to sit *beside* your
+content rather than *over* it has to stay part of the document flow instead. That means it needs a
+place to push content into — mount it as a flex-row sibling of your page content, typically once near
+the root of your app:
+
+```jsx
+// app/layout.jsx
+<div className="flex min-h-screen">
+  <Navbar items={items} logo={logo} onChange={setRoute} selected={route} />
+  <main className="flex-1">{children}</main>
+</div>
+```
+
+It still stays pinned in view while the page scrolls — `sticky` plus a full-viewport-tall box gives it
+the same "always visible" feel `fixed` had, just without sitting on top of anything. The mobile bar is
+the opposite on purpose: a bottom bar is expected to float over the last bit of content, so it keeps
+its own `fixed` position and an elevated z-index.
 
 ---
 
@@ -478,6 +544,7 @@ defines:
 | group | tokens |
 |---|---|
 | Typography | `--md-ref-typeface-brand/plain`, `--md-ref-typeface-weight-*`, `--md-sys-typescale-<role>-{font,size,line-height,tracking,weight}` for the fifteen roles, `--font-family`, `--tracking-caps` |
+| Title emphasis | `--md-sys-title-emphasis-{weight,tracking,opsz}`, applied by the `.mott-title-emphasis` class — not tied to modals, layer it **on top of** any typescale role to make a title read heavier and tighter |
 | Radii | `--radius-sm`, `--radius-lg`, `--radius-default`, `--radius-full`, `--radius-modal`, `--control-radius` |
 | Spacing | `--pad-button`, `--pad-input`, `--pad-card`, `--pad-badge-*`, `--gap-tight` → `--gap-page` |
 | Sizing | `--sm-icon` → `--xl-icon`, `--control-size-sm/md/lg` |

@@ -1,0 +1,11 @@
+<!doctype html>
+<html lang="es">
+  <head><meta charset="UTF-8" /><title>verify nav + swatch</title></head>
+  <body>
+    <div id="root"></div>
+    <!-- Retrasa el evento load hasta que las aserciones terminen: firefox --screenshot captura en
+         load, y las medidas tardan unos segundos. -->
+    <img src="http://127.0.0.1:8741/gate.png" alt="" style="position:fixed;left:-10px;width:1px" />
+    <script type="module" src="./verifyNav.jsx"></script>
+  </body>
+</html>

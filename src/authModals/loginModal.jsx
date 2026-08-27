@@ -1,6 +1,6 @@
 'use client';
 import Input from '../input/input.jsx';
-import AuthShell from './authShell.jsx';
+import AuthShell, { SwitchLink } from './authShell.jsx';
 import PasswordField from './passwordField.jsx';
 import { verifyTypesLoginModal } from '../utils/verifyTypes.js';
 
@@ -27,6 +27,8 @@ export default function LoginModal({
     passwordPlaceholder = 'Escribe tu contraseña',
     submitLabel = 'Iniciar sesión',
     onSubmit,
+    onForgotPassword,
+    forgotPasswordText = '¿Olvidaste tu contraseña?',
     onGoogle,
     googleLabel,
     switchText = '¿No tienes cuenta?',
@@ -35,7 +37,7 @@ export default function LoginModal({
     error,
     loading = false,
 }) {
-    verifyTypesLoginModal({ email, password, onEmailChange, onPasswordChange, onSubmit });
+    verifyTypesLoginModal({ email, password, onEmailChange, onPasswordChange, onSubmit, onForgotPassword });
     //authshell 
     return (
         <AuthShell
@@ -72,6 +74,24 @@ export default function LoginModal({
                 onChange={onPasswordChange}
                 disabled={loading}
             />
+
+            {/*Only when there is somewhere for it to go. A dead "forgot your password?" is worse than
+               no link at all, so the callback is what decides whether it exists.
+
+               The wrapper carries `mott-body-medium` because SwitchLink is `font: inherit` - out here
+               in the form there is no typescale to inherit, so without this it picks up the browser's
+               16px and comes out bigger than the title's own switch line. `body-medium` is the size
+               that line uses, which is what this link is: the same kind of aside, higher up.
+
+               The wrapper also exists to stop the button stretching: the form is a flex column, and a
+               bare <button> in it would be pulled to the full width by `align-items: stretch`.*/}
+            {onForgotPassword && (
+                <div className="mott-body-medium">
+                    <SwitchLink onClick={onForgotPassword} disabled={loading}>
+                        {forgotPasswordText}
+                    </SwitchLink>
+                </div>
+            )}
         </AuthShell>
     );
 }

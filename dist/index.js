@@ -574,11 +574,6 @@ function verifyTypesSelect({ options, onChange, label, placeholder, disabled } =
   assertType("Select", "disabled", disabled, "boolean");
   return true;
 }
-function verifyTypesProgress({ value, color } = {}) {
-  assertRange("Progress", "value", value, 0, 100);
-  assertType("Progress", "color", color, "string");
-  return true;
-}
 function verifyTypesLoading({ size, color } = {}) {
   assertOneOf("Loading", "size", size, CONTROL_SIZES, "sm");
   assertType("Loading", "color", color, "string");
@@ -636,12 +631,20 @@ function verifyTypesAuthShell({
   assertType("AuthShell", "loading", loading, "boolean");
   return true;
 }
-function verifyTypesLoginModal({ email, password, onEmailChange, onPasswordChange, onSubmit } = {}) {
+function verifyTypesLoginModal({
+  email,
+  password,
+  onEmailChange,
+  onPasswordChange,
+  onSubmit,
+  onForgotPassword
+} = {}) {
   assertType("LoginModal", "email", email, "string");
   assertType("LoginModal", "password", password, "string");
   assertType("LoginModal", "onEmailChange", onEmailChange, "function");
   assertType("LoginModal", "onPasswordChange", onPasswordChange, "function");
   assertType("LoginModal", "onSubmit", onSubmit, "function");
+  assertType("LoginModal", "onForgotPassword", onForgotPassword, "function");
   return true;
 }
 function verifyTypesRegisterModal({
@@ -669,6 +672,34 @@ function verifyTypesOtpModal({ code, onCodeChange, length, onSubmit, email, onRe
   assertType("OtpModal", "onSubmit", onSubmit, "function");
   assertType("OtpModal", "email", email, "string");
   assertType("OtpModal", "onResend", onResend, "function");
+  return true;
+}
+function verifyTypesRecoverPasswordModal({
+  step,
+  email,
+  code,
+  onCodeChange,
+  length,
+  onVerifyCode,
+  onResend,
+  password,
+  confirmPassword,
+  onPasswordChange,
+  onConfirmPasswordChange,
+  onSubmitPassword
+} = {}) {
+  assertOneOf("RecoverPasswordModal", "step", step, ["code", "password"], "code");
+  assertType("RecoverPasswordModal", "email", email, "string");
+  assertType("RecoverPasswordModal", "code", code, "string");
+  assertType("RecoverPasswordModal", "onCodeChange", onCodeChange, "function");
+  assertRange("RecoverPasswordModal", "length", length, 2, 8);
+  assertType("RecoverPasswordModal", "onVerifyCode", onVerifyCode, "function");
+  assertType("RecoverPasswordModal", "onResend", onResend, "function");
+  assertType("RecoverPasswordModal", "password", password, "string");
+  assertType("RecoverPasswordModal", "confirmPassword", confirmPassword, "string");
+  assertType("RecoverPasswordModal", "onPasswordChange", onPasswordChange, "function");
+  assertType("RecoverPasswordModal", "onConfirmPasswordChange", onConfirmPasswordChange, "function");
+  assertType("RecoverPasswordModal", "onSubmitPassword", onSubmitPassword, "function");
   return true;
 }
 function verifyTypesNavbar({ items, logo, selected, defaultSelected, onChange, align } = {}) {
@@ -937,12 +968,17 @@ var DURATION = {
   slow: 0.4,
   modal: 0.55,
   /*El morph de seleccion pide la suya. Con --duration-base y la curva vieja el 78% del
-    recorrido cabia en los primeros 70ms y los 210 restantes no ensenaban nada: se leia como un
-    salto, no como un movimiento. Repartida la curva, este numero ES el tiempo que se ve - por eso
-    es mas corto de lo que parece que deberia. A 380ms se sentia lento, y ademas dejaba el arco
-    del border-radius repintandose 80ms sin avanzar de forma visible, que es donde el
-    antialiasing del borde parpadea.*/
-  morph: 0.3,
+        recorrido cabia en los primeros 70ms y los 210 restantes no ensenaban nada: se leia como un
+        salto, no como un movimiento. Repartida la curva, este numero ES el tiempo que se ve - por eso
+        es mas corto de lo que parece que deberia.
+  
+        Bajo de 300 a 220 y de ahi a 120 al mover la geometria fuera del boton (ver `mott-morph` en
+        globals.css). Lo que ataba el numero por abajo no era la lectura, era el temblor: cuanto mas
+        corta la curva, mas px avanza el glifo entre cuadro y cuadro y mas se notaba el rehinteado.
+        Sin glifos que reescalar ese suelo desaparece. A 120ms - siete cuadros a 60fps - la seleccion
+        ya no acompana al clic, contesta; queda a la par de --duration-instant, que es lo que dura el
+        pulsado, asi que encoger y morfear se leen como una sola respuesta.*/
+  morph: 0.12,
   // The odd one out: every value above answers a click, so it is measured in how fast a control
   // can respond. This one is the length of a journey across a surface - a highlight sweeping a
   // control - and a travel that reads as light has to take its time.
@@ -986,7 +1022,7 @@ var release = (base) => (event) => {
     overwrite: "auto"
   });
 };
-var pressHandlers = (base) => ({
+var pressHandlers = (base = 1) => ({
   onPointerDown: (event) => {
     pressing.add(event.currentTarget);
     gsap.to(event.currentTarget, {
@@ -1005,6 +1041,21 @@ var CIRCLE_RADIUS = longForm("50%");
 var squircleRadius = () => longForm(
   typeof document !== "undefined" && getComputedStyle(document.documentElement).getPropertyValue("--control-radius").trim() || "28%"
 );
+var CIRCLE_PCT = 50;
+var squirclePct = () => typeof document !== "undefined" && parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--control-radius")) || 28;
+var selectionShape = (selected) => ({
+  "--mott-morph-r": selected ? squirclePct() : CIRCLE_PCT,
+  "--mott-morph-scale": selected ? MORPH_SCALE : 1
+});
+var morphSelection = (el, selected) => gsap.to(el, {
+  ...selectionShape(selected),
+  duration: dur(selected ? DURATION.morph : DURATION.morph * HANDOFF.out),
+  delay: selected ? dur(DURATION.morph * HANDOFF.lead) : 0,
+  ease: EASE.morph,
+  // sin esto, un segundo clic apila un tween nuevo sobre el que sigue corriendo y los dos
+  // escriben la misma variable en el mismo cuadro desde origenes distintos
+  overwrite: "auto"
+});
 var prefersReducedMotion = () => typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 var dur = (seconds) => prefersReducedMotion() ? 0 : seconds;
 
@@ -1023,8 +1074,7 @@ function ButtonGroup({ buttons, vertical = true, variant = "support", defaultSel
   const resting = FAMILIES.neutral;
   useGSAP(() => {
     itemRefs.current.length = buttons.length;
-    const squircle = squircleRadius();
-    const shapeOf = (i) => i === selectedButton ? { borderRadius: squircle, scale: MORPH_SCALE } : { borderRadius: CIRCLE_RADIUS, scale: 1 };
+    const shapeOf = (i) => selectionShape(i === selectedButton);
     const settleOnly = prevCountRef.current !== buttons.length;
     prevCountRef.current = buttons.length;
     if (settleOnly) {
@@ -1038,7 +1088,7 @@ function ButtonGroup({ buttons, vertical = true, variant = "support", defaultSel
     prevSelectedRef.current = selectedButton;
     changed.forEach((i) => {
       const el = itemRefs.current[i];
-      if (el) morphTo(el, shapeOf(i), { entering: i === selectedButton });
+      if (el) morphSelection(el, i === selectedButton);
     });
   }, { dependencies: [selectedButton, buttons.length], scope: containerRef });
   const handleSelect = (i) => {
@@ -1061,12 +1111,13 @@ function ButtonGroup({ buttons, vertical = true, variant = "support", defaultSel
         "aria-pressed": selectedButton === i,
         "aria-label": btn.ariaLabel,
         title: btn.ariaLabel,
-        className: "mott-btn-in-group mott-state-layer",
-        ...pressHandlers(i === selectedButton ? MORPH_SCALE : 1),
+        className: "mott-btn-in-group mott-state-layer mott-morph",
+        ...pressHandlers(),
         style: {
-          backgroundColor: i === selectedButton ? selected.surface : resting.container,
+          /*El fondo lo pinta ::before, no el boton: transicionarlo aqui lo repintaba
+            entero - texto incluido - en cada cuadro del morph.*/
+          "--mott-morph-bg": i === selectedButton ? selected.surface : resting.container,
           color: i === selectedButton ? selected.on : resting.onContainer,
-          borderRadius: CIRCLE_RADIUS,
           height: "var(--control-size-md)",
           ...iconOnly ? { width: "var(--control-size-md)", padding: 0 } : { padding: "0 20px" }
         },
@@ -1631,6 +1682,21 @@ function killRunningMorph(panel) {
   (_a = panel[RUNNING_MORPH]) == null ? void 0 : _a.kill();
   panel[RUNNING_MORPH] = null;
 }
+function paintedRect(el) {
+  const rect = el.getBoundingClientRect();
+  const scale = parseFloat(getComputedStyle(el).getPropertyValue("--mott-morph-scale")) || 1;
+  if (scale === 1) return rect;
+  const dx = rect.width * (scale - 1) / 2;
+  const dy = rect.height * (scale - 1) / 2;
+  return {
+    left: rect.left - dx,
+    right: rect.right + dx,
+    top: rect.top - dy,
+    bottom: rect.bottom + dy,
+    width: rect.width + dx * 2,
+    height: rect.height + dy * 2
+  };
+}
 function resolveRadius(el, rect) {
   const raw = getComputedStyle(el).borderTopLeftRadius.trim();
   const parts = raw.split(/\s+/);
@@ -1688,7 +1754,7 @@ function createTriggerGhost(dialog, trigger, originRect) {
     letterSpacing: cs.letterSpacing
   });
   const inner = document.createElement("div");
-  const scale = trigger.offsetWidth ? originRect.width / trigger.offsetWidth : 1;
+  const scale = Number(gsap4.getProperty(trigger, "scaleX")) || 1;
   Object.assign(inner.style, {
     display: "flex",
     alignItems: "center",
@@ -1782,7 +1848,7 @@ var MorphAnimation = class extends ModalAnimation {
     const tx = Number(gsap4.getProperty(panel, "x")) || 0;
     const ty = Number(gsap4.getProperty(panel, "y")) || 0;
     const panelRect = { left: rect.left - tx, top: rect.top - ty, width: rect.width, height: rect.height };
-    const originRect = trigger.getBoundingClientRect();
+    const originRect = paintedRect(trigger);
     const panelBox = { ...panelRect, right: panelRect.left + panelRect.width, bottom: panelRect.top + panelRect.height };
     return {
       pad,
@@ -2148,7 +2214,8 @@ function Swatch({ theme, selected, onSelect }) {
     if (!ref.current) return;
     const shape = {
       borderRadius: selected ? squircleRadius() : CIRCLE_RADIUS,
-      scale: selected ? MORPH_SCALE : 1
+      scale: selected ? MORPH_SCALE : 1,
+      "--mott-morph-scale": selected ? MORPH_SCALE : 1
     };
     const mark = { autoAlpha: selected ? 1 : 0, scale: selected ? 1 : 0.6 };
     if (!didMountRef.current) {
@@ -2175,18 +2242,10 @@ function Swatch({ theme, selected, onSelect }) {
         width: SWATCH,
         height: SWATCH,
         borderRadius: CIRCLE_RADIUS,
-        /*Measured off the reference rather than guessed: the fill runs from the raw colour
-          to that colour under 20% white, along a 98deg axis. That - not a shadow - is what
-          reads as a gloss running down the right-hand side. The last stop eases back down
-          instead of holding the peak to the edge; that small dip is what keeps the far rim
-          from looking flat-lit, and it is in the reference too.*/
         background: `linear-gradient(98deg, rgb(255 255 255 / 0) 22%, rgb(255 255 255 / 0.20) 76%, rgb(255 255 255 / 0.12) 100%), ${theme.hex}`,
-        /*Only the alpha travels inline; the shadow itself lives in `mott-swatch`. An inline
-          boxShadow would beat the class and take the focus ring down with it, which is the
-          exact bug this file already had once.*/
         "--mott-swatch-ring": selected ? "0.3" : "0.1"
       },
-      children: /* @__PURE__ */ jsx10("span", { ref: checkRef, className: "flex", children: /* @__PURE__ */ jsx10(
+      children: /* @__PURE__ */ jsx10("span", { className: "mott-morph-steady flex", children: /* @__PURE__ */ jsx10("span", { ref: checkRef, className: "flex", children: /* @__PURE__ */ jsx10(
         Icon,
         {
           name: "check",
@@ -2194,7 +2253,7 @@ function Swatch({ theme, selected, onSelect }) {
           weight: 700,
           style: { color: onColorFor(theme.hex) }
         }
-      ) })
+      ) }) })
     }
   );
 }
@@ -2209,7 +2268,7 @@ function ThemeModal({ open, onClose, triggerRef, title = "Apariencia" }) {
       /* @__PURE__ */ jsx10(
         "h2",
         {
-          className: "mott-headline-small",
+          className: "mott-headline-small mott-title-emphasis",
           style: { color: "var(--md-sys-color-on-surface)" },
           children: title
         }
@@ -2803,7 +2862,7 @@ function AuthShell({
             children: /* @__PURE__ */ jsx17(Icon, { name: "close", size: "lg" })
           }
         ),
-        /* @__PURE__ */ jsxs11("div", { className: "flex flex-col items-center text-center", children: [
+        /* @__PURE__ */ jsxs11("div", { className: "flex flex-col items-start text-left", children: [
           (logo || brand) && /* @__PURE__ */ jsxs11("div", { className: "flex items-center gap-[var(--gap-group)]", children: [
             logo,
             brand && /* @__PURE__ */ jsx17(
@@ -2818,7 +2877,7 @@ function AuthShell({
           /* @__PURE__ */ jsx17(
             "h2",
             {
-              className: "mott-headline-large",
+              className: "mott-headline-large mott-title-emphasis",
               style: {
                 color: "var(--md-sys-color-on-surface)",
                 marginTop: logo || brand ? "var(--gap-group)" : 0
@@ -2831,7 +2890,7 @@ function AuthShell({
             {
               onSubmit: handleSubmit,
               noValidate: true,
-              className: "mt-[var(--gap-page)] flex w-full flex-col gap-[var(--gap-block)] text-left",
+              className: "mt-[var(--gap-page)] flex w-full flex-col gap-[var(--gap-block)]",
               children: [
                 children,
                 error && /* @__PURE__ */ jsx17("p", { className: "mott-body-small", style: { color: "var(--md-sys-color-error)" }, role: "alert", children: error }),
@@ -2843,10 +2902,12 @@ function AuthShell({
               ]
             }
           ),
-          switchText && /* @__PURE__ */ jsxs11(
+          switchText && /*`w-full` first: the column is `items-start`, so without it the <p> shrinks to
+            its text and `text-center` has nothing wider than itself to centre against.*/
+          /* @__PURE__ */ jsxs11(
             "p",
             {
-              className: "mott-body-medium mt-[var(--gap-block)]",
+              className: "mott-body-medium mt-[var(--gap-block)] w-full text-center",
               style: { color: "var(--md-sys-color-on-surface-variant)" },
               children: [
                 switchText,
@@ -2864,7 +2925,15 @@ function AuthShell({
 // src/authModals/passwordField.jsx
 import { useState as useState8 } from "react";
 import { jsx as jsx18 } from "react/jsx-runtime";
-function PasswordField({ label, placeholder, value, onChange, disabled }) {
+function PasswordField({
+  label,
+  placeholder,
+  value,
+  onChange,
+  disabled,
+  autoComplete = "current-password",
+  ...props
+}) {
   const [visible, setVisible] = useState8(false);
   return /* @__PURE__ */ jsx18(
     Input,
@@ -2875,7 +2944,8 @@ function PasswordField({ label, placeholder, value, onChange, disabled }) {
       value,
       onChange,
       disabled,
-      autoComplete: "current-password",
+      autoComplete,
+      ...props,
       trailing: /* @__PURE__ */ jsx18(
         "button",
         {
@@ -2910,6 +2980,8 @@ function LoginModal({
   passwordPlaceholder = "Escribe tu contrase\xF1a",
   submitLabel = "Iniciar sesi\xF3n",
   onSubmit,
+  onForgotPassword,
+  forgotPasswordText = "\xBFOlvidaste tu contrase\xF1a?",
   onGoogle,
   googleLabel,
   switchText = "\xBFNo tienes cuenta?",
@@ -2918,7 +2990,7 @@ function LoginModal({
   error,
   loading = false
 }) {
-  verifyTypesLoginModal({ email, password, onEmailChange, onPasswordChange, onSubmit });
+  verifyTypesLoginModal({ email, password, onEmailChange, onPasswordChange, onSubmit, onForgotPassword });
   return /* @__PURE__ */ jsxs12(
     AuthShell,
     {
@@ -2960,7 +3032,8 @@ function LoginModal({
             onChange: onPasswordChange,
             disabled: loading
           }
-        )
+        ),
+        onForgotPassword && /* @__PURE__ */ jsx19("div", { className: "mott-body-medium", children: /* @__PURE__ */ jsx19(SwitchLink, { onClick: onForgotPassword, disabled: loading, children: forgotPasswordText }) })
       ]
     }
   );
@@ -3041,6 +3114,7 @@ function RegisterModal({
         /* @__PURE__ */ jsx20(
           PasswordField,
           {
+            autoComplete: "new-password",
             label: passwordLabel,
             placeholder: passwordPlaceholder,
             value: password,
@@ -3051,6 +3125,7 @@ function RegisterModal({
         /* @__PURE__ */ jsx20(
           PasswordField,
           {
+            autoComplete: "new-password",
             label: confirmLabel,
             placeholder: confirmPlaceholder,
             value: confirmPassword,
@@ -3063,32 +3138,20 @@ function RegisterModal({
   );
 }
 
-// src/authModals/otpModal.jsx
+// src/authModals/otpFields.jsx
 import { useRef as useRef9 } from "react";
-import { jsx as jsx21, jsxs as jsxs14 } from "react/jsx-runtime";
+import { Fragment, jsx as jsx21, jsxs as jsxs14 } from "react/jsx-runtime";
 var BOX2 = "flex-1 min-w-0 aspect-square rounded-[var(--radius-lg)] bg-[var(--md-sys-color-surface-container)] mott-title-large text-center text-[var(--md-sys-color-on-surface)] outline-none transition-colors duration-150 focus:bg-[color-mix(in_srgb,var(--md-sys-color-on-surface)_8%,var(--md-sys-color-surface-container))] disabled:opacity-50 disabled:cursor-not-allowed";
 var GAP2 = " ";
-function OtpModal({
-  open,
-  onClose,
-  triggerRef,
-  logo,
-  brand,
-  title = "Verifica tu correo",
-  email,
-  description,
+function OtpFields({
   code = "",
   onCodeChange,
   length = 6,
-  submitLabel = "Verificar",
-  onSubmit,
-  switchText = "\xBFNo te lleg\xF3 el c\xF3digo?",
-  switchAction = "Reenviar",
-  onResend,
-  error,
-  loading = false
+  email,
+  description,
+  disabled = false,
+  groupLabel
 }) {
-  verifyTypesOtpModal({ code, onCodeChange, length, onSubmit, email, onResend });
   const boxes = useRef9([]);
   const charAt = (index) => {
     const char = code[index];
@@ -3148,7 +3211,56 @@ function OtpModal({
     focus(cursor);
   };
   const message = description ?? (email ? `Escribe el c\xF3digo de ${length} d\xEDgitos que enviamos a ${email}.` : `Escribe el c\xF3digo de ${length} d\xEDgitos que te enviamos.`);
-  return /* @__PURE__ */ jsxs14(
+  return /* @__PURE__ */ jsxs14(Fragment, { children: [
+    /* @__PURE__ */ jsx21("p", { className: "mott-body-medium", style: { color: "var(--md-sys-color-on-surface-variant)" }, children: message }),
+    /* @__PURE__ */ jsx21("div", { role: "group", "aria-label": groupLabel, className: "flex w-full gap-[var(--gap-group)]", children: Array.from({ length }, (_, index) => /* @__PURE__ */ jsx21(
+      "input",
+      {
+        ref: (node) => {
+          boxes.current[index] = node;
+        },
+        type: "text",
+        inputMode: "numeric",
+        autoComplete: index === 0 ? "one-time-code" : "off",
+        maxLength: 1,
+        "aria-label": `D\xEDgito ${index + 1} de ${length}`,
+        className: BOX2,
+        value: charAt(index),
+        disabled,
+        onFocus: (event) => event.target.select(),
+        onChange: handleChange(index),
+        onKeyDown: handleKeyDown(index),
+        onPaste: handlePaste(index)
+      },
+      index
+    )) })
+  ] });
+}
+
+// src/authModals/otpModal.jsx
+import { jsx as jsx22 } from "react/jsx-runtime";
+function OtpModal({
+  open,
+  onClose,
+  triggerRef,
+  logo,
+  brand,
+  title = "Verifica tu correo",
+  email,
+  description,
+  code = "",
+  onCodeChange,
+  length = 6,
+  submitLabel = "Verificar",
+  onSubmit,
+  switchText = "\xBFNo te lleg\xF3 el c\xF3digo?",
+  switchAction = "Reenviar",
+  onResend,
+  error,
+  loading = false
+}) {
+  verifyTypesOtpModal({ code, onCodeChange, length, onSubmit, email, onResend });
+  return /* @__PURE__ */ jsx22(
     AuthShell,
     {
       open,
@@ -3164,30 +3276,129 @@ function OtpModal({
       onSwitch: onResend,
       error,
       loading,
-      children: [
-        /* @__PURE__ */ jsx21("p", { className: "mott-body-medium", style: { color: "var(--md-sys-color-on-surface-variant)" }, children: message }),
-        /* @__PURE__ */ jsx21("div", { role: "group", "aria-label": title, className: "flex w-full gap-[var(--gap-group)]", children: Array.from({ length }, (_, index) => /* @__PURE__ */ jsx21(
-          "input",
+      children: /* @__PURE__ */ jsx22(
+        OtpFields,
+        {
+          code,
+          onCodeChange,
+          length,
+          email,
+          description,
+          disabled: loading,
+          groupLabel: title
+        }
+      )
+    }
+  );
+}
+
+// src/authModals/recoverPasswordModal.jsx
+import { Fragment as Fragment2, jsx as jsx23, jsxs as jsxs15 } from "react/jsx-runtime";
+function RecoverPasswordModal({
+  open,
+  onClose,
+  triggerRef,
+  logo,
+  brand,
+  step = "code",
+  // step 'code'
+  email,
+  code = "",
+  onCodeChange,
+  length = 6,
+  description,
+  onVerifyCode,
+  onResend,
+  codeTitle = "Recupera tu contrase\xF1a",
+  codeSubmitLabel = "Verificar",
+  resendText = "\xBFNo te lleg\xF3 el c\xF3digo?",
+  resendAction = "Reenviar",
+  // step 'password'
+  password,
+  onPasswordChange,
+  confirmPassword,
+  onConfirmPasswordChange,
+  onSubmitPassword,
+  passwordTitle = "Crea una contrase\xF1a nueva",
+  passwordLabel = "Nueva contrase\xF1a",
+  passwordPlaceholder = "Escribe tu contrase\xF1a nueva",
+  confirmLabel = "Confirma tu contrase\xF1a",
+  confirmPlaceholder = "Escr\xEDbela de nuevo",
+  passwordSubmitLabel = "Guardar contrase\xF1a",
+  // back to the login modal
+  onSwitch,
+  switchText = "\xBFYa la recordaste?",
+  switchAction = "Inicia sesi\xF3n",
+  error,
+  loading = false
+}) {
+  verifyTypesRecoverPasswordModal({
+    step,
+    email,
+    code,
+    onCodeChange,
+    length,
+    onVerifyCode,
+    onResend,
+    password,
+    confirmPassword,
+    onPasswordChange,
+    onConfirmPasswordChange,
+    onSubmitPassword
+  });
+  const isCode = step === "code";
+  return /* @__PURE__ */ jsx23(
+    AuthShell,
+    {
+      open,
+      onClose,
+      triggerRef,
+      logo,
+      brand,
+      title: isCode ? codeTitle : passwordTitle,
+      submitLabel: isCode ? codeSubmitLabel : passwordSubmitLabel,
+      onSubmit: isCode ? onVerifyCode : onSubmitPassword,
+      switchText: isCode ? resendText : switchText,
+      switchAction: isCode ? resendAction : switchAction,
+      onSwitch: isCode ? onResend : onSwitch,
+      error,
+      loading,
+      children: isCode ? /* @__PURE__ */ jsx23(
+        OtpFields,
+        {
+          code,
+          onCodeChange,
+          length,
+          email,
+          description,
+          disabled: loading,
+          groupLabel: codeTitle
+        }
+      ) : /* @__PURE__ */ jsxs15(Fragment2, { children: [
+        /* @__PURE__ */ jsx23(
+          PasswordField,
           {
-            ref: (node) => {
-              boxes.current[index] = node;
-            },
-            type: "text",
-            inputMode: "numeric",
-            autoComplete: index === 0 ? "one-time-code" : "off",
-            maxLength: 1,
-            "aria-label": `D\xEDgito ${index + 1} de ${length}`,
-            className: BOX2,
-            value: charAt(index),
-            disabled: loading,
-            onFocus: (event) => event.target.select(),
-            onChange: handleChange(index),
-            onKeyDown: handleKeyDown(index),
-            onPaste: handlePaste(index)
-          },
-          index
-        )) })
-      ]
+            autoFocus: true,
+            autoComplete: "new-password",
+            label: passwordLabel,
+            placeholder: passwordPlaceholder,
+            value: password,
+            onChange: onPasswordChange,
+            disabled: loading
+          }
+        ),
+        /* @__PURE__ */ jsx23(
+          PasswordField,
+          {
+            autoComplete: "new-password",
+            label: confirmLabel,
+            placeholder: confirmPlaceholder,
+            value: confirmPassword,
+            onChange: onConfirmPasswordChange,
+            disabled: loading
+          }
+        )
+      ] })
     }
   );
 }
@@ -3196,7 +3407,7 @@ function OtpModal({
 import { useRef as useRef10 } from "react";
 import { useGSAP as useGSAP6 } from "@gsap/react";
 import gsap8 from "gsap";
-import { jsx as jsx22 } from "react/jsx-runtime";
+import { jsx as jsx24 } from "react/jsx-runtime";
 var SHAPES = [
   "50% 50% 50% 50% / 50% 50% 50% 50%",
   // circle
@@ -3230,7 +3441,7 @@ function Loading({ size = "sm", color = "primary", className, style, ...props })
     tl.to(el, { opacity: 0, scale: 0.85, duration: 0.2, ease: "power2.in" }, "+=0.3").set(el, { clipPath: "none", borderRadius: SHAPES[0] }).to(el, { opacity: 1, scale: 1.12, duration: 0.3, ease: "power2.out" }).to(el, { scale: 1, duration: 0.45, ease: "power2.in" });
     gsap8.to(el, { rotate: 360, duration: 5, repeat: -1, ease: "none" });
   }, []);
-  return /* @__PURE__ */ jsx22(
+  return /* @__PURE__ */ jsx24(
     "div",
     {
       ref: shapeRef,
@@ -3250,62 +3461,18 @@ function Loading({ size = "sm", color = "primary", className, style, ...props })
   );
 }
 
-// src/loading/progress.jsx
-import { useRef as useRef11 } from "react";
+// src/navbar/navbar.jsx
+import { useRef as useRef11, useState as useState9 } from "react";
 import { useGSAP as useGSAP7 } from "@gsap/react";
 import gsap9 from "gsap";
-import { jsx as jsx23 } from "react/jsx-runtime";
-function Progress({ value, color = "primary", className, style, ...props }) {
-  verifyTypesProgress({ value, color });
-  const fillRef = useRef11(null);
-  const trackRef = useRef11(null);
-  const resolved = ACCENTS[color] ?? color;
-  const indeterminate = value === void 0 || value === null;
-  useGSAP7(() => {
-    if (indeterminate) {
-      gsap9.set(fillRef.current, { xPercent: -100 });
-      gsap9.to(fillRef.current, { xPercent: 200, duration: prefersReducedMotion() ? 3 : 1.2, repeat: -1, ease: "none" });
-    } else {
-      gsap9.killTweensOf(fillRef.current);
-      const width = `${Math.min(100, Math.max(0, value))}%`;
-      if (prefersReducedMotion()) gsap9.set(fillRef.current, { width });
-      else gsap9.to(fillRef.current, { width, duration: DURATION.slow, ease: EASE.standard });
-    }
-  }, { dependencies: [indeterminate, value] });
-  return /* @__PURE__ */ jsx23(
-    "div",
-    {
-      ref: trackRef,
-      role: "progressbar",
-      "aria-valuenow": indeterminate ? void 0 : value,
-      "aria-valuemin": 0,
-      "aria-valuemax": 100,
-      className,
-      style: { width: "100%", height: 8, borderRadius: "var(--radius-full)", backgroundColor: "var(--md-sys-color-surface-container)", overflow: "hidden", position: "relative", ...style },
-      ...props,
-      children: /* @__PURE__ */ jsx23(
-        "div",
-        {
-          ref: fillRef,
-          style: indeterminate ? { position: "absolute", inset: 0, width: "40%", background: `linear-gradient(90deg, transparent, ${resolved}, transparent)` } : { height: "100%", width: 0, borderRadius: "var(--radius-full)", backgroundColor: resolved }
-        }
-      )
-    }
-  );
-}
-
-// src/navbar/navbar.jsx
-import { useRef as useRef12, useState as useState9 } from "react";
-import { useGSAP as useGSAP8 } from "@gsap/react";
-import gsap10 from "gsap";
 import { twMerge as twMerge11 } from "tailwind-merge";
-import { Fragment, jsx as jsx24, jsxs as jsxs15 } from "react/jsx-runtime";
+import { Fragment as Fragment3, jsx as jsx25, jsxs as jsxs16 } from "react/jsx-runtime";
 var DESKTOP_ALIGN = {
-  center: "top-1/2 -translate-y-1/2",
-  top: "top-8"
+  center: "justify-center",
+  top: "justify-start pt-8"
 };
-var ITEM_BASE = "mott-state-layer inline-flex items-center justify-center gap-2 border-0 cursor-pointer p-0 mott-label-large mott-trim bg-[var(--md-sys-color-surface-container)] text-[var(--md-sys-color-on-surface-variant)] transition-[background-color,color] duration-[var(--duration-morph)] ease-[var(--ease-morph)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[var(--md-sys-color-primary)]";
-var ITEM_SELECTED = "bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)]";
+var ITEM_BASE = "mott-state-layer mott-morph inline-flex items-center justify-center gap-2 border-0 cursor-pointer p-0 mott-label-large mott-trim [--mott-morph-bg:var(--md-sys-color-surface-container)] text-[var(--md-sys-color-on-surface-variant)] transition-[color] duration-[var(--duration-morph)] ease-[var(--ease-morph)]";
+var ITEM_SELECTED = "[--mott-morph-bg:var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)]";
 var attachRef = (node, store, i, forwarded) => {
   if (i === null) store.current = node;
   else store.current[i] = node;
@@ -3313,19 +3480,18 @@ var attachRef = (node, store, i, forwarded) => {
   else if (forwarded) forwarded.current = node;
 };
 function NavItems({ items, selectedItem, onSelect, vertical }) {
-  const itemRefs = useRef12([]);
-  const containerRef = useRef12(null);
-  const prevSelectedRef = useRef12(selectedItem);
-  const prevCountRef = useRef12(null);
-  useGSAP8(() => {
+  const itemRefs = useRef11([]);
+  const containerRef = useRef11(null);
+  const prevSelectedRef = useRef11(selectedItem);
+  const prevCountRef = useRef11(null);
+  useGSAP7(() => {
     itemRefs.current.length = items.length;
-    const squircle = squircleRadius();
-    const shapeOf = (i) => i === selectedItem ? { borderRadius: squircle, scale: MORPH_SCALE } : { borderRadius: CIRCLE_RADIUS, scale: 1 };
+    const shapeOf = (i) => selectionShape(i === selectedItem);
     const settleOnly = prevCountRef.current !== items.length;
     prevCountRef.current = items.length;
     if (settleOnly) {
       itemRefs.current.forEach((el, i) => {
-        if (el) gsap10.set(el, shapeOf(i));
+        if (el) gsap9.set(el, shapeOf(i));
       });
       prevSelectedRef.current = selectedItem;
       return;
@@ -3334,12 +3500,12 @@ function NavItems({ items, selectedItem, onSelect, vertical }) {
     prevSelectedRef.current = selectedItem;
     changed.forEach((i) => {
       const el = itemRefs.current[i];
-      if (el) morphTo(el, shapeOf(i), { entering: i === selectedItem });
+      if (el) morphSelection(el, i === selectedItem);
     });
   }, { dependencies: [selectedItem, items.length], scope: containerRef });
-  return /* @__PURE__ */ jsx24("div", { ref: containerRef, className: twMerge11("inline-flex gap-[var(--gap-group)]", vertical && "flex-col"), children: items.map((item, i) => {
+  return /* @__PURE__ */ jsx25("div", { ref: containerRef, className: twMerge11("inline-flex gap-[var(--gap-group)]", vertical && "flex-col"), children: items.map((item, i) => {
     const iconOnly = !item.label;
-    return /* @__PURE__ */ jsxs15(
+    return /* @__PURE__ */ jsxs16(
       "button",
       {
         ref: (el) => attachRef(el, itemRefs, i, item.buttonRef),
@@ -3347,15 +3513,14 @@ function NavItems({ items, selectedItem, onSelect, vertical }) {
         onClick: () => onSelect(i),
         "aria-pressed": selectedItem === i,
         className: twMerge11(ITEM_BASE, selectedItem === i && ITEM_SELECTED),
-        ...pressHandlers(selectedItem === i ? MORPH_SCALE : 1),
+        ...pressHandlers(),
         style: {
-          borderRadius: CIRCLE_RADIUS,
           height: "var(--control-size-md)",
           ...iconOnly ? { width: "var(--control-size-md)" } : { padding: "0 20px" }
         },
         children: [
-          item.icon && (typeof item.icon === "string" ? /* @__PURE__ */ jsx24(Icon, { name: item.icon }) : item.icon),
-          item.label && /* @__PURE__ */ jsx24("span", { children: item.label })
+          item.icon && (typeof item.icon === "string" ? /* @__PURE__ */ jsx25(Icon, { name: item.icon }) : item.icon),
+          item.label && /* @__PURE__ */ jsx25("span", { children: item.label })
         ]
       },
       item.id ?? i
@@ -3363,22 +3528,19 @@ function NavItems({ items, selectedItem, onSelect, vertical }) {
   }) });
 }
 function LogoButton({ logo }) {
-  const ref = useRef12(null);
-  const didMountRef = useRef12(false);
-  useGSAP8(() => {
+  const ref = useRef11(null);
+  const didMountRef = useRef11(false);
+  useGSAP7(() => {
     if (!ref.current) return;
-    const shape = {
-      borderRadius: logo.active ? squircleRadius() : CIRCLE_RADIUS,
-      scale: logo.active ? MORPH_SCALE : 1
-    };
+    const shape = selectionShape(!!logo.active);
     if (!didMountRef.current) {
       didMountRef.current = true;
-      gsap10.set(ref.current, shape);
+      gsap9.set(ref.current, shape);
       return;
     }
-    morphTo(ref.current, shape, { entering: !!logo.active });
+    morphSelection(ref.current, !!logo.active);
   }, { dependencies: [logo.active] });
-  return /* @__PURE__ */ jsx24(
+  return /* @__PURE__ */ jsx25(
     "button",
     {
       ref: (el) => attachRef(el, ref, null, logo.buttonRef),
@@ -3387,13 +3549,12 @@ function LogoButton({ logo }) {
       "aria-pressed": !!logo.active,
       "aria-label": logo.label ?? "Inicio",
       className: twMerge11(ITEM_BASE, logo.active && ITEM_SELECTED),
-      ...pressHandlers(logo.active ? MORPH_SCALE : 1),
+      ...pressHandlers(),
       style: {
         width: "var(--control-size-md)",
-        height: "var(--control-size-md)",
-        borderRadius: CIRCLE_RADIUS
+        height: "var(--control-size-md)"
       },
-      children: typeof logo.icon === "string" ? /* @__PURE__ */ jsx24(Icon, { name: logo.icon }) : logo.icon
+      children: typeof logo.icon === "string" ? /* @__PURE__ */ jsx25(Icon, { name: logo.icon }) : logo.icon
     }
   );
 }
@@ -3415,23 +3576,23 @@ function Navbar({
     if (!isControlled) setInternalSelected(i);
     onChange == null ? void 0 : onChange(i, items[i]);
   };
-  return /* @__PURE__ */ jsxs15(Fragment, { children: [
-    /* @__PURE__ */ jsxs15(
+  return /* @__PURE__ */ jsxs16(Fragment3, { children: [
+    /* @__PURE__ */ jsxs16(
       "nav",
       {
         className: twMerge11(
-          "hidden md:flex fixed left-4 z-[var(--z-nav)] flex-col items-center gap-[var(--gap-group)]",
+          "hidden md:flex sticky top-0 h-dvh flex-col items-center px-4 gap-[var(--gap-group)]",
           DESKTOP_ALIGN[align] ?? DESKTOP_ALIGN.center,
           className
         ),
         style,
         children: [
-          logo && /* @__PURE__ */ jsx24(LogoButton, { logo }),
-          /* @__PURE__ */ jsx24(NavItems, { items, selectedItem, onSelect: handleSelect, vertical: true })
+          logo && /* @__PURE__ */ jsx25(LogoButton, { logo }),
+          /* @__PURE__ */ jsx25(NavItems, { items, selectedItem, onSelect: handleSelect, vertical: true })
         ]
       }
     ),
-    /* @__PURE__ */ jsx24(
+    /* @__PURE__ */ jsx25(
       "nav",
       {
         className: twMerge11(
@@ -3439,12 +3600,12 @@ function Navbar({
           className
         ),
         style,
-        children: /* @__PURE__ */ jsx24(
+        children: /* @__PURE__ */ jsx25(
           "div",
           {
             className: "flex items-center gap-1 rounded-[var(--radius-full)] bg-[var(--md-sys-color-surface)] p-1",
             style: { boxShadow: "var(--shadow-floating)" },
-            children: /* @__PURE__ */ jsx24(NavItems, { items, selectedItem, onSelect: handleSelect, vertical: false })
+            children: /* @__PURE__ */ jsx25(NavItems, { items, selectedItem, onSelect: handleSelect, vertical: false })
           }
         )
       }
@@ -3453,13 +3614,13 @@ function Navbar({
 }
 
 // src/dragScroll/dragScroll.jsx
-import { useCallback as useCallback3, useEffect as useEffect7, useLayoutEffect, useRef as useRef13, useState as useState10 } from "react";
+import { useCallback as useCallback3, useEffect as useEffect7, useLayoutEffect, useRef as useRef12, useState as useState10 } from "react";
 import { twMerge as twMerge12 } from "tailwind-merge";
-import gsap11 from "gsap";
+import gsap10 from "gsap";
 import { Draggable as Draggable2 } from "gsap/Draggable";
 import { InertiaPlugin } from "gsap/InertiaPlugin";
-import { jsx as jsx25 } from "react/jsx-runtime";
-gsap11.registerPlugin(Draggable2, InertiaPlugin);
+import { jsx as jsx26 } from "react/jsx-runtime";
+gsap10.registerPlugin(Draggable2, InertiaPlugin);
 var DRAG_TYPE = { y: "scrollTop", x: "scrollLeft", both: "scroll" };
 var EDGE_RESISTANCE = 0.85;
 function useDragScroll(ref, { axis = "y", inertia = true, disabled = false } = {}) {
@@ -3536,12 +3697,12 @@ function DragScroll({
   ...props
 }) {
   verifyTypesDragScroll({ axis, inertia, disabled, fade, fadeSize });
-  const scrollRef = useRef13(null);
+  const scrollRef = useRef12(null);
   useDragScroll(scrollRef, { axis, inertia, disabled });
   const size = fadeSize ?? 32;
   const [fadeStart, fadeEnd] = useEdgeFade(scrollRef, axis, fade ? size : 0);
   const horizontal = axis === "x";
-  return /* @__PURE__ */ jsx25(
+  return /* @__PURE__ */ jsx26(
     "div",
     {
       ref: scrollRef,
@@ -3562,7 +3723,7 @@ function DragScroll({
 // src/shapes/shapes.jsx
 import { forwardRef as forwardRef2, useId as useId5 } from "react";
 import { twMerge as twMerge13 } from "tailwind-merge";
-import { Fragment as Fragment2, jsx as jsx26, jsxs as jsxs16 } from "react/jsx-runtime";
+import { Fragment as Fragment4, jsx as jsx27, jsxs as jsxs17 } from "react/jsx-runtime";
 var SIZE_TOKEN2 = {
   sm: "var(--control-size-sm)",
   md: "var(--control-size-md)",
@@ -3594,8 +3755,8 @@ var Shape = forwardRef2(function Shape2({
   const surface = ACCENTS[color] ?? color;
   const on = contentColor ?? ACCENT_ON[color] ?? "inherit";
   const decorative = !label && children == null;
-  return /* @__PURE__ */ jsxs16(Fragment2, { children: [
-    /* @__PURE__ */ jsx26(
+  return /* @__PURE__ */ jsxs17(Fragment4, { children: [
+    /* @__PURE__ */ jsx27(
       "svg",
       {
         "aria-hidden": "true",
@@ -3603,10 +3764,10 @@ var Shape = forwardRef2(function Shape2({
         width: "0",
         height: "0",
         style: { position: "absolute", width: 0, height: 0, overflow: "hidden" },
-        children: /* @__PURE__ */ jsx26("defs", { children: /* @__PURE__ */ jsx26("clipPath", { id: clipId, clipPathUnits: "objectBoundingBox", children: /* @__PURE__ */ jsx26("path", { d: shapePath(name, { points }), transform: `scale(0.01)${spin(rotate)}` }) }) })
+        children: /* @__PURE__ */ jsx27("defs", { children: /* @__PURE__ */ jsx27("clipPath", { id: clipId, clipPathUnits: "objectBoundingBox", children: /* @__PURE__ */ jsx27("path", { d: shapePath(name, { points }), transform: `scale(0.01)${spin(rotate)}` }) }) })
       }
     ),
-    /* @__PURE__ */ jsx26(
+    /* @__PURE__ */ jsx27(
       "div",
       {
         ref,
@@ -3634,7 +3795,7 @@ var shapes_default = Shape;
 import { useMemo as useMemo3 } from "react";
 import { Style, Avatar as Dicebear } from "@dicebear/core";
 import critters from "@dicebear/styles/critters.json";
-import { jsx as jsx27 } from "react/jsx-runtime";
+import { jsx as jsx28 } from "react/jsx-runtime";
 var SIZE_TOKEN3 = {
   sm: "var(--control-size-sm)",
   md: "var(--control-size-md)",
@@ -3740,7 +3901,7 @@ function Avatar({
   }), [styleDefinition, options, seed]);
   const box = SIZE_TOKEN3[size] ?? size;
   const unselectable = { userSelect: "none", WebkitUserSelect: "none", WebkitUserDrag: "none" };
-  const image = /* @__PURE__ */ jsx27(
+  const image = /* @__PURE__ */ jsx28(
     "img",
     {
       src: uri,
@@ -3752,7 +3913,7 @@ function Avatar({
     }
   );
   if (!shape) return image;
-  return /* @__PURE__ */ jsx27(shapes_default, { name: shape, size, className, style, ...props, children: image });
+  return /* @__PURE__ */ jsx28(shapes_default, { name: shape, size, className, style, ...props, children: image });
 }
 export {
   AnchoredAnimation,
@@ -3778,7 +3939,7 @@ export {
   Navbar,
   OtpModal,
   PRESS_SCALE,
-  Progress,
+  RecoverPasswordModal,
   RegisterModal,
   SHAPE_NAMES,
   Search,

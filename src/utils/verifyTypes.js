@@ -299,12 +299,16 @@ export function verifyTypesAuthShell({
     return true;
 }
 
-export function verifyTypesLoginModal({ email, password, onEmailChange, onPasswordChange, onSubmit } = {}) {
+export function verifyTypesLoginModal({
+    email, password, onEmailChange, onPasswordChange, onSubmit, onForgotPassword,
+} = {}) {
     assertType('LoginModal', 'email', email, 'string');
     assertType('LoginModal', 'password', password, 'string');
     assertType('LoginModal', 'onEmailChange', onEmailChange, 'function');
     assertType('LoginModal', 'onPasswordChange', onPasswordChange, 'function');
     assertType('LoginModal', 'onSubmit', onSubmit, 'function');
+    // whether the link exists at all, so a non-function here is a link that renders and does nothing
+    assertType('LoginModal', 'onForgotPassword', onForgotPassword, 'function');
     return true;
 }
 
@@ -330,6 +334,28 @@ export function verifyTypesOtpModal({ code, onCodeChange, length, onSubmit, emai
     assertType('OtpModal', 'onSubmit', onSubmit, 'function');
     assertType('OtpModal', 'email', email, 'string');
     assertType('OtpModal', 'onResend', onResend, 'function');
+    return true;
+}
+
+export function verifyTypesRecoverPasswordModal({
+    step, email, code, onCodeChange, length, onVerifyCode, onResend,
+    password, confirmPassword, onPasswordChange, onConfirmPasswordChange, onSubmitPassword,
+} = {}) {
+    // a closed set, and the only one that has to be: an unrecognised step renders neither the boxes
+    // nor the fields, so the panel comes up with a title, a button and nothing in between
+    assertOneOf('RecoverPasswordModal', 'step', step, ['code', 'password'], 'code');
+    assertType('RecoverPasswordModal', 'email', email, 'string');
+    assertType('RecoverPasswordModal', 'code', code, 'string');
+    assertType('RecoverPasswordModal', 'onCodeChange', onCodeChange, 'function');
+    // same bounds as OtpModal - it is the same field underneath
+    assertRange('RecoverPasswordModal', 'length', length, 2, 8);
+    assertType('RecoverPasswordModal', 'onVerifyCode', onVerifyCode, 'function');
+    assertType('RecoverPasswordModal', 'onResend', onResend, 'function');
+    assertType('RecoverPasswordModal', 'password', password, 'string');
+    assertType('RecoverPasswordModal', 'confirmPassword', confirmPassword, 'string');
+    assertType('RecoverPasswordModal', 'onPasswordChange', onPasswordChange, 'function');
+    assertType('RecoverPasswordModal', 'onConfirmPasswordChange', onConfirmPasswordChange, 'function');
+    assertType('RecoverPasswordModal', 'onSubmitPassword', onSubmitPassword, 'function');
     return true;
 }
 

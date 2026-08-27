@@ -46,6 +46,26 @@ function killRunningMorph(panel) {
 }
 
 
+/*Lo que se VE de un trigger puede sobresalir de su caja. Los controles que morfean por `mott-morph`
+  pintan su forma en un pseudo-elemento escalado - el boton mide sus 56px pase lo que pase y el pill
+  elegido se sale 3px por lado - asi que getBoundingClientRect devuelve la caja y no lo pintado. El
+  clip tiene que arrancar de lo pintado, o el panel empieza por dentro del propio pill.
+
+  Inflar la caja tambien deja `resolveRadius` en su sitio sin tocarlo: el radio es un porcentaje
+  medido contra la caja y luego escalado, y el 28% de 62 es exactamente el 28% de 56 por 62/56.*/
+function paintedRect(el) {
+    const rect = el.getBoundingClientRect();
+    const scale = parseFloat(getComputedStyle(el).getPropertyValue('--mott-morph-scale')) || 1;
+    if (scale === 1) return rect;
+    const dx = (rect.width * (scale - 1)) / 2;
+    const dy = (rect.height * (scale - 1)) / 2;
+    return {
+        left: rect.left - dx, right: rect.right + dx,
+        top: rect.top - dy, bottom: rect.bottom + dy,
+        width: rect.width + dx * 2, height: rect.height + dy * 2,
+    };
+}
+
 /*border-radius may be a percentage, which clip-path's `round` cannot take - resolve it to px.
   Two details matter. CSS resolves the two halves of a percentage radius against DIFFERENT axes
   (horizontal against the width, vertical against the height), so a single Math.min() reading turns
@@ -121,7 +141,11 @@ function createTriggerGhost(dialog, trigger, originRect) {
     });
 
     const inner = document.createElement('div');
-    const scale = trigger.offsetWidth ? originRect.width / trigger.offsetWidth : 1;
+    /*El contenido del ghost se dibuja a la escala a la que lo dibuja el trigger, que es su propio
+      transform. No sale de originRect/offsetWidth: ese cociente ahora incluye lo que el pill de un
+      control `mott-morph` se sale de su caja, y eso es pintura del control, no escala de lo que
+      lleva dentro - un item del nav elegido escalaria aqui un icono que en el nav no esta escalado.*/
+    const scale = Number(gsap.getProperty(trigger, 'scaleX')) || 1;
     Object.assign(inner.style, {
         display: 'flex',
         alignItems: 'center',
@@ -232,7 +256,7 @@ export class MorphAnimation extends ModalAnimation {
         const ty = Number(gsap.getProperty(panel, 'y')) || 0;
         const panelRect = { left: rect.left - tx, top: rect.top - ty, width: rect.width, height: rect.height };
         
-        const originRect = trigger.getBoundingClientRect();
+        const originRect = paintedRect(trigger);
         const panelBox = { ...panelRect, right: panelRect.left + panelRect.width, bottom: panelRect.top + panelRect.height };
         
         return {

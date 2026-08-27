@@ -6,7 +6,19 @@ import Icon from '../icon/icon.jsx';
 // Whether the password is showing is state of the widget, not of the form: it is a momentary way of
 // looking at a value, and it resets the moment the modal closes. So it lives here rather than being
 // hoisted into the props the consumer controls, which are only ever about the value itself.
-export default function PasswordField({ label, placeholder, value, onChange, disabled }) {
+// `autoComplete` is a prop and not a constant because the same field means two different things to a
+// password manager: `current-password` asks it to fill what it already has, `new-password` asks it to
+// propose one and offer to save it. Handing a reset form `current-password` gets the old password
+// offered back and the new one never stored.
+export default function PasswordField({
+    label,
+    placeholder,
+    value,
+    onChange,
+    disabled,
+    autoComplete = 'current-password',
+    ...props
+}) {
     const [visible, setVisible] = useState(false);
 
     return (
@@ -17,7 +29,8 @@ export default function PasswordField({ label, placeholder, value, onChange, dis
             value={value}
             onChange={onChange}
             disabled={disabled}
-            autoComplete="current-password"
+            autoComplete={autoComplete}
+            {...props}
             trailing={
                 <button
                     type="button"

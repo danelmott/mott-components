@@ -70,7 +70,11 @@ export default function RegisterModal({
                 onChange={onEmailChange}
                 disabled={loading}
             />
+            {/*`new-password`, not the field's `current-password` default: this form is where a
+               password is invented, so the manager should be offering to generate and save one
+               rather than filling in whatever it already has for this site.*/}
             <PasswordField
+                autoComplete="new-password"
                 label={passwordLabel}
                 placeholder={passwordPlaceholder}
                 value={password}
@@ -78,6 +82,7 @@ export default function RegisterModal({
                 disabled={loading}
             />
             <PasswordField
+                autoComplete="new-password"
                 label={confirmLabel}
                 placeholder={confirmPlaceholder}
                 value={confirmPassword}

@@ -6,7 +6,9 @@ import GoogleIcon from '../icon/googleIcon.jsx';
 import { verifyTypesAuthShell } from '../utils/verifyTypes.js';
 
 
-function SwitchLink({ children, onClick, disabled }) {
+// Exported so the "forgot your password?" link in LoginModal is the SAME link as the switch line at
+// the bottom, not a second set of classes that happens to match today.
+export function SwitchLink({ children, onClick, disabled }) {
     return (
         <button
             type="button"
@@ -58,14 +60,8 @@ export default function AuthShell({
             open={open}
             onClose={onClose}
             triggerRef={triggerRef}
-            // `--pad-card` sideways, `--gap-page` top and bottom: the reference gives the panel more
-            // air above and below than beside. twMerge resolves the p-* that CustomModal sets
-            // against the px-*/py-* here, so only these survive.
             className="w-[400px] px-[var(--pad-card)] py-[var(--gap-page)]"
         >
-            {/*Absolute against the panel, which is the nearest positioned ancestor. `ghost` paints
-               its label `primary`; a close affordance is not the action of the panel, so it is
-               overridden down to the muted role.*/}
             <Button
                 variant="ghost"
                 iconOnly
@@ -78,7 +74,7 @@ export default function AuthShell({
                 <Icon name="close" size="lg" />
             </Button>
 
-            <div className="flex flex-col items-center text-center">
+            <div className="flex flex-col items-start text-left">
                 {(logo || brand) && (
                     <div className="flex items-center gap-[var(--gap-group)]">
                         {logo}
@@ -94,7 +90,7 @@ export default function AuthShell({
                 )}
 
                 <h2
-                    className="mott-headline-large"
+                    className="mott-headline-large mott-title-emphasis"
                     style={{
                         color: 'var(--md-sys-color-on-surface)',
                         marginTop: logo || brand ? 'var(--gap-group)' : 0,
@@ -106,14 +102,10 @@ export default function AuthShell({
                 {/*A real <form>, so Enter submits from any field and the browser does the work.
                    Everything inside it is one rhythm - `--gap-block` between field and field, field
                    and button, button and button - which is what the reference measures.*/}
-                {/*`text-left` undoes the centring for the fields only. The brand, the title and the
-                   switch line are centred, but a label reads as the heading of the box under it and
-                   has to start where that box starts - centred over a full-width field it floats.
-                   Button labels are unaffected: `mott-btn` centres them as a flex container.*/}
                 <form
                     onSubmit={handleSubmit}
                     noValidate
-                    className="mt-[var(--gap-page)] flex w-full flex-col gap-[var(--gap-block)] text-left"
+                    className="mt-[var(--gap-page)] flex w-full flex-col gap-[var(--gap-block)]"
                 >
                     {children}
 
@@ -138,8 +130,10 @@ export default function AuthShell({
                 </form>
 
                 {switchText && (
+                    /*`w-full` first: the column is `items-start`, so without it the <p> shrinks to
+                      its text and `text-center` has nothing wider than itself to centre against.*/
                     <p
-                        className="mott-body-medium mt-[var(--gap-block)]"
+                        className="mott-body-medium mt-[var(--gap-block)] w-full text-center"
                         style={{ color: 'var(--md-sys-color-on-surface-variant)' }}
                     >
                         {switchText}{' '}

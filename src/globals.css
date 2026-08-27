@@ -10,6 +10,10 @@
     --md-ref-typeface-plain: 'DM Sans', sans-serif;
     --md-ref-typeface-weight-regular: 400;
     --md-ref-typeface-weight-medium: 500;
+    /* The rung the ramp was missing. DM Sans is a variable face with a continuous 100-1000 `wght`
+       axis, so 600 is a real weight the file draws, not a synthesised one. It is what "heavier
+       without being bold" means: 500 is barely a change at display sizes, 700 shouts. */
+    --md-ref-typeface-weight-semibold: 600;
     --md-ref-typeface-weight-bold: 700;
 
     --font-family: var(--md-ref-typeface-plain);
@@ -124,6 +128,26 @@
     --pad-badge-md: 6px 12px;
     --pad-badge-lg: 8px 16px;
     
+    /*title emphasis tokens*/
+    /* Not scoped to any one component - a title is short, read at a glance, and set against
+       whatever edges its own container gives it, whether that container is a modal panel, a card
+       header or a page section. So it is set heavier and tighter than the typescale role it borrows
+       its size from - the role still decides how BIG it is, this decides how it is drawn.
+
+       `opsz` is the reason there is no font-stretch here. Narrower letterforms are what font-stretch
+       would be for, and DM Sans has no `wdth` axis - Google serves it with `opsz` and `wght` only,
+       so `font-stretch` is silently ignored, at any value. What the face does have is the optical
+       size axis, 9-40, and its display end genuinely draws narrower, more closed letterforms. Pinned
+       to 40 the same 32px title measures ~10px narrower than the default `auto` (which would set the
+       axis to 32) while carrying MORE weight. That is the effect, from the axis that actually
+       exists. */
+    --md-sys-title-emphasis-weight: var(--md-ref-typeface-weight-semibold);
+    /* Tracking pays back the width the extra weight costs: 600 alone runs ~10px wider than 400.
+       Display type wants negative tracking anyway - 0 is a body-text default that reads as loose
+       once the letters are 32px tall. */
+    --md-sys-title-emphasis-tracking: -0.025em;
+    --md-sys-title-emphasis-opsz: 40;
+
     /*margin tokens*/
     --gap-tight: 0.25rem; 
     --gap-related: 0.25rem; 
@@ -150,7 +174,7 @@
     --duration-base: 280ms;
     --duration-slow: 400ms;
     --duration-modal: 550ms;
-    --duration-morph: 300ms;
+    --duration-morph: 120ms;
     --duration-sweep: 900ms;
 
     --ease-standard: cubic-bezier(0.2, 0, 0, 1);
@@ -431,6 +455,26 @@ body {
   letter-spacing: var(--md-sys-typescale-label-small-tracking);
 }
 
+/* Layered ON TOP of a typescale role, never instead of one: `mott-headline-large mott-title-emphasis`.
+   The role brings the size and the line-height, this brings the treatment. Not modal-specific - any
+   title-sized text in any component can take it, which is why the name says what it does rather than
+   where it was first used.
+
+   A plain rule and NOT an `@utility`, which is the version this replaced. The roles set `font:`, and
+   the shorthand resets font-weight, so the treatment only lands if it wins the cascade - and as an
+   `@utility` it did not: Tailwind sorts utilities by its own order, not by source order, and emitted
+   `mott-title-emphasis` ~30 lines ABOVE `mott-headline-large`, so the role's shorthand reset the
+   weight straight back to 400. Unlayered CSS beats anything in `@layer utilities` whatever the
+   order, which is what makes this deterministic instead of a coin flip on a class name. */
+.mott-title-emphasis {
+  font-weight: var(--md-sys-title-emphasis-weight);
+  letter-spacing: var(--md-sys-title-emphasis-tracking);
+  /* Both axes named. Naming only `opsz` leaves `wght` to be merged in from font-weight, which
+     engines do not all do the same way; naming both is unambiguous. This also overrides the
+     `font-optical-sizing: auto` the role's `font:` shorthand resets it to. */
+  font-variation-settings: 'opsz' var(--md-sys-title-emphasis-opsz), 'wght' var(--md-sys-title-emphasis-weight);
+}
+
 @utility mott-fade-y {
     mask-image: linear-gradient(
         to bottom,
@@ -499,9 +543,13 @@ body {
     position: absolute;
     inset: 0;
     z-index: -1;        /* under the label, over the control's own background */
-    /*GSAP writes border-radius inline while it morphs, so the layer follows a circle turning into
-      a squircle for free - the same trick mott-shine leans on further down this file.*/
+    /*El radio se hereda del control, que es donde `mott-morph` lo escribe, asi que la capa sigue al
+      circulo convirtiendose en squircle sin tener que animar nada suyo - el mismo truco del que
+      tira mott-shine mas abajo. La escala hay que copiarla a mano: el transform del morph vive en
+      ::before, y un pseudo-elemento no lo hereda de su hermano. El fallback deja intacto a quien
+      use esta utility sin morph.*/
     border-radius: inherit;
+    transform: scale(var(--mott-morph-scale, 1));
     background-color: currentColor;
     opacity: 0;
     transition: opacity var(--duration-instant);
@@ -515,6 +563,95 @@ body {
   }
 
   &:active::after { opacity: 0.12; }
+}
+
+
+/*La forma de la seleccion, y la razon por la que vive en un pseudo-elemento y no en el control.
+
+  Lo que temblaba era el texto, no la forma. El morph mueve dos cosas a la vez: `scale`, que se
+  compone, y `border-radius`, que se PINTA - y un cambio de pintado invalida la capa entera, asi que
+  el navegador vuelve a rasterizar el icono en cada cuadro. Mientras la escala corria, cada uno de
+  esos rasterizados caia en un tamano distinto, y Material Symbols es una fuente variable: su cache
+  de glifos esta indexada por instancia Y tamano, o sea que no acertaba ni una vez y volvia a
+  hintear y antialiasear el glifo trece veces seguidas. Eso era el temblor. `will-change: transform`
+  no lo curaba porque no evita el repintado, solo promueve la capa que se repinta - y el fondo, que
+  se transicionaba en el propio boton, repintaba igual.
+
+  Aqui la geometria corre sobre ::before, que no tiene texto dentro: el pill crece y se redondea, y
+  el icono y la etiqueta se quedan quietos en el flujo del control, al mismo tamano y en las mismas
+  coordenadas de siempre. Se siguen repintando cada cuadro, porque comparten capa - pero a geometria
+  IDENTICA, y rasterizar dos veces lo mismo da exactamente lo mismo. No hay de donde salga el
+  temblor. Y de paso no hace falta promover ni despromover nada a mitad de animacion.
+
+  Lo que cuesta: la caja del control ya no crece, solo lo pintado. `getBoundingClientRect` de un
+  control elegido devuelve sus 56px y no los 62 que se ven, asi que si se usa como `triggerRef` de
+  una CustomModal el clip arranca 3px por lado por dentro del pill. En un morph que termina en un
+  panel de 360px no se ve; si algun dia hay que afinarlo, el sitio es `measure()` en
+  modalAnimation.js, inflando originRect por --mott-morph-scale.*/
+@utility mott-morph {
+  position: relative;
+  isolation: isolate;   /* clampea los z-index negativos de los pseudo-elementos dentro del control */
+
+  /*Numeros pelados, sin unidad: GSAP interpola un custom property numerico sin releer de
+    getComputedStyle la forma larga de ocho valores del border-radius, cuya aridad descuadrada era
+    el otro bamboleo. 50 es el circulo en reposo; --control-radius (28) es el squircle.*/
+  --mott-morph-r: 50;
+  --mott-morph-scale: 1;
+
+  /*El radio se queda en el control para que ::before y ::after lo hereden de un solo sitio, y para
+    que `resolveRadius` de modalAnimation.js siga leyendo la forma real del trigger. Moverlo no
+    pinta nada: aqui ya no hay fondo que repintar.*/
+  border-radius: calc(var(--mott-morph-r) * 1%);
+  background-color: transparent;
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -2;              /* debajo de la capa de estado, que va en -1 */
+    border-radius: inherit;
+    background-color: var(--mott-morph-bg, transparent);
+    transform: scale(var(--mott-morph-scale));
+    /*El color acompana a la geometria en lugar de ir sobre el control. Mismos tokens que el tween,
+      asi que fondo y forma aterrizan juntos.*/
+    transition: background-color var(--duration-morph) var(--ease-morph);
+    pointer-events: none;
+  }
+
+  /*El anillo se dibuja sobre la forma, no sobre la caja: el control mide 56px pase lo que pase, y
+    en el estado elegido el pill sobresale 3px por lado - pegado a la caja, el anillo quedaria por
+    dentro de lo que se ve.*/
+  &:focus-visible {
+    outline: none;
+  }
+
+  &:focus-visible::before {
+    box-shadow:
+      0 0 0 2px var(--md-sys-color-surface),
+      0 0 0 4px var(--md-sys-color-primary);
+  }
+}
+
+
+/*La contra-escala, para lo que no puede salirse del control que se escala.
+
+  ButtonGroup y Navbar sacan la geometria a un pseudo-elemento y dejan el icono fuera de lo que se
+  escala, que es la cura de raiz. El bead de ThemeModal no puede: su forma ES el boton - el degradado
+  vive ahi, el anillo es un inset shadow suyo y `mott-shine` ya le ocupa el ::before y se recorta con
+  su `overflow: hidden`. Sacar todo eso a un hijo dejaria el destello por DEBAJO del check, y que la
+  luz pase por encima de la marca del control es justo lo que `mott-shine` defiende.
+
+  Asi que en vez de sacar el glifo de la escala, se le deshace: el control va a --mott-morph-scale y
+  su hijo va a 1/--mott-morph-scale, las dos leyendo la MISMA variable en el mismo recalculo, o sea
+  que el producto es 1 en todos los cuadros. El bead se sigue repintando entero cada cuadro, pero el
+  glifo se repinta a tamano identico - y rasterizar dos veces lo mismo da lo mismo. Que es, al final,
+  el mismo argumento de `mott-morph` por otro camino.
+
+  El fallback a 1 importa: el ghost de la modal clona los hijos del trigger fuera de el, donde ya no
+  hereda la variable, y sin fallback el calc() seria invalido y se llevaria por delante el transform
+  entero.*/
+@utility mott-morph-steady {
+  transform: scale(calc(1 / var(--mott-morph-scale, 1)));
 }
 
 
@@ -533,18 +670,15 @@ body {
   letter-spacing: var(--md-sys-typescale-label-large-tracking);
 
 
-  /*The morph's own tokens, not --duration-base: colour and shape have to land on the same frame,
-    and the shape moved to 380ms when the curve was spread out.*/
-  transition-property: background-color, color;
+  /*Solo el color del texto. El del fondo se transiciona en ::before (ver `mott-morph`): hacerlo
+    aqui repintaba el boton entero - texto incluido - en cada cuadro del morph, que era justo lo que
+    habia que quitar de en medio. Los tokens son los del morph y no --duration-base para que color y
+    forma aterricen en el mismo cuadro.*/
+  transition-property: color;
   transition-duration: var(--duration-morph);
   transition-timing-function: var(--ease-morph);
 
-  &:focus-visible {
-    outline: none;
-    box-shadow:
-      0 0 0 2px var(--md-sys-color-surface),
-      0 0 0 4px var(--md-sys-color-primary);
-  }
+  /* el anillo de foco lo pone `mott-morph`, que lo dibuja sobre la forma y no sobre la caja */
 }
 
 

@@ -18,10 +18,15 @@ export const DURATION = {
     /*El morph de seleccion pide la suya. Con --duration-base y la curva vieja el 78% del
       recorrido cabia en los primeros 70ms y los 210 restantes no ensenaban nada: se leia como un
       salto, no como un movimiento. Repartida la curva, este numero ES el tiempo que se ve - por eso
-      es mas corto de lo que parece que deberia. A 380ms se sentia lento, y ademas dejaba el arco
-      del border-radius repintandose 80ms sin avanzar de forma visible, que es donde el
-      antialiasing del borde parpadea.*/
-    morph: 0.3,
+      es mas corto de lo que parece que deberia.
+
+      Bajo de 300 a 220 y de ahi a 120 al mover la geometria fuera del boton (ver `mott-morph` en
+      globals.css). Lo que ataba el numero por abajo no era la lectura, era el temblor: cuanto mas
+      corta la curva, mas px avanza el glifo entre cuadro y cuadro y mas se notaba el rehinteado.
+      Sin glifos que reescalar ese suelo desaparece. A 120ms - siete cuadros a 60fps - la seleccion
+      ya no acompana al clic, contesta; queda a la par de --duration-instant, que es lo que dura el
+      pulsado, asi que encoger y morfear se leen como una sola respuesta.*/
+    morph: 0.12,
     // The odd one out: every value above answers a click, so it is measured in how fast a control
     // can respond. This one is the length of a journey across a surface - a highlight sweeping a
     // control - and a travel that reads as light has to take its time.
@@ -55,7 +60,9 @@ export const EASE = {
     morph: CustomEase.create('mottMorph', '0.35, 0, 0.45, 1'),
 };
 
-/*Shared by every selection morph in the library - ButtonGroup, Navbar, the ThemeModal swatches.
+/*Shared by the morphs that still tween the control itself - Navbar and the ThemeModal swatches.
+  ButtonGroup ya no pasa por aqui: su geometria corre sobre las variables de `mott-morph`, ver
+  `morphSelection` mas abajo.
   `overwrite: 'auto'` is the one that matters: useGSAP does not revert its context when the
   dependencies change, so without it a second click stacks a fresh tween on top of the one still
   running and the two write `transform` on the same frame from different start values. That fight
@@ -96,8 +103,11 @@ export const MORPH_SCALE = 62 / 56;
   ES el traspaso: mismo recorrido, distinta llegada, que es lo que hace que la seleccion se lea como
   un movimiento pasando de un control a otro en vez de dos controles cambiando de estado a la vez.
   Antes los dos arrancaban en el mismo tick con vars identicas - imagenes especulares, y por eso
-  nada viajaba. El retardo del entrante son dos cuadros y medio: no se percibe como lentitud porque
-  el pulsado ya acuso recibo del clic.*/
+  nada viajaba. A 120ms el retardo del entrante son 12ms, o sea menos de un cuadro: en la practica
+  el traspaso lo hace la diferencia de duraciones (96ms contra 120), y el `lead` solo garantiza que
+  el entrante no arranque nunca antes que el saliente. Subirlo para "que se note" seria peor: sobre
+  un recorrido tan corto, dos cuadros de retardo ya son un cuarto de la animacion y se leen como
+  lentitud.*/
 // `lead` es una fraccion de la duracion, no milisegundos sueltos: si se toca el numero de arriba
 // el traspaso se reajusta solo en vez de quedarse desproporcionado.
 const HANDOFF = { out: 0.8, lead: 0.1 };
@@ -140,7 +150,11 @@ const release = (base) => (event) => {
     });
 };
 
-export const pressHandlers = (base) => ({
+/*`base` solo lo sigue necesitando quien tenga la seleccion metida en su propio `transform` (el bead
+  de ThemeModal). Los controles que morfean por `mott-morph` descansan siempre en 1 - su seleccion
+  vive en --mott-morph-scale, sobre ::before - asi que el pulsado se compone solo y no hay dos
+  tweens peleandose por `scale`.*/
+export const pressHandlers = (base = 1) => ({
     onPointerDown: (event) => {
         pressing.add(event.currentTarget);
         gsap.to(event.currentTarget, {
@@ -170,6 +184,43 @@ export const squircleRadius = () => longForm(
         && getComputedStyle(document.documentElement).getPropertyValue('--control-radius').trim())
     || '28%'
 );
+
+/*La seleccion de ButtonGroup no se anima sobre el boton: se anima sobre estas dos variables, que
+  ::before y ::after leen (ver `mott-morph` en globals.css). El porque esta alli - resumido, animar
+  `border-radius` repinta, repintar rerasteriza el icono, y rerasterizarlo mientras la escala se
+  mueve lo hace a un tamano distinto cada cuadro: eso era el temblor. Movida la geometria a un
+  pseudo-elemento sin texto, el glifo se queda quieto y no hay nada que rerasterizar.
+
+  Numeros pelados, sin unidad, a proposito: GSAP interpola un custom property numerico directamente,
+  sin releer de getComputedStyle el border-radius resuelto - la forma larga de ocho valores cuya
+  aridad, cuando no cuadraba con la del destino, era el otro bamboleo que habia que evitar. El % lo
+  pone el calc() del CSS.*/
+export const CIRCLE_PCT = 50;
+
+// --control-radius es estatico (no cambia con el tema), asi que leerlo bajo demanda no se queda
+// viejo como se quedaria un color resuelto.
+export const squirclePct = () => (typeof document !== 'undefined'
+    && parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--control-radius')))
+    || 28;
+
+export const selectionShape = (selected) => ({
+    '--mott-morph-r': selected ? squirclePct() : CIRCLE_PCT,
+    '--mott-morph-scale': selected ? MORPH_SCALE : 1,
+});
+
+/*El saliente suelta en cuatro quintos del tiempo y el entrante llega un pelo tarde: mismo recorrido,
+  distinta llegada, que es lo que hace que la seleccion se lea como algo que pasa de un control a
+  otro y no como dos controles cambiando de estado a la vez. Ver HANDOFF.*/
+export const morphSelection = (el, selected) => gsap.to(el, {
+    ...selectionShape(selected),
+    duration: dur(selected ? DURATION.morph : DURATION.morph * HANDOFF.out),
+    delay: selected ? dur(DURATION.morph * HANDOFF.lead) : 0,
+    ease: EASE.morph,
+    // sin esto, un segundo clic apila un tween nuevo sobre el que sigue corriendo y los dos
+    // escriben la misma variable en el mismo cuadro desde origenes distintos
+    overwrite: 'auto',
+});
+
 
 /*Guarded because this module is evaluated on the server too: the components are 'use client' and
   only tween inside effects, but the import itself still runs during SSR.*/

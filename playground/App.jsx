@@ -24,6 +24,7 @@ import ThemeModal from '../src/themeModal/themeModal.jsx';
 import LoginModal from '../src/authModals/loginModal.jsx';
 import RegisterModal from '../src/authModals/registerModal.jsx';
 import OtpModal from '../src/authModals/otpModal.jsx';
+import RecoverPasswordModal from '../src/authModals/recoverPasswordModal.jsx';
 
 function Section({ title, wide, children }) {
   return (
@@ -197,8 +198,8 @@ function ScrollBox({ id, horizontal, dragScrollProps, children }) {
   );
 }
 
-// The three auth modals. Every field is controlled from here on purpose - that is the API, and this
-// is what using it actually looks like: one useState per field, one handler that gets the value.
+// The auth modals. Every field is controlled from here on purpose - that is the API, and this is
+// what using it actually looks like: one useState per field, one handler that gets the value.
 function AuthDemo() {
   const [screen, setScreen] = useState(null);
   const [email, setEmail] = useState('');
@@ -206,12 +207,28 @@ function AuthDemo() {
   const [confirm, setConfirm] = useState('');
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
+  // The recovery flow's own state. `recoverStep` lives out here because the modal does not hold it:
+  // in a real app the code would go to the server and this would only move once it came back ok.
+  const [recoverStep, setRecoverStep] = useState('code');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNew, setConfirmNew] = useState('');
 
   const loginRef = useRef(null);
   const registerRef = useRef(null);
   const otpRef = useRef(null);
+  const recoverRef = useRef(null);
 
   const close = () => { setScreen(null); setError(''); };
+
+  // Every way in resets the flow to its first step, so it never reopens halfway through.
+  const openRecover = () => {
+    setError('');
+    setCode('');
+    setNewPassword('');
+    setConfirmNew('');
+    setRecoverStep('code');
+    setScreen('recover');
+  };
 
   const brand = { brand: 'aguilarIA', logo: <Shape name="flower" size="20px" color="primary" /> };
 
@@ -221,6 +238,7 @@ function AuthDemo() {
         <Button ref={loginRef} variant="action" onClick={() => setScreen('login')}>Iniciar sesión</Button>
         <Button ref={registerRef} variant="default" onClick={() => setScreen('register')}>Crear cuenta</Button>
         <Button ref={otpRef} variant="default" onClick={() => setScreen('otp')}>Verificar código</Button>
+        <Button ref={recoverRef} variant="default" onClick={openRecover}>Recuperar contraseña</Button>
       </Row>
 
       <LoginModal
@@ -235,6 +253,7 @@ function AuthDemo() {
         error={error}
         onSubmit={() => setError(email && password ? '' : 'Completá los dos campos.')}
         onGoogle={() => setError('')}
+        onForgotPassword={openRecover}
         onSwitch={() => { setError(''); setScreen('register'); }}
       />
 
@@ -268,6 +287,39 @@ function AuthDemo() {
         error={error}
         onSubmit={() => setError(code.length === 6 ? '' : 'El código va completo.')}
         onResend={() => { setCode(''); setError(''); }}
+      />
+
+      <RecoverPasswordModal
+        {...brand}
+        open={screen === 'recover'}
+        onClose={close}
+        triggerRef={recoverRef}
+        step={recoverStep}
+        email={email || 'tucorreo@gmail.com'}
+        code={code}
+        onCodeChange={setCode}
+        // This is the round trip the modal cannot make on its own: check the code, and only then
+        // move the step. Here the check is the length; in an app it is the server.
+        onVerifyCode={() => {
+          if (code.length !== 6) return setError('El código va completo.');
+          setError('');
+          setRecoverStep('password');
+        }}
+        onResend={() => { setCode(''); setError(''); }}
+        password={newPassword}
+        onPasswordChange={setNewPassword}
+        confirmPassword={confirmNew}
+        onConfirmPasswordChange={setConfirmNew}
+        // Saved: hand the user back to the login modal to enter with what they just set.
+        onSubmitPassword={() => {
+          if (!newPassword) return setError('Escribí una contraseña.');
+          if (newPassword !== confirmNew) return setError('Las contraseñas no coinciden.');
+          setError('');
+          setPassword('');
+          setScreen('login');
+        }}
+        error={error}
+        onSwitch={() => { setError(''); setScreen('login'); }}
       />
     </>
   );
@@ -328,6 +380,46 @@ export default function App() {
         <ThemeToggle />
       </div>
 
+      {/* Navbar mounted once, live, as a flex-row sibling of everything else on the page - the exact
+         pattern the README documents for app/layout.jsx. It deliberately sits OUTSIDE the masonry's
+         `columnWidth` container below: `position: sticky` and CSS multicol are a combination browsers
+         do not implement consistently (Navbar's own <nav> is `sticky`, not `fixed`, precisely so it
+         reserves flow space instead of floating - see src/navbar/navbar.jsx), so the rail needs to sit
+         in a normal flow context, not a fragmented one. */}
+      <div className="flex" style={{ gap: '1.5rem' }}>
+        <Navbar
+          selected={gearActive ? 4 : activeRoute}
+          onChange={(index) => {
+            if (index === 4) {
+              setGearActive(true);
+              setGearModalOpen(true);
+            } else {
+              setActiveRoute(index);
+              setGearModalOpen(false);
+            }
+          }}
+          logo={{
+            buttonRef: logoButtonRef,
+            icon: (
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <path d="M12 2L2 7l10 5 10-5-10-5z" fill="currentColor" />
+                <path d="M2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" strokeWidth="2" fill="none" />
+              </svg>
+            ),
+            onClick: () => setLogoPopoverOpen(true),
+          }}
+          items={[
+            { icon: 'home' },
+            { icon: 'search' },
+            { icon: 'favorite' },
+            { icon: 'person' },
+            { icon: 'settings', buttonRef: setGearTrigger },
+          ]}
+        />
+        {/* `minWidth: 0` so the multicol block below can actually shrink inside the flex item instead
+           of forcing the row wider than the viewport - a flex item's default min-width is `auto`,
+           which is its content's own natural width, and a wide masonry easily exceeds that. */}
+        <div style={{ flex: 1, minWidth: 0 }}>
       <div
         style={{
           columnWidth: 320,
@@ -621,86 +713,16 @@ export default function App() {
           <AuthDemo />
         </Section>
 
-        <Section title="Navbar — rail en desktop, barra inferior en mobile" wide>
+        <Section title="Navbar — rail en desktop, barra inferior en mobile">
           <Text variant="body-medium" tone="muted">
-            Achicá la ventana por debajo de ~768px para ver el cambio de rail a barra inferior. El activo está
-            controlado (simula la ruta actual) — reclickear el mismo ítem no lo deselecciona. Los dos triggers
-            muestran las dos variantes del morph: el <strong>logo</strong> abre un pop up que se apoya encima y lo
-            tapa (por eso no cambia de estilo: no se vería), y el <strong>engranaje</strong> abre una modal centrada
-            que viaja hasta el medio de la pantalla (por eso sí se ilumina: ese botón queda a la vista).
+            Corriendo en vivo a la izquierda de <strong>toda esta página</strong>, no metido en una tarjeta:
+            así es como se monta en un layout real — hermano de fila flex del resto del contenido, nunca
+            anidado dentro de un contenedor de columnas CSS como el masonry de acá abajo (esa combinación
+            no se comporta igual entre navegadores). Achicá la ventana por debajo de ~768px para ver el
+            cambio de rail a barra inferior. El <strong>logo</strong> abre un pop up que se apoya encima y
+            lo tapa; el <strong>engranaje</strong> abre una modal centrada que viaja hasta el medio de la
+            pantalla.
           </Text>
-          <Navbar
-            selected={gearActive ? 4 : activeRoute}
-            onChange={(index) => {
-              if (index === 4) {
-                setGearActive(true);
-                setGearModalOpen(true);
-              } else {
-                setActiveRoute(index);
-                setGearModalOpen(false);
-              }
-            }}
-            logo={{
-              buttonRef: logoButtonRef,
-              icon: (
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
-                  <path d="M12 2L2 7l10 5 10-5-10-5z" fill="currentColor" />
-                  <path d="M2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" strokeWidth="2" fill="none" />
-                </svg>
-              ),
-              onClick: () => setLogoPopoverOpen(true),
-            }}
-            items={[
-              { icon: 'home' },
-              { icon: 'search' },
-              { icon: 'favorite' },
-              { icon: 'person' },
-              { icon: 'settings', buttonRef: setGearTrigger },
-            ]}
-          />
-          {/* centred modal from the gear: it travels to the middle, so the button stays visible and
-              does get the click effect */}
-          <CustomModal
-            open={gearModalOpen}
-            onClose={() => setGearModalOpen(false)}
-            // the gear stays active for the whole shrink, so the modal lands on the button in the same
-            // state it left from, and only then does it return to the default
-            onCloseComplete={() => setGearActive(false)}
-            triggerRef={gearButtonRef}
-          >
-            <div className="w-[19rem]">
-              <h3 style={{ font: 'var(--md-sys-typescale-title-large)', letterSpacing: 'var(--md-sys-typescale-title-large-tracking)', fontWeight: 700, color: 'var(--md-sys-color-on-surface)', marginBottom: '0.5rem' }}>
-                Modal centrada desde el nav
-              </h3>
-              <p style={{ font: 'var(--md-sys-typescale-body-medium)', letterSpacing: 'var(--md-sys-typescale-body-medium-tracking)', color: 'var(--md-sys-color-on-surface-variant)', marginBottom: '1rem' }}>
-                El botón se transforma en la modal y viaja hasta el centro. Como queda a la vista, se ilumina
-                al clickearlo y vuelve al default recién cuando la modal termina de plegarse encima.
-              </p>
-              <Button variant="default" onClick={() => setGearModalOpen(false)}>
-                Cerrar
-              </Button>
-            </div>
-          </CustomModal>
-
-          {/* popover anchored to the logo: the same morph, but resting on top of the button itself
-              instead of travelling to the centre of the screen */}
-          <CustomModal
-            open={logoPopoverOpen}
-            onClose={() => setLogoPopoverOpen(false)}
-            triggerRef={logoButtonRef}
-            animation={anchoredAnimation}
-          >
-            <div className="w-[15rem]">
-              <h3 style={{ font: 'var(--md-sys-typescale-title-large)', letterSpacing: 'var(--md-sys-typescale-title-large-tracking)', fontWeight: 700, color: 'var(--md-sys-color-on-surface)', marginBottom: '0.5rem' }}>
-                Pop up desde el logo
-              </h3>
-              <p style={{ font: 'var(--md-sys-typescale-body-medium)', letterSpacing: 'var(--md-sys-typescale-body-medium-tracking)', color: 'var(--md-sys-color-on-surface-variant)', marginBottom: '1rem' }}>
-                Se apoya encima del logo y lo tapa: el círculo se estira desde su propia esquina hasta
-                convertirse en este panel. Por eso el logo no cambia de estilo al clickearlo — no se vería.
-              </p>
-              <Button variant="default" onClick={() => setLogoPopoverOpen(false)}>Cerrar</Button>
-            </div>
-          </CustomModal>
         </Section>
 
         <Section title="Shape — las 5 formas de M3" wide>
@@ -861,6 +883,52 @@ export default function App() {
           </Toast>
         </Section>
       </div>
+        </div>
+      </div>
+
+      {/* centred modal from the gear: it travels to the middle, so the button stays visible and
+          does get the click effect */}
+      <CustomModal
+        open={gearModalOpen}
+        onClose={() => setGearModalOpen(false)}
+        // the gear stays active for the whole shrink, so the modal lands on the button in the same
+        // state it left from, and only then does it return to the default
+        onCloseComplete={() => setGearActive(false)}
+        triggerRef={gearButtonRef}
+      >
+        <div className="w-[19rem]">
+          <h3 style={{ font: 'var(--md-sys-typescale-title-large)', letterSpacing: 'var(--md-sys-typescale-title-large-tracking)', fontWeight: 700, color: 'var(--md-sys-color-on-surface)', marginBottom: '0.5rem' }}>
+            Modal centrada desde el nav
+          </h3>
+          <p style={{ font: 'var(--md-sys-typescale-body-medium)', letterSpacing: 'var(--md-sys-typescale-body-medium-tracking)', color: 'var(--md-sys-color-on-surface-variant)', marginBottom: '1rem' }}>
+            El botón se transforma en la modal y viaja hasta el centro. Como queda a la vista, se ilumina
+            al clickearlo y vuelve al default recién cuando la modal termina de plegarse encima.
+          </p>
+          <Button variant="default" onClick={() => setGearModalOpen(false)}>
+            Cerrar
+          </Button>
+        </div>
+      </CustomModal>
+
+      {/* popover anchored to the logo: the same morph, but resting on top of the button itself
+          instead of travelling to the centre of the screen */}
+      <CustomModal
+        open={logoPopoverOpen}
+        onClose={() => setLogoPopoverOpen(false)}
+        triggerRef={logoButtonRef}
+        animation={anchoredAnimation}
+      >
+        <div className="w-[15rem]">
+          <h3 style={{ font: 'var(--md-sys-typescale-title-large)', letterSpacing: 'var(--md-sys-typescale-title-large-tracking)', fontWeight: 700, color: 'var(--md-sys-color-on-surface)', marginBottom: '0.5rem' }}>
+            Pop up desde el logo
+          </h3>
+          <p style={{ font: 'var(--md-sys-typescale-body-medium)', letterSpacing: 'var(--md-sys-typescale-body-medium-tracking)', color: 'var(--md-sys-color-on-surface-variant)', marginBottom: '1rem' }}>
+            Se apoya encima del logo y lo tapa: el círculo se estira desde su propia esquina hasta
+            convertirse en este panel. Por eso el logo no cambia de estilo al clickearlo — no se vería.
+          </p>
+          <Button variant="default" onClick={() => setLogoPopoverOpen(false)}>Cerrar</Button>
+        </div>
+      </CustomModal>
     </div>
   );
 }

@@ -5,18 +5,21 @@ import gsap from 'gsap';
 import { twMerge } from 'tailwind-merge';
 import Icon from '../icon/icon.jsx';
 import { selectionTint, FAMILIES } from '../theme/roles.js';
-import { MORPH_SCALE, morphTo, pressHandlers, CIRCLE_RADIUS, squircleRadius } from '../animations/motion.js';
+import { morphSelection, selectionShape, pressHandlers } from '../animations/motion.js';
 import { verifyTypesButtonGroup } from '../utils/verifyTypes.js';
 
 
 /*Selection reads as a morph: a circle resolving into a squircle, scaled up. COLOUR is left to CSS
-  (see `mott-btn-in-group` in globals.css) because GSAP writes what it animates into the inline
-  style, and tweening backgroundColor would bake a literal hex over the role token - the button
-  would stop following the theme from its first click onwards. GEOMETRY stays in GSAP because the
-  radius and the scale have to move as one. Both halves run on --duration-base / --ease-emphasized,
-  so they still land on the same frame. `morphTo` is what runs the geometry: it promotes the button
-  to its own layer for the length of the tween, without which the browser re-rasterises the icon at
-  a new size on every frame and the glyph visibly shivers - see the note on it in motion.js.*/
+  (see `mott-morph` in globals.css) because GSAP writes what it animates into the inline style, and
+  tweening backgroundColor would bake a literal hex over the role token - the button would stop
+  following the theme from its first click onwards. GEOMETRY stays in GSAP because the radius and
+  the scale have to move as one. Both halves run on --duration-morph / --ease-morph, so they land
+  on the same frame.
+
+  Ni una ni otra tocan el boton: las dos corren sobre ::before, y lo unico que se anima aqui son las
+  dos variables que ese pseudo-elemento lee. Esa es la diferencia entre esto y lo que temblaba - el
+  icono ya no esta dentro de lo que se escala y se repinta, asi que no hay glifo que rerasterizar a
+  un tamano distinto en cada cuadro. El porque completo esta en `mott-morph`.*/
 
 
 export default function ButtonGroup({ buttons, vertical = true, variant = 'support', defaultSelected = null, value, allowDeselect = true, onChange }) {
@@ -35,10 +38,7 @@ export default function ButtonGroup({ buttons, vertical = true, variant = 'suppo
         // buttons can shrink; without this the array keeps handing back detached nodes to tween
         itemRefs.current.length = buttons.length;
 
-        const squircle = squircleRadius();
-        const shapeOf = (i) => (i === selectedButton
-            ? { borderRadius: squircle, scale: MORPH_SCALE }
-            : { borderRadius: CIRCLE_RADIUS, scale: 1 });
+        const shapeOf = (i) => selectionShape(i === selectedButton);
 
         /*The first pass - and any pass where the set of buttons itself changed - only puts the
           resting state in place. Animating it means a group that mounts already selected (the mode
@@ -60,7 +60,7 @@ export default function ButtonGroup({ buttons, vertical = true, variant = 'suppo
 
         changed.forEach((i) => {
             const el = itemRefs.current[i];
-            if (el) morphTo(el, shapeOf(i), { entering: i === selectedButton });
+            if (el) morphSelection(el, i === selectedButton);
         });
     }, { dependencies: [selectedButton, buttons.length], scope: containerRef });
 
@@ -87,15 +87,18 @@ export default function ButtonGroup({ buttons, vertical = true, variant = 'suppo
                         aria-pressed={selectedButton === i}
                         aria-label={btn.ariaLabel}
                         title={btn.ariaLabel}
-                        className='mott-btn-in-group mott-state-layer'
-                        /*The press has to travel through GSAP - it owns `transform` on this button, so a
-                          CSS :active scale could never win. `base` is where the control rests, so the
-                          press composes with the selection instead of fighting it.*/
-                        {...pressHandlers(i === selectedButton ? MORPH_SCALE : 1)}
+                        className='mott-btn-in-group mott-state-layer mott-morph'
+                        /*El pulsado sigue pasando por GSAP - un `:active { transform }` de CSS no le
+                          ganaria al transform inline. Ya no necesita saber donde descansa el control:
+                          la seleccion vive en --mott-morph-scale, sobre ::before, asi que el boton
+                          descansa siempre en 1 y el encogido se compone con el pill sin pelearse por
+                          `scale` con nadie.*/
+                        {...pressHandlers()}
                         style={{
-                            backgroundColor: i === selectedButton ? selected.surface : resting.container,
+                            /*El fondo lo pinta ::before, no el boton: transicionarlo aqui lo repintaba
+                              entero - texto incluido - en cada cuadro del morph.*/
+                            '--mott-morph-bg': i === selectedButton ? selected.surface : resting.container,
                             color: i === selectedButton ? selected.on : resting.onContainer,
-                            borderRadius: CIRCLE_RADIUS,
                             height: 'var(--control-size-md)',
                             ...(iconOnly
                                 ? { width: 'var(--control-size-md)', padding: 0 }

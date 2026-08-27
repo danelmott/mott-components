@@ -247,6 +247,7 @@ suave de la familia neutra y `ghost` no tiene superficie que suavizar, así que 
 | `Dropdown` | panel anclado, sin backdrop; cierra con Escape o un clic afuera |
 | `CustomModal` | `<dialog>` nativo con animaciones de apertura y cierre intercambiables |
 | `LoginModal` / `RegisterModal` / `OtpModal` | modales de auth ya armadas: campos controlados, botón de Google, botón de cerrar y línea de switch |
+| `RecoverPasswordModal` | recuperar contraseña en dos pasos — el código, después la contraseña nueva — en un solo panel |
 | `Icon` | Material Symbols Rounded con `fill`, `weight`, `grade`, `opticalSize` |
 | `GoogleIcon` | la marca de Google con sus cuatro colores propios — lo único acá que no sigue el tema |
 | `Loading` | spinner, tamaños `sm`/`md`/`lg` |
@@ -425,10 +426,10 @@ function SaveButton() {
 
 ### Modales de auth
 
-`LoginModal`, `RegisterModal` y `OtpModal` son el mismo panel con distinto contenido: línea de marca,
-título, campos, botón primario, botón de Google y la línea de switch abajo. Las tres se componen con
-los componentes que ya están en esta librería, así que heredan la escala tipográfica y los roles de
-color en vez de repetirlos.
+`LoginModal`, `RegisterModal`, `OtpModal` y `RecoverPasswordModal` son el mismo panel con distinto
+contenido: línea de marca, título, campos, botón primario, botón de Google y la línea de switch abajo.
+Se componen con los componentes que ya están en esta librería, así que heredan la escala tipográfica
+y los roles de color en vez de repetirlos.
 
 **Los campos los controlás vos.** La modal renderiza lo que le pasás y avisa lo que se escribió; nunca
 se queda con el valor. Eso es lo que te deja validar mientras el usuario escribe, conservar lo tipeado
@@ -468,9 +469,76 @@ vacía retrocede y borra la anterior, las flechas mueven, y pegar un código com
 la casilla en la que estés. Lo que no sea dígito se descarta, y un código más largo que el campo se
 corta en vez de desbordar.
 
+#### Recuperar la contraseña
+
+`RecoverPasswordModal` es ese mismo campo de código y después un par de campos de contraseña, en un
+panel que no se cierra en el medio. **Qué paso se ve es un prop, no estado interno**: pasar al
+siguiente significa que el código fue aceptado, y eso solo lo podés preguntar vos al servidor.
+`onVerifyCode` corre en el primer paso, `onSubmitPassword` en el segundo, y vos movés `step` cuando
+vuelve la respuesta.
+
+```jsx
+const [step, setStep] = useState('code');   // 'code' | 'password'
+
+<RecoverPasswordModal
+  open={open}
+  onClose={() => setOpen(false)}
+  triggerRef={buttonRef}
+  step={step}
+  email={email}
+  code={code} onCodeChange={setCode}
+  onVerifyCode={() => verifyCode(code).then(() => setStep('password'), (e) => setError(e.message))}
+  onResend={() => sendCode(email)}
+  password={password} onPasswordChange={setPassword}
+  confirmPassword={confirm} onConfirmPasswordChange={setConfirm}
+  onSubmitPassword={() => resetPassword(password).then(() => setScreen('login'))}
+  error={error}
+  onSwitch={() => setScreen('login')}
+/>
+```
+
+Guardar es el final — no hay paso de éxito. Corre `onSubmitPassword` y vos devolvés al usuario a la
+modal de login para que entre con lo que acaba de poner; la línea de switch de ese paso apunta ahí
+también, por si se acordó de la contraseña a mitad de camino. Acá adentro nada compara los dos campos
+de contraseña: como en todo lo demás, la regla es de quien la sepa, y el veredicto vuelve como
+`error`.
+
+La entrada al flujo es `onForgotPassword` en `LoginModal` — un callback opcional que renderiza un
+enlace debajo del campo de contraseña. Si no se lo pasás, no aparece nada.
+
 **La marca de Google conserva sus colores.** `GoogleIcon` son cuatro hex de marca fijos y no sigue la
 semilla — es el logo de otro, y repintarlo lo convertiría en otro logo. Se exporta aparte por si
 querés armar el botón vos mismo.
+
+---
+
+### Navbar
+
+Íconos en un rail vertical en desktop, una barra flotante en mobile — `Navbar` renderiza los dos y deja
+que el CSS elija uno con un breakpoint `md:`. `items` es el array de botones, `logo` es uno opcional
+que abre algo aparte (un menú, un enlace a inicio), y `align` (`'center'` | `'top'`) solo afecta al
+rail de desktop — la barra de mobile siempre va abajo.
+
+**El rail de desktop reserva su propia columna; no flota sobre tu página.** Es `position: sticky`, no
+`fixed` — un elemento `fixed` se pinta por encima del contenido normal del flujo sin importar qué
+z-index tenga, porque así funciona el orden de pintado de CSS, así que un rail que tiene que quedar
+*al lado* de tu contenido y no *encima* tiene que seguir siendo parte del flujo del documento. Eso
+significa que necesita un lugar donde empujar contenido — montalo como hermano en fila flex de tu
+contenido, típicamente una vez cerca de la raíz de tu app:
+
+```jsx
+// app/layout.jsx
+<div className="flex min-h-screen">
+  <Navbar items={items} logo={logo} onChange={setRoute} selected={route} />
+  <main className="flex-1">{children}</main>
+</div>
+```
+
+Igual se queda fijo en pantalla mientras la página scrollea — `sticky` más una caja de la altura
+completa del viewport le da la misma sensación de "siempre visible" que tenía con `fixed`, solo que
+sin sentarse encima de nada. La barra de mobile es lo opuesto a propósito: se espera que una barra
+inferior flote sobre el último tramo de contenido, así que conserva su propio `fixed` y un z-index
+elevado.
 
 ---
 
@@ -482,6 +550,7 @@ define:
 | grupo | tokens |
 |---|---|
 | Tipografía | `--md-ref-typeface-brand/plain`, `--md-ref-typeface-weight-*`, `--md-sys-typescale-<rol>-{font,size,line-height,tracking,weight}` para los quince roles, `--font-family`, `--tracking-caps` |
+| Énfasis de título | `--md-sys-title-emphasis-{weight,tracking,opsz}`, que aplica la clase `.mott-title-emphasis` — no es exclusivo de modales, va **encima** de cualquier rol de la escala para que un título se lea más pesado y compacto |
 | Radios | `--radius-sm`, `--radius-lg`, `--radius-default`, `--radius-full`, `--radius-modal`, `--control-radius` |
 | Espaciado | `--pad-button`, `--pad-input`, `--pad-card`, `--pad-badge-*`, `--gap-tight` → `--gap-page` |
 | Tamaños | `--sm-icon` → `--xl-icon`, `--control-size-sm/md/lg` |

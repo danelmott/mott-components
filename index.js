@@ -14,6 +14,7 @@ export { default as CustomModal } from './src/customModal/customModal.jsx';
 export { default as LoginModal } from './src/authModals/loginModal.jsx';
 export { default as RegisterModal } from './src/authModals/registerModal.jsx';
 export { default as OtpModal } from './src/authModals/otpModal.jsx';
+export { default as RecoverPasswordModal } from './src/authModals/recoverPasswordModal.jsx';
 export { default as Icon } from './src/icon/icon.jsx';
 export { default as GoogleIcon } from './src/icon/googleIcon.jsx';
 export { default as Loading } from './src/loading/loading.jsx';
