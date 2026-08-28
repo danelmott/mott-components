@@ -523,11 +523,20 @@ the root of your app:
 
 ```jsx
 // app/layout.jsx
-<div className="flex min-h-screen">
+<div className="flex min-h-dvh">
   <Navbar items={items} logo={logo} onChange={setRoute} selected={route} />
-  <main className="flex-1">{children}</main>
+  <main className="flex-1 min-w-0 p-8">{children}</main>
 </div>
 ```
+
+**The rail is exactly its own buttons wide — 64px — and carries no margin of its own**, so it sits
+flush against the left edge and everything else starts where it ends. That is the 56px of
+`--control-size-md` plus 4px per side, and those 4px are not breathing room: a selected item paints a
+pill scaled to 62px over its 56px box, so it overhangs ~3px each way and the window edge would shave
+that off. Because of it, **the page's padding belongs to the `<main>`, never to the row** — padding on
+the flex row is exactly what pushes the rail off the edge, and a heading left outside the `<main>` is
+a heading that does not respect the rail's column. `min-w-0` is there so wide content inside the
+`<main>` shrinks instead of forcing the row wider than the viewport.
 
 It still stays pinned in view while the page scrolls — `sticky` plus a full-viewport-tall box gives it
 the same "always visible" feel `fixed` had, just without sitting on top of anything. The mobile bar is

@@ -24,6 +24,9 @@ export { default as Shape } from './src/shapes/shapes.jsx';
 export { default as Avatar } from './src/avatars/avatars.jsx';
 export { default as Text, TYPESCALE_ROLES } from './src/text/text.jsx';
 export { SHAPE_NAMES } from './src/shapes/shapePaths.js';
+export { default as GeneratorGradientProfile } from './src/GeneratorGradientProfile/GeneratorGradientProfile.jsx';
+export { GRADIENT_RECIPE, buildGradientStops } from './src/GeneratorGradientProfile/gradientPalette.js';
+
 
 export { ModalAnimation, MorphAnimation, AnchoredAnimation, morphAnimation, anchoredAnimation } from './src/animations/modalAnimation.js';
 export { DURATION, EASE, MORPH, MORPH_SCALE, morphTo, pressHandlers, PRESS_SCALE, CIRCLE_RADIUS, squircleRadius, prefersReducedMotion } from './src/animations/motion.js';

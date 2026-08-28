@@ -528,11 +528,20 @@ contenido, típicamente una vez cerca de la raíz de tu app:
 
 ```jsx
 // app/layout.jsx
-<div className="flex min-h-screen">
+<div className="flex min-h-dvh">
   <Navbar items={items} logo={logo} onChange={setRoute} selected={route} />
-  <main className="flex-1">{children}</main>
+  <main className="flex-1 min-w-0 p-8">{children}</main>
 </div>
 ```
+
+**El rail mide exactamente sus botones — 64px — y no lleva margen propio**, así que queda pegado al
+borde izquierdo y todo lo demás arranca donde él termina. Son los 56px de `--control-size-md` más 4px
+por lado, y esos 4px no son aire: el item elegido pinta un pill escalado a 62px sobre su caja de 56,
+o sea desborda ~3px por lado, y el borde de la ventana se lo comería. Por eso **el padding de la
+página va en el `<main>`, nunca en la fila** — un padding en la fila flex es exactamente lo que
+despega el rail del borde, y un título fuera del `<main>` es un título que no respeta la columna del
+rail. El `min-w-0` está para que el contenido ancho del `<main>` se achique en vez de forzar la fila
+más ancha que el viewport.
 
 Igual se queda fijo en pantalla mientras la página scrollea — `sticky` más una caja de la altura
 completa del viewport le da la misma sensación de "siempre visible" que tenía con `fixed`, solo que

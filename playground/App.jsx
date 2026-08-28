@@ -21,6 +21,7 @@ import { SHAPE_NAMES } from '../src/shapes/shapePaths.js';
 import DragScroll from '../src/dragScroll/dragScroll.jsx';
 import { useTheme } from '../src/theme/themeContext.jsx';
 import ThemeModal from '../src/themeModal/themeModal.jsx';
+import GeneratorGradientProfile from '../src/GeneratorGradientProfile/GeneratorGradientProfile.jsx';
 import LoginModal from '../src/authModals/loginModal.jsx';
 import RegisterModal from '../src/authModals/registerModal.jsx';
 import OtpModal from '../src/authModals/otpModal.jsx';
@@ -337,13 +338,16 @@ export default function App() {
   const [toasts, setToasts] = useState({ info: false, success: false, warning: false, danger: false });
   const toggleToast = (variant) => setToasts((t) => ({ ...t, [variant]: !t[variant] }));
   const [country, setCountry] = useState(null);
-  const [progressValue, setProgressValue] = useState(30);
   const [searchLog, setSearchLog] = useState('(nada buscado todavía)');
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [customModalOpen, setCustomModalOpen] = useState(false);
   const [autoModalOpen, setAutoModalOpen] = useState(false);
+  const [accountModalOpen, setAccountModalOpen] = useState(false);
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
   const dropdownTriggerRef = useRef(null);
   const customModalTriggerRef = useRef(null);
+  const accountTriggerRef = useRef(null);
+  const deleteTriggerRef = useRef(null);
   const [activeRoute, setActiveRoute] = useState(0);
   // The logo opens the anchored popover. It deliberately has no active state: the panel rests on top
   // and covers it, so the button only takes the click - restyling it would not be visible, and the
@@ -364,29 +368,19 @@ export default function App() {
   };
 
   return (
-    <div style={{ padding: '2rem', maxWidth: 1400, margin: '0 auto' }}>
-      <h1
-        style={{
-          font: 'var(--md-sys-typescale-display-small)', letterSpacing: 'var(--md-sys-typescale-display-small-tracking)',
-          fontWeight: 700,
-          color: 'var(--md-sys-color-on-surface)',
-          marginBottom: '1.5rem',
-        }}
-      >
-        Mott Design Components — Playground
-      </h1>
-
-      <div style={{ marginBottom: '1.5rem' }}>
-        <ThemeToggle />
-      </div>
-
-      {/* Navbar mounted once, live, as a flex-row sibling of everything else on the page - the exact
+    <>
+      {/* The flex row is the OUTERMOST element here and carries neither padding nor gap, which is
+         the whole reason the rail can sit flush against x=0. Padding on this row - which is where it
+         used to be, on a `maxWidth: 1400` wrapper around everything, title included - is exactly
+         what pushed the rail off the window edge; it belongs to the content column below instead,
+         and a heading left outside that column is a heading that does not respect the rail's zone.
+         Navbar is mounted once, live, as a flex-row sibling of the rest of the page - the exact
          pattern the README documents for app/layout.jsx. It deliberately sits OUTSIDE the masonry's
-         `columnWidth` container below: `position: sticky` and CSS multicol are a combination browsers
-         do not implement consistently (Navbar's own <nav> is `sticky`, not `fixed`, precisely so it
-         reserves flow space instead of floating - see src/navbar/navbar.jsx), so the rail needs to sit
-         in a normal flow context, not a fragmented one. */}
-      <div className="flex" style={{ gap: '1.5rem' }}>
+         `columnWidth` container further down: `position: sticky` and CSS multicol are a combination
+         browsers do not implement consistently (Navbar's own <nav> is `sticky`, not `fixed`,
+         precisely so it reserves flow space instead of floating - see src/navbar/navbar.jsx), so the
+         rail needs to sit in a normal flow context, not a fragmented one. */}
+      <div className="flex min-h-dvh">
         <Navbar
           selected={gearActive ? 4 : activeRoute}
           onChange={(index) => {
@@ -420,469 +414,529 @@ export default function App() {
            of forcing the row wider than the viewport - a flex item's default min-width is `auto`,
            which is its content's own natural width, and a wide masonry easily exceeds that. */}
         <div style={{ flex: 1, minWidth: 0 }}>
-      <div
-        style={{
-          columnWidth: 320,
-          columnGap: '1rem',
-        }}
-      >
-        <Section title="ThemeProvider — paleta M3 + modo" wide>
-          <ThemeDemo />
-        </Section>
-
-        <Section title="DragScroll — sin barra, se arrastra" wide>
-          <Text variant="body-medium" tone="muted">
-            Las barras de scroll están ocultas en toda la app. Estas cajas se arrastran con el mouse y
-            siguen de largo al soltar (inercia). La rueda y el teclado funcionan igual que siempre. El
-            degradado en el borde avisa que hay más contenido y se apaga al llegar al tope.
-          </Text>
-          <ScrollBox id="scroll-vertical">
-            <p style={{ fontWeight: 600, color: 'var(--md-sys-color-on-surface)', marginBottom: '0.5rem' }}>Vertical</p>
-            {Array.from({ length: 25 }, (_, i) => (
-              <p key={i} style={{ marginBottom: '0.5rem' }}>{i + 1}. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation.</p>
-            ))}
-          </ScrollBox>
-
-          <ScrollBox id="scroll-horizontal" horizontal>
-            <div style={{ display: 'flex', gap: '0.5rem', width: 'max-content', paddingBottom: '0.5rem' }}>
-              {Array.from({ length: 40 }, (_, i) => (
-                <span
-                  key={i}
-                  style={{
-                    padding: 'var(--pad-badge-md)',
-                    borderRadius: 'var(--radius-full)',
-                    backgroundColor: 'var(--md-sys-color-secondary-container)',
-                    color: 'var(--md-sys-color-on-secondary-container)',
-                    font: 'var(--md-sys-typescale-body-medium)', letterSpacing: 'var(--md-sys-typescale-body-medium-tracking)',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  Elemento {i + 1}
-                </span>
-              ))}
-            </div>
-          </ScrollBox>
-
-          <ScrollBox id="scroll-no-inertia" dragScrollProps={{ inertia: false, fade: false }}>
-            <p style={{ fontWeight: 600, color: 'var(--md-sys-color-on-surface)', marginBottom: '0.5rem' }}>
-              inertia={'{false}'} fade={'{false}'} — se arrastra pero frena al soltar, y sin degradado
-            </p>
-            {Array.from({ length: 25 }, (_, i) => (
-              <p key={i} style={{ marginBottom: '0.5rem' }}>{i + 1}. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation.</p>
-            ))}
-          </ScrollBox>
-        </Section>
-
-        <Section title="Typescale — los 15 roles de M3 en DM Sans" wide>
-          <Text variant="body-medium" tone="muted">
-            Cada rol dice <em>qué es</em> un texto, no qué tan grande: trae junto su tamaño, interlineado,
-            tracking y peso. La fuente se cambia en un solo lugar — <code>--md-ref-typeface-brand</code> y
-            <code>--md-ref-typeface-plain</code> — y los quince roles la siguen.
-          </Text>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-            {TYPESCALE_ROLES.map((role) => (
-              <div
-                key={role}
-                style={{
-                  display: 'flex',
-                  alignItems: 'baseline',
-                  gap: '1.5rem',
-                  borderBottom: '1px solid var(--md-sys-color-surface-container-high)',
-                  paddingBottom: '0.5rem',
-                }}
-              >
-                <Text
-                  as="span"
-                  variant="label-small"
-                  tone="muted"
-                  style={{ minWidth: '9rem', fontVariantNumeric: 'tabular-nums' }}
-                >
-                  {role}
-                </Text>
-                <Text as="span" variant={role}>
-                  Cargá el sistema con una sola fuente
-                </Text>
-              </div>
-            ))}
-          </div>
-        </Section>
-
-        <Section title="Button — variantes semánticas">
-          <Row>
-            <Button>Cancelar</Button>
-            <Button variant="action">Enviar</Button>
-            <Button variant="support">Continuar</Button>
-            <Button variant="danger">Eliminar</Button>
-            <Button variant="success">Aprobar</Button>
-            <Button variant="warning">Archivar</Button>
-            <Button variant="ghost">Omitir</Button>
-            <Button variant="action" disabled>Deshabilitado</Button>
-          </Row>
-        </Section>
-
-        <Section title="Button — quiet (mismo significado, menos volumen)">
-          <Row>
-            <Button variant="action">Enviar</Button>
-            <Button variant="action" quiet>Enviar</Button>
-          </Row>
-          <Row>
-            <Button variant="danger">Eliminar</Button>
-            <Button variant="danger" quiet>Eliminar</Button>
-          </Row>
-          <Row>
-            <Button variant="success">Aprobar</Button>
-            <Button variant="success" quiet>Aprobar</Button>
-          </Row>
-          <Row>
-            <Button variant="warning">Archivar</Button>
-            <Button variant="warning" quiet>Archivar</Button>
-          </Row>
-        </Section>
-
-        <Section title="Button — ícono, ancho completo, shape">
-          <Row>
-            <Button variant="default">
-              <Icon name="favorite" size="sm" />
-              Con ícono
-            </Button>
-            <Button variant="action" shape="pill">Shape pill</Button>
-          </Row>
-          <Button variant="support" fullWidth>Ancho completo</Button>
-        </Section>
-
-        <Section title="Button — iconOnly (sm / md / lg)">
-          <Row>
-            <Button variant="ghost" iconOnly aria-label="Editar" >
-              <Icon name="edit" size="sm" />
-            </Button>
-            <Button variant="default" iconOnly aria-label="Editar">
-              <Icon name="edit" size="md" />
-            </Button>
-            <Button variant="action" iconOnly aria-label="Editar">
-              <Icon name="edit" size="lg" />
-            </Button>
-          </Row>
-        </Section>
-
-        <Section title="FabButton">
-          <Row>
-            <FabButton variant="action" icon="add" size="sm" aria-label="Nuevo (sm)" />
-            <FabButton variant="support" icon="edit" size="md" aria-label="Editar (md)" />
-            <FabButton variant="danger" icon="delete" size="lg" aria-label="Eliminar (lg)" />
-            <FabButton variant="success" icon="check" size="md" aria-label="Aprobar" />
-            <FabButton variant="danger" quiet icon="delete" size="md" aria-label="Eliminar (quiet)" />
-          </Row>
-        </Section>
-
-        <Section title="ButtonGroup">
-          <ButtonGroup
-            variant="support"
-            buttons={[
-              { icon: 'bluetooth' },
-              { icon: 'alarm' },
-              { icon: 'radio_button_unchecked' },
-              { icon: 'flashlight_on' },
-              { icon: 'wifi' },
-            ]}
-          />
-        </Section>
-
-
-        <Section title="Input">
-          <Input label="Correo" type="text" placeholder="Escribe tu correo" />
-          <Input label="Contraseña" type="password" placeholder="Escribe tu contraseña" />
-          <Input label="Deshabilitado" placeholder="No editable" disabled />
-        </Section>
-
-        <Section title="Textarea">
-          <Textarea label="Mensaje" placeholder="Escribí tu mensaje" />
-        </Section>
-
-        <Section title="Search — debounce, listo para una API">
-          <Search
-            label="Buscar"
-            placeholder="Escribí para buscar..."
-            delay={400}
-            onSearch={(query) => setSearchLog(query ? `Llamando a la API con: "${query}"` : '(nada buscado todavía)')}
-          />
-          <Text variant="body-medium" tone="muted">{searchLog}</Text>
-        </Section>
-
-        <Section title="Select">
-          <Select
-            label="País"
-            placeholder="Elegí un país"
-            value={country}
-            onChange={setCountry}
-            options={[
-              { value: 'ar', label: 'Argentina' },
-              { value: 'mx', label: 'México' },
-              { value: 'co', label: 'Colombia' },
-              { value: 'cl', label: 'Chile' },
-              { value: 'pe', label: 'Perú' },
-            ]}
-          />
-        </Section>
-
-        <Section title="Loading">
-          <Row>
-            <Loading size="sm" color="primary" />
-            <Loading size="md" color="danger" />
-            <Loading size="lg" color="#7c3aed" />
-          </Row>
-        </Section>
-
-        <Section title="Progress">
-          <div>
-            <Row>
-              <Button variant="default" onClick={() => setProgressValue((v) => Math.max(0, v - 10))}>-10</Button>
-              <Button variant="default" onClick={() => setProgressValue((v) => Math.min(100, v + 10))}>+10</Button>
-            </Row>
-          </div>
-        </Section>
-
-        <Section title="Dropdown — sin backdrop">
-          <div style={{ position: 'relative', display: 'inline-block' }}>
-            <Button ref={dropdownTriggerRef} variant="default" onClick={() => setDropdownOpen((o) => !o)}>
-              Abrir dropdown
-            </Button>
-            <Dropdown
-              open={dropdownOpen}
-              onClose={() => setDropdownOpen(false)}
-              triggerRef={dropdownTriggerRef}
-              className="absolute top-full left-0 mt-1 w-[220px]"
+          {/* The content column, and the only box with a gutter: the page's padding, its maximum
+             width and its centring all live here and never on the row. Everything inside it - the
+             title included - scrolls away with the document while the rail stays put. */}
+          <div style={{ padding: '2rem', maxWidth: 1400, margin: '0 auto' }}>
+            <h1
+              style={{
+                font: 'var(--md-sys-typescale-display-small)', letterSpacing: 'var(--md-sys-typescale-display-small-tracking)',
+                fontWeight: 700,
+                color: 'var(--md-sys-color-on-surface)',
+                marginBottom: '1.5rem',
+              }}
             >
-              <div style={{ padding: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                <span style={{ font: 'var(--md-sys-typescale-body-medium)', letterSpacing: 'var(--md-sys-typescale-body-medium-tracking)', color: 'var(--md-sys-color-on-surface)', padding: '0.5rem' }}>Opción 1</span>
-                <span style={{ font: 'var(--md-sys-typescale-body-medium)', letterSpacing: 'var(--md-sys-typescale-body-medium-tracking)', color: 'var(--md-sys-color-on-surface)', padding: '0.5rem' }}>Opción 2</span>
-                <span style={{ font: 'var(--md-sys-typescale-body-medium)', letterSpacing: 'var(--md-sys-typescale-body-medium-tracking)', color: 'var(--md-sys-color-on-surface)', padding: '0.5rem' }}>Opción 3</span>
-              </div>
-            </Dropdown>
-          </div>
-        </Section>
+              Mott Design Components — Playground
+            </h1>
 
-        <Section title="CustomModal — anclada al botón">
-          <Button ref={customModalTriggerRef} variant="action" onClick={() => setCustomModalOpen(true)}>
-            Abrir CustomModal
-          </Button>
-          <CustomModal
-            open={customModalOpen}
-            onClose={() => setCustomModalOpen(false)}
-            triggerRef={customModalTriggerRef}
-            animation={anchoredAnimation}
-          >
-            {/* el ancho lo pone este div, no la modal: el panel se mide por su contenido */}
-            <div className="w-[23rem]">
-              <h3 style={{ font: 'var(--md-sys-typescale-title-large)', letterSpacing: 'var(--md-sys-typescale-title-large-tracking)', fontWeight: 700, color: 'var(--md-sys-color-on-surface)', marginBottom: '0.5rem' }}>
-                Modal personalizado
-              </h3>
-              <p style={{ font: 'var(--md-sys-typescale-body-medium)', letterSpacing: 'var(--md-sys-typescale-body-medium-tracking)', color: 'var(--md-sys-color-on-surface-variant)', marginBottom: '1rem' }}>
-                Backdrop constante (igual en todas las modales), ancho puesto por el div de adentro, animación anclada junto al botón (AnchoredAnimation).
-              </p>
-              {Array.from({ length: 2 }, (_, i) => (
-                <p key={i} style={{ font: 'var(--md-sys-typescale-body-medium)', letterSpacing: 'var(--md-sys-typescale-body-medium-tracking)', color: 'var(--md-sys-color-on-surface-variant)', marginBottom: '0.75rem' }}>
-                  {i + 1}. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation.
-                </p>
-              ))}
-              <Button variant="default" onClick={() => setCustomModalOpen(false)}>Cerrar</Button>
+            <div style={{ marginBottom: '1.5rem' }}>
+              <ThemeToggle />
             </div>
-          </CustomModal>
 
-          <Button id="abrir-auto" variant="default" onClick={() => setAutoModalOpen(true)}>
-            Sin div — se adapta al contenido
-          </Button>
-          <CustomModal open={autoModalOpen} onClose={() => setAutoModalOpen(false)}>
-            {/* sin div de ancho: el panel mide lo que miden estos hijos y nada más */}
-            <h3 style={{ font: 'var(--md-sys-typescale-title-large)', letterSpacing: 'var(--md-sys-typescale-title-large-tracking)', fontWeight: 700, color: 'var(--md-sys-color-on-surface)', marginBottom: '0.75rem' }}>
-              ¿Eliminar el elemento?
-            </h3>
-            <Row>
-              <Button variant="danger" onClick={() => setAutoModalOpen(false)}>Eliminar</Button>
-              <Button variant="ghost" onClick={() => setAutoModalOpen(false)}>Cancelar</Button>
-            </Row>
-          </CustomModal>
-        </Section>
+            <div
+              style={{
+                columnWidth: 320,
+                columnGap: '1rem',
+              }}
+            >
+              <Section title="ThemeProvider — paleta M3 + modo" wide>
+                <ThemeDemo />
+              </Section>
 
-        <Section title="Modales de auth — login, registro y OTP" wide>
-          <Text variant="body-medium" tone="muted">
-            Los campos los controla quien usa la modal: un useState por campo y un handler que recibe el valor.
-            El correo y la contraseña se comparten entre login y registro acá a propósito, para que se vea que
-            el valor sobrevive al switch. El botón de Google sale del ícono nuevo, y es lo único de la librería
-            que no sigue el tema.
-          </Text>
-          <AuthDemo />
-        </Section>
+              <Section title="GeneratorGradientProfile — degradado desde el acento" wide>
+                <Text variant="body-medium" tone="muted">
+                  El degradado se genera con el seed del tema: cambia el swatch en «Apariencia» y la
+                  tarjeta se recolorea.
+                </Text>
+                <GeneratorGradientProfile
+                  name="Danel Mantilla Palomino"
+                  email="mantillapalominodanel@gmail.com"
+                />
+              </Section>
 
-        <Section title="Navbar — rail en desktop, barra inferior en mobile">
-          <Text variant="body-medium" tone="muted">
-            Corriendo en vivo a la izquierda de <strong>toda esta página</strong>, no metido en una tarjeta:
-            así es como se monta en un layout real — hermano de fila flex del resto del contenido, nunca
-            anidado dentro de un contenedor de columnas CSS como el masonry de acá abajo (esa combinación
-            no se comporta igual entre navegadores). Achicá la ventana por debajo de ~768px para ver el
-            cambio de rail a barra inferior. El <strong>logo</strong> abre un pop up que se apoya encima y
-            lo tapa; el <strong>engranaje</strong> abre una modal centrada que viaja hasta el medio de la
-            pantalla.
-          </Text>
-        </Section>
+              <Section title="DragScroll — sin barra, se arrastra" wide>
+                <Text variant="body-medium" tone="muted">
+                  Las barras de scroll están ocultas en toda la app. Estas cajas se arrastran con el mouse y
+                  siguen de largo al soltar (inercia). La rueda y el teclado funcionan igual que siempre. El
+                  degradado en el borde avisa que hay más contenido y se apaga al llegar al tope.
+                </Text>
+                <ScrollBox id="scroll-vertical">
+                  <p style={{ fontWeight: 600, color: 'var(--md-sys-color-on-surface)', marginBottom: '0.5rem' }}>Vertical</p>
+                  {Array.from({ length: 25 }, (_, i) => (
+                    <p key={i} style={{ marginBottom: '0.5rem' }}>{i + 1}. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation.</p>
+                  ))}
+                </ScrollBox>
 
-        <Section title="Shape — las 5 formas de M3" wide>
-          <Text variant="body-medium" tone="muted">
-            El shape es un recorte, no un dibujo: el <code>clip-path</code> corta también a los children,
-            así que lo que va adentro toma la forma en vez de desbordarla. El color acepta un nombre del
-            tema o cualquier color CSS.
-          </Text>
-          <Row>
-            {SHAPE_NAMES.map((name) => (
-              <div key={name} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
-                <Shape name={name} label={name}>
-                  <Icon name="favorite" size="lg" />
-                </Shape>
-                <span style={{ font: 'var(--md-sys-typescale-body-small)', letterSpacing: 'var(--md-sys-typescale-body-small-tracking)', color: 'var(--md-sys-color-on-surface-variant)' }}>{name}</span>
-              </div>
-            ))}
-          </Row>
-        </Section>
+                <ScrollBox id="scroll-horizontal" horizontal>
+                  <div style={{ display: 'flex', gap: '0.5rem', width: 'max-content', paddingBottom: '0.5rem' }}>
+                    {Array.from({ length: 40 }, (_, i) => (
+                      <span
+                        key={i}
+                        style={{
+                          padding: 'var(--pad-badge-md)',
+                          borderRadius: 'var(--radius-full)',
+                          backgroundColor: 'var(--md-sys-color-secondary-container)',
+                          color: 'var(--md-sys-color-on-secondary-container)',
+                          font: 'var(--md-sys-typescale-body-medium)', letterSpacing: 'var(--md-sys-typescale-body-medium-tracking)',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        Elemento {i + 1}
+                      </span>
+                    ))}
+                  </div>
+                </ScrollBox>
 
-        <Section title="Avatar — seeded, y recortado por cada shape" wide>
-          <Text variant="body-medium" tone="muted">
-            El mismo <code>seed</code> dibuja siempre la misma cara, sin guardar nada en ningún lado. Acá está
-            el mismo seed pasado por las cinco formas: el avatar se corta con el contorno en vez de quedar
-            encima de él.
-          </Text>
-          <Row>
-            {SHAPE_NAMES.map((name) => (
-              <div key={name} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
-                <Avatar seed="danel" shape={name} size="120px" />
-                <span style={{ font: 'var(--md-sys-typescale-body-small)', letterSpacing: 'var(--md-sys-typescale-body-small-tracking)', color: 'var(--md-sys-color-on-surface-variant)' }}>{name}</span>
-              </div>
-            ))}
-          </Row>
-          <Row>
-            {['ana', 'brenda', 'carlos', 'delfina', 'eze', 'flor'].map((seed) => (
-              <div key={seed} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
-                <Avatar seed={seed} shape="cookie" size="120px" />
-                <span style={{ font: 'var(--md-sys-typescale-body-small)', letterSpacing: 'var(--md-sys-typescale-body-small-tracking)', color: 'var(--md-sys-color-on-surface-variant)' }}>{seed}</span>
-              </div>
-            ))}
-          </Row>
-          <Row>
-            {['ana', 'brenda', 'carlos', 'delfina', 'eze', 'flor'].map((seed) => (
-              <Avatar key={seed} seed={seed} shape="flower" size="120px" />
-            ))}
-          </Row>
-        </Section>
+                <ScrollBox id="scroll-no-inertia" dragScrollProps={{ inertia: false, fade: false }}>
+                  <p style={{ fontWeight: 600, color: 'var(--md-sys-color-on-surface)', marginBottom: '0.5rem' }}>
+                    inertia={'{false}'} fade={'{false}'} — se arrastra pero frena al soltar, y sin degradado
+                  </p>
+                  {Array.from({ length: 25 }, (_, i) => (
+                    <p key={i} style={{ marginBottom: '0.5rem' }}>{i + 1}. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation.</p>
+                  ))}
+                </ScrollBox>
+              </Section>
 
-        <Section title="Avatar — tamaños y sin forma" wide>
-          <Text variant="body-medium" tone="muted">
-            Sin <code>shape</code> es una imagen cuadrada. Las fotos no se pueden seleccionar ni arrastrar: las
-            dos cosas dibujan el cuadrado que el recorte está tapando.
-          </Text>
-          <Row>
-            <Avatar seed="danel" size="sm" />
-            <Avatar seed="danel" size="md" />
-            <Avatar seed="danel" size="lg" />
-            <Avatar seed="danel" size="120px" />
-            <Avatar seed="danel" size="120px" style={{ borderRadius: 'var(--radius-full)' }} />
-          </Row>
-          <Row>
-            {['ana', 'brenda', 'carlos', 'delfina'].map((seed) => (
-              <Avatar key={seed} seed={seed} shape="diamond" size="120px" />
-            ))}
-          </Row>
-        </Section>
+              <Section title="Typescale — los 15 roles de M3 en DM Sans" wide>
+                <Text variant="body-medium" tone="muted">
+                  Cada rol dice <em>qué es</em> un texto, no qué tan grande: trae junto su tamaño, interlineado,
+                  tracking y peso. La fuente se cambia en un solo lugar — <code>--md-ref-typeface-brand</code> y
+                  <code>--md-ref-typeface-plain</code> — y los quince roles la siguen.
+                </Text>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  {TYPESCALE_ROLES.map((role) => (
+                    <div
+                      key={role}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'baseline',
+                        gap: '1.5rem',
+                        borderBottom: '1px solid var(--md-sys-color-surface-container-high)',
+                        paddingBottom: '0.5rem',
+                      }}
+                    >
+                      <Text
+                        as="span"
+                        variant="label-small"
+                        tone="muted"
+                        style={{ minWidth: '9rem', fontVariantNumeric: 'tabular-nums' }}
+                      >
+                        {role}
+                      </Text>
+                      <Text as="span" variant={role}>
+                        Cargá el sistema con una sola fuente
+                      </Text>
+                    </div>
+                  ))}
+                </div>
+              </Section>
 
-        <Section title="Shape — color, tamaño, points y rotate" wide>
-          <Text variant="body-medium" tone="muted">
-            Los primeros cuatro siguen el tema (cambiá la semilla arriba y se repintan); el del hex crudo
-            no, y por eso su contenido hereda el color en vez de resolver uno legible solo.
-          </Text>
-          <Row>
-            <Shape name="cookie" color="primary" size="sm" />
-            <Shape name="cookie" color="secondary" size="md" />
-            <Shape name="cookie" color="success" size="lg" />
-            <Shape name="cookie" color="danger" size="120px" />
-            <Shape name="cookie" color="#7c3aed" size="120px" />
-          </Row>
-          <Row>
-            <Shape name="cookie" points={6} color="warning">
-              <span style={{ fontWeight: 700 }}>6</span>
-            </Shape>
-            <Shape name="cookie" points={20} color="warning">
-              <span style={{ fontWeight: 700 }}>20</span>
-            </Shape>
-            <Shape name="flower" points={5} color="secondary">
-              <span style={{ fontWeight: 700 }}>5</span>
-            </Shape>
-            <Shape name="flower" points={12} color="secondary">
-              <span style={{ fontWeight: 700 }}>12</span>
-            </Shape>
-            {/* la forma gira, el ícono de adentro no */}
-            <Shape name="triangle" rotate={30} color="primary">
-              <Icon name="north" size="lg" />
-            </Shape>
-            <Shape name="arch" rotate={180} color="primary">
-              <Icon name="north" size="lg" />
-            </Shape>
-          </Row>
-          <Row>
-            {/* la prueba de que el recorte agarra a los children: una imagen rectangular adentro */}
-            <Shape name="diamond" size="120px">
-              <img
-                src="https://picsum.photos/200"
-                alt=""
-                draggable={false}
-                style={{ width: '100%', height: '100%', objectFit: 'cover', userSelect: 'none' }}
-              />
-            </Shape>
-            <Shape name="flower" size="120px">
-              <img
-                src="https://picsum.photos/201"
-                alt=""
-                draggable={false}
-                style={{ width: '100%', height: '100%', objectFit: 'cover', userSelect: 'none' }}
-              />
-            </Shape>
-            <Shape name="arch" size="120px" color="secondary">
-              <span style={{ font: 'var(--md-sys-typescale-headline-large)', letterSpacing: 'var(--md-sys-typescale-headline-large-tracking)', fontWeight: 700 }}>DM</span>
-            </Shape>
-          </Row>
-        </Section>
+              <Section title="Button — variantes semánticas">
+                <Row>
+                  <Button>Cancelar</Button>
+                  <Button variant="action">Enviar</Button>
+                  <Button variant="support">Continuar</Button>
+                  <Button variant="danger">Eliminar</Button>
+                  <Button variant="success">Aprobar</Button>
+                  <Button variant="warning">Archivar</Button>
+                  <Button variant="ghost">Omitir</Button>
+                  <Button variant="action" disabled>Deshabilitado</Button>
+                </Row>
+              </Section>
 
-        <Section title="Toast — API imperativa con useToast()" wide>
-          <Text variant="body-medium" tone="muted">
-            La forma recomendada de usar toasts: <code>{'<ToastProvider>'}</code> envuelve la app (acá está en
-            main.jsx) y <code>useToast()</code> devuelve la API. El provider mantiene una cola, así que varios
-            toasts seguidos se apilan; <code>showToast()</code> devuelve un id para cerrarlo a mano.
-          </Text>
-          <ToastApiDemo />
-        </Section>
+              <Section title="Button — quiet (mismo significado, menos volumen)">
+                <Row>
+                  <Button variant="action">Enviar</Button>
+                  <Button variant="action" quiet>Enviar</Button>
+                </Row>
+                <Row>
+                  <Button variant="danger">Eliminar</Button>
+                  <Button variant="danger" quiet>Eliminar</Button>
+                </Row>
+                <Row>
+                  <Button variant="success">Aprobar</Button>
+                  <Button variant="success" quiet>Aprobar</Button>
+                </Row>
+                <Row>
+                  <Button variant="warning">Archivar</Button>
+                  <Button variant="warning" quiet>Archivar</Button>
+                </Row>
+              </Section>
 
-        <Section title="Toast — uso declarativo (open / onClose)" wide>
-          <Text variant="body-medium" tone="muted">
-            Los toasts se renderizan en un stack fijo arriba a la derecha, no donde se los declara. Se
-            cierran solos a los 5s —el contador se pausa si les pasás el mouse por encima o los
-            arrastrás— o arrastrándolos hacia la derecha más de la mitad de su ancho.
-          </Text>
-          <Row>
-            <Button variant="default" onClick={() => toggleToast('info')}>Toggle info</Button>
-            <Button variant="default" onClick={() => toggleToast('success')}>Toggle success</Button>
-            <Button variant="default" onClick={() => toggleToast('warning')}>Toggle warning</Button>
-            <Button variant="default" onClick={() => toggleToast('danger')}>Toggle danger</Button>
-          </Row>
-          <Toast variant="info" title="Info" open={toasts.info} onClose={() => toggleToast('info')}>
-            Arrastrame hacia la derecha para descartarme.
-          </Toast>
-          <Toast variant="success" title="Listo" open={toasts.success} onClose={() => toggleToast('success')}>
-            La operación se completó con éxito.
-          </Toast>
-          <Toast variant="warning" title="Atención" open={toasts.warning} onClose={() => toggleToast('warning')}>
-            Revisá este dato antes de continuar.
-          </Toast>
-          <Toast variant="danger" title="Error" open={toasts.danger} onClose={() => toggleToast('danger')}>
-            Algo salió mal, intentá de nuevo.
-          </Toast>
-        </Section>
-      </div>
+              <Section title="Button — ícono, ancho completo, shape">
+                <Row>
+                  <Button variant="default">
+                    <Icon name="favorite" size="sm" />
+                    Con ícono
+                  </Button>
+                  <Button variant="action" shape="pill">Shape pill</Button>
+                </Row>
+                <Button variant="support" fullWidth>Ancho completo</Button>
+              </Section>
+
+              <Section title="Button — iconOnly (sm / md / lg)">
+                <Row>
+                  <Button variant="ghost" iconOnly aria-label="Editar" >
+                    <Icon name="edit" size="sm" />
+                  </Button>
+                  <Button variant="default" iconOnly aria-label="Editar">
+                    <Icon name="edit" size="md" />
+                  </Button>
+                  <Button variant="action" iconOnly aria-label="Editar">
+                    <Icon name="edit" size="lg" />
+                  </Button>
+                </Row>
+              </Section>
+
+              <Section title="FabButton">
+                <Row>
+                  <FabButton variant="action" icon="add" size="sm" aria-label="Nuevo (sm)" />
+                  <FabButton variant="support" icon="edit" size="md" aria-label="Editar (md)" />
+                  <FabButton variant="danger" icon="delete" size="lg" aria-label="Eliminar (lg)" />
+                  <FabButton variant="success" icon="check" size="md" aria-label="Aprobar" />
+                  <FabButton variant="danger" quiet icon="delete" size="md" aria-label="Eliminar (quiet)" />
+                </Row>
+              </Section>
+
+              <Section title="ButtonGroup">
+                <ButtonGroup
+                  variant="support"
+                  buttons={[
+                    { icon: 'bluetooth' },
+                    { icon: 'alarm' },
+                    { icon: 'radio_button_unchecked' },
+                    { icon: 'flashlight_on' },
+                    { icon: 'wifi' },
+                  ]}
+                />
+              </Section>
+
+
+              <Section title="Input">
+                <Input label="Correo" type="text" placeholder="Escribe tu correo" />
+                <Input label="Contraseña" type="password" placeholder="Escribe tu contraseña" />
+                <Input label="Deshabilitado" placeholder="No editable" disabled />
+              </Section>
+
+              <Section title="Textarea">
+                <Textarea label="Mensaje" placeholder="Escribí tu mensaje" />
+              </Section>
+
+              <Section title="Search — debounce, listo para una API">
+                <Search
+                  label="Buscar"
+                  placeholder="Escribí para buscar..."
+                  delay={400}
+                  onSearch={(query) => setSearchLog(query ? `Llamando a la API con: "${query}"` : '(nada buscado todavía)')}
+                />
+                <Text variant="body-medium" tone="muted">{searchLog}</Text>
+              </Section>
+
+              <Section title="Select">
+                <Select
+                  label="País"
+                  placeholder="Elegí un país"
+                  value={country}
+                  onChange={setCountry}
+                  options={[
+                    { value: 'ar', label: 'Argentina' },
+                    { value: 'mx', label: 'México' },
+                    { value: 'co', label: 'Colombia' },
+                    { value: 'cl', label: 'Chile' },
+                    { value: 'pe', label: 'Perú' },
+                  ]}
+                />
+              </Section>
+
+              <Section title="Loading">
+                <Row>
+                  <Loading size="sm" color="primary" />
+                  <Loading size="md" color="danger" />
+                  <Loading size="lg" color="#7c3aed" />
+                </Row>
+              </Section>
+
+              <Section title="Dropdown — sin backdrop">
+                <div style={{ position: 'relative', display: 'inline-block' }}>
+                  <Button ref={dropdownTriggerRef} variant="default" onClick={() => setDropdownOpen((o) => !o)}>
+                    Abrir dropdown
+                  </Button>
+                  <Dropdown
+                    open={dropdownOpen}
+                    onClose={() => setDropdownOpen(false)}
+                    triggerRef={dropdownTriggerRef}
+                    className="absolute top-full left-0 mt-1 w-[220px]"
+                  >
+                    <div style={{ padding: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                      <span style={{ font: 'var(--md-sys-typescale-body-medium)', letterSpacing: 'var(--md-sys-typescale-body-medium-tracking)', color: 'var(--md-sys-color-on-surface)', padding: '0.5rem' }}>Opción 1</span>
+                      <span style={{ font: 'var(--md-sys-typescale-body-medium)', letterSpacing: 'var(--md-sys-typescale-body-medium-tracking)', color: 'var(--md-sys-color-on-surface)', padding: '0.5rem' }}>Opción 2</span>
+                      <span style={{ font: 'var(--md-sys-typescale-body-medium)', letterSpacing: 'var(--md-sys-typescale-body-medium-tracking)', color: 'var(--md-sys-color-on-surface)', padding: '0.5rem' }}>Opción 3</span>
+                    </div>
+                  </Dropdown>
+                </div>
+              </Section>
+
+              <Section title="CustomModal — anclada al botón">
+                <Button ref={customModalTriggerRef} variant="action" onClick={() => setCustomModalOpen(true)}>
+                  Abrir CustomModal
+                </Button>
+                <CustomModal
+                  open={customModalOpen}
+                  onClose={() => setCustomModalOpen(false)}
+                  triggerRef={customModalTriggerRef}
+                  animation={anchoredAnimation}
+                >
+                  {/* el ancho lo pone este div, no la modal: el panel se mide por su contenido */}
+                  <div className="w-[23rem]">
+                    <h3 style={{ font: 'var(--md-sys-typescale-title-large)', letterSpacing: 'var(--md-sys-typescale-title-large-tracking)', fontWeight: 700, color: 'var(--md-sys-color-on-surface)', marginBottom: '0.5rem' }}>
+                      Modal personalizado
+                    </h3>
+                    <p style={{ font: 'var(--md-sys-typescale-body-medium)', letterSpacing: 'var(--md-sys-typescale-body-medium-tracking)', color: 'var(--md-sys-color-on-surface-variant)', marginBottom: '1rem' }}>
+                      Backdrop constante (igual en todas las modales), ancho puesto por el div de adentro, animación anclada junto al botón (AnchoredAnimation).
+                    </p>
+                    {Array.from({ length: 2 }, (_, i) => (
+                      <p key={i} style={{ font: 'var(--md-sys-typescale-body-medium)', letterSpacing: 'var(--md-sys-typescale-body-medium-tracking)', color: 'var(--md-sys-color-on-surface-variant)', marginBottom: '0.75rem' }}>
+                        {i + 1}. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation.
+                      </p>
+                    ))}
+                    <Button variant="default" onClick={() => setCustomModalOpen(false)}>Cerrar</Button>
+                  </div>
+                </CustomModal>
+
+                <Button id="abrir-auto" variant="default" onClick={() => setAutoModalOpen(true)}>
+                  Sin div — se adapta al contenido
+                </Button>
+                <CustomModal open={autoModalOpen} onClose={() => setAutoModalOpen(false)}>
+                  {/* sin div de ancho: el panel mide lo que miden estos hijos y nada más */}
+                  <h3 style={{ font: 'var(--md-sys-typescale-title-large)', letterSpacing: 'var(--md-sys-typescale-title-large-tracking)', fontWeight: 700, color: 'var(--md-sys-color-on-surface)', marginBottom: '0.75rem' }}>
+                    ¿Eliminar el elemento?
+                  </h3>
+                  <Row>
+                    <Button variant="danger" onClick={() => setAutoModalOpen(false)}>Eliminar</Button>
+                    <Button variant="ghost" onClick={() => setAutoModalOpen(false)}>Cancelar</Button>
+                  </Row>
+                </CustomModal>
+              </Section>
+
+              <Section title="Modales anidadas — una encima de otra" wide>
+                <Text variant="body-medium" tone="muted">
+                  La de confirmación se declara DENTRO de la de ajustes y se apila encima. Escape y el clic
+                  en el fondo cierran solo la de arriba; el fondo de la página no se oscurece el doble, y el
+                  panel de abajo queda atenuado por el velo de la de arriba sin moverse de sitio.
+                </Text>
+
+                <Button ref={accountTriggerRef} variant="action" onClick={() => setAccountModalOpen(true)}>
+                  Ajustes de la cuenta
+                </Button>
+
+                <CustomModal
+                  open={accountModalOpen}
+                  onClose={() => setAccountModalOpen(false)}
+                  triggerRef={accountTriggerRef}
+                >
+                  <div className="w-[22rem] flex flex-col gap-[var(--gap-section)]">
+                    <Text variant="title-large" as="h3">Ajustes de la cuenta</Text>
+                    <Text variant="body-medium" tone="muted">
+                      Nivel 1. Abrí la confirmación para ver cómo se apila la segunda encima de esta.
+                    </Text>
+                    <Row>
+                      <Button ref={deleteTriggerRef} variant="danger" onClick={() => setConfirmDeleteOpen(true)}>
+                        Eliminar cuenta
+                      </Button>
+                      <Button variant="ghost" onClick={() => setAccountModalOpen(false)}>Cerrar</Button>
+                    </Row>
+
+                    <CustomModal
+                      open={confirmDeleteOpen}
+                      onClose={() => setConfirmDeleteOpen(false)}
+                      triggerRef={deleteTriggerRef}
+                    >
+                      <div className="w-[19rem] flex flex-col gap-[var(--gap-section)]">
+                        <Text variant="title-large" as="h3">¿Eliminar la cuenta?</Text>
+                        <Text variant="body-medium" tone="muted">
+                          Nivel 2. Esto no se puede deshacer.
+                        </Text>
+                        <Row>
+                          <Button variant="danger" onClick={() => { setConfirmDeleteOpen(false); setAccountModalOpen(false); }}>
+                            Eliminar
+                          </Button>
+                          <Button variant="ghost" onClick={() => setConfirmDeleteOpen(false)}>Cancelar</Button>
+                        </Row>
+                      </div>
+                    </CustomModal>
+                  </div>
+                </CustomModal>
+              </Section>
+
+              <Section title="Modales de auth — login, registro y OTP" wide>
+                <Text variant="body-medium" tone="muted">
+                  Los campos los controla quien usa la modal: un useState por campo y un handler que recibe el valor.
+                  El correo y la contraseña se comparten entre login y registro acá a propósito, para que se vea que
+                  el valor sobrevive al switch. El botón de Google sale del ícono nuevo, y es lo único de la librería
+                  que no sigue el tema.
+                </Text>
+                <AuthDemo />
+              </Section>
+
+              <Section title="Shape — las 5 formas de M3" wide>
+                <Text variant="body-medium" tone="muted">
+                  El shape es un recorte, no un dibujo: el <code>clip-path</code> corta también a los children,
+                  así que lo que va adentro toma la forma en vez de desbordarla. El color acepta un nombre del
+                  tema o cualquier color CSS.
+                </Text>
+                <Row>
+                  {SHAPE_NAMES.map((name) => (
+                    <div key={name} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+                      <Shape name={name} label={name}>
+                        <Icon name="favorite" size="lg" />
+                      </Shape>
+                      <span style={{ font: 'var(--md-sys-typescale-body-small)', letterSpacing: 'var(--md-sys-typescale-body-small-tracking)', color: 'var(--md-sys-color-on-surface-variant)' }}>{name}</span>
+                    </div>
+                  ))}
+                </Row>
+              </Section>
+
+              <Section title="Avatar — seeded, y recortado por cada shape" wide>
+                <Text variant="body-medium" tone="muted">
+                  El mismo <code>seed</code> dibuja siempre la misma cara, sin guardar nada en ningún lado. Acá está
+                  el mismo seed pasado por las cinco formas: el avatar se corta con el contorno en vez de quedar
+                  encima de él.
+                </Text>
+                <Row>
+                  {SHAPE_NAMES.map((name) => (
+                    <div key={name} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+                      <Avatar seed="danel" shape={name} size="120px" />
+                      <span style={{ font: 'var(--md-sys-typescale-body-small)', letterSpacing: 'var(--md-sys-typescale-body-small-tracking)', color: 'var(--md-sys-color-on-surface-variant)' }}>{name}</span>
+                    </div>
+                  ))}
+                </Row>
+                <Row>
+                  {['ana', 'brenda', 'carlos', 'delfina', 'eze', 'flor'].map((seed) => (
+                    <div key={seed} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+                      <Avatar seed={seed} shape="cookie" size="120px" />
+                      <span style={{ font: 'var(--md-sys-typescale-body-small)', letterSpacing: 'var(--md-sys-typescale-body-small-tracking)', color: 'var(--md-sys-color-on-surface-variant)' }}>{seed}</span>
+                    </div>
+                  ))}
+                </Row>
+                <Row>
+                  {['ana', 'brenda', 'carlos', 'delfina', 'eze', 'flor'].map((seed) => (
+                    <Avatar key={seed} seed={seed} shape="flower" size="120px" />
+                  ))}
+                </Row>
+              </Section>
+
+              <Section title="Avatar — tamaños y sin forma" wide>
+                <Text variant="body-medium" tone="muted">
+                  Sin <code>shape</code> es una imagen cuadrada. Las fotos no se pueden seleccionar ni arrastrar: las
+                  dos cosas dibujan el cuadrado que el recorte está tapando.
+                </Text>
+                <Row>
+                  <Avatar seed="danel" size="sm" />
+                  <Avatar seed="danel" size="md" />
+                  <Avatar seed="danel" size="lg" />
+                  <Avatar seed="danel" size="120px" />
+                  <Avatar seed="danel" size="120px" style={{ borderRadius: 'var(--radius-full)' }} />
+                </Row>
+                <Row>
+                  {['ana', 'brenda', 'carlos', 'delfina'].map((seed) => (
+                    <Avatar key={seed} seed={seed} shape="diamond" size="120px" />
+                  ))}
+                </Row>
+              </Section>
+
+              <Section title="Shape — color, tamaño, points y rotate" wide>
+                <Text variant="body-medium" tone="muted">
+                  Los primeros cuatro siguen el tema (cambiá la semilla arriba y se repintan); el del hex crudo
+                  no, y por eso su contenido hereda el color en vez de resolver uno legible solo.
+                </Text>
+                <Row>
+                  <Shape name="cookie" color="primary" size="sm" />
+                  <Shape name="cookie" color="secondary" size="md" />
+                  <Shape name="cookie" color="success" size="lg" />
+                  <Shape name="cookie" color="danger" size="120px" />
+                  <Shape name="cookie" color="#7c3aed" size="120px" />
+                </Row>
+                <Row>
+                  <Shape name="cookie" points={6} color="warning">
+                    <span style={{ fontWeight: 700 }}>6</span>
+                  </Shape>
+                  <Shape name="cookie" points={20} color="warning">
+                    <span style={{ fontWeight: 700 }}>20</span>
+                  </Shape>
+                  <Shape name="flower" points={5} color="secondary">
+                    <span style={{ fontWeight: 700 }}>5</span>
+                  </Shape>
+                  <Shape name="flower" points={12} color="secondary">
+                    <span style={{ fontWeight: 700 }}>12</span>
+                  </Shape>
+                  {/* la forma gira, el ícono de adentro no */}
+                  <Shape name="triangle" rotate={30} color="primary">
+                    <Icon name="north" size="lg" />
+                  </Shape>
+                  <Shape name="arch" rotate={180} color="primary">
+                    <Icon name="north" size="lg" />
+                  </Shape>
+                </Row>
+                <Row>
+                  {/* la prueba de que el recorte agarra a los children: una imagen rectangular adentro */}
+                  <Shape name="diamond" size="120px">
+                    <img
+                      src="https://picsum.photos/200"
+                      alt=""
+                      draggable={false}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', userSelect: 'none' }}
+                    />
+                  </Shape>
+                  <Shape name="flower" size="120px">
+                    <img
+                      src="https://picsum.photos/201"
+                      alt=""
+                      draggable={false}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover', userSelect: 'none' }}
+                    />
+                  </Shape>
+                  <Shape name="arch" size="120px" color="secondary">
+                    <span style={{ font: 'var(--md-sys-typescale-headline-large)', letterSpacing: 'var(--md-sys-typescale-headline-large-tracking)', fontWeight: 700 }}>DM</span>
+                  </Shape>
+                </Row>
+              </Section>
+
+              <Section title="Toast — API imperativa con useToast()" wide>
+                <Text variant="body-medium" tone="muted">
+                  La forma recomendada de usar toasts: <code>{'<ToastProvider>'}</code> envuelve la app (acá está en
+                  main.jsx) y <code>useToast()</code> devuelve la API. El provider mantiene una cola, así que varios
+                  toasts seguidos se apilan; <code>showToast()</code> devuelve un id para cerrarlo a mano.
+                </Text>
+                <ToastApiDemo />
+              </Section>
+
+              <Section title="Toast — uso declarativo (open / onClose)" wide>
+                <Text variant="body-medium" tone="muted">
+                  Los toasts se renderizan en un stack fijo arriba a la derecha, no donde se los declara. Se
+                  cierran solos a los 5s —el contador se pausa si les pasás el mouse por encima o los
+                  arrastrás— o arrastrándolos hacia la derecha más de la mitad de su ancho.
+                </Text>
+                <Row>
+                  <Button variant="default" onClick={() => toggleToast('info')}>Toggle info</Button>
+                  <Button variant="default" onClick={() => toggleToast('success')}>Toggle success</Button>
+                  <Button variant="default" onClick={() => toggleToast('warning')}>Toggle warning</Button>
+                  <Button variant="default" onClick={() => toggleToast('danger')}>Toggle danger</Button>
+                </Row>
+                <Toast variant="info" title="Info" open={toasts.info} onClose={() => toggleToast('info')}>
+                  Arrastrame hacia la derecha para descartarme.
+                </Toast>
+                <Toast variant="success" title="Listo" open={toasts.success} onClose={() => toggleToast('success')}>
+                  La operación se completó con éxito.
+                </Toast>
+                <Toast variant="warning" title="Atención" open={toasts.warning} onClose={() => toggleToast('warning')}>
+                  Revisá este dato antes de continuar.
+                </Toast>
+                <Toast variant="danger" title="Error" open={toasts.danger} onClose={() => toggleToast('danger')}>
+                  Algo salió mal, intentá de nuevo.
+                </Toast>
+              </Section>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -929,6 +983,6 @@ export default function App() {
           <Button variant="default" onClick={() => setLogoPopoverOpen(false)}>Cerrar</Button>
         </div>
       </CustomModal>
-    </div>
+    </>
   );
 }

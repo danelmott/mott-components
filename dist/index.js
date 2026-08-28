@@ -816,6 +816,13 @@ function verifyTypesThemeProvider({ defaultSeed, defaultMode, themes } = {}) {
   });
   return true;
 }
+function verifyTypesGradientProfile({ name, email, showControls, verifiedLabel } = {}) {
+  assertType("GeneratorGradientProfile", "name", name, "string");
+  assertType("GeneratorGradientProfile", "email", email, "string");
+  assertType("GeneratorGradientProfile", "showControls", showControls, "boolean");
+  assertType("GeneratorGradientProfile", "verifiedLabel", verifiedLabel, "string");
+  return true;
+}
 
 // src/buttons/button.jsx
 import { jsx as jsx2 } from "react/jsx-runtime";
@@ -1647,13 +1654,10 @@ function useTheme() {
   return context;
 }
 
-// src/themeModal/themeModal.jsx
-import { useRef as useRef5 } from "react";
-import { useGSAP as useGSAP3 } from "@gsap/react";
-import gsap5 from "gsap";
-
 // src/customModal/customModal.jsx
-import { useEffect as useEffect3, useRef as useRef4 } from "react";
+import { useEffect as useEffect3, useRef as useRef5, useState as useState5 } from "react";
+import { createPortal as createPortal2 } from "react-dom";
+import gsap5 from "gsap";
 import { twMerge as twMerge5 } from "tailwind-merge";
 
 // src/animations/modalAnimation.js
@@ -2092,6 +2096,46 @@ var morphAnimation = new MorphAnimation();
 var fadeAnimation = new FadeScaleAnimation();
 var anchoredAnimation = new AnchoredAnimation();
 
+// src/modalStack/modalStack.js
+import { useCallback as useCallback3, useRef as useRef4, useSyncExternalStore } from "react";
+var seq = 0;
+var layers = [];
+var listeners = /* @__PURE__ */ new Set();
+var emit = () => listeners.forEach((listener) => listener());
+var nextLayerId = () => ++seq;
+function pushLayer(id) {
+  if (layers.includes(id)) return;
+  layers = [...layers, id];
+  emit();
+}
+function popLayer(id) {
+  if (!layers.includes(id)) return;
+  layers = layers.filter((layer) => layer !== id);
+  emit();
+}
+function subscribe(listener) {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+}
+function getSnapshot() {
+  return layers;
+}
+var EMPTY = Object.freeze([]);
+function getServerSnapshot() {
+  return EMPTY;
+}
+function useModalLayer() {
+  const idRef = useRef4(null);
+  if (idRef.current === null) idRef.current = nextLayerId();
+  const id = idRef.current;
+  const stack2 = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  const depth = stack2.indexOf(id);
+  const isTop = depth === -1 || depth === stack2.length - 1;
+  const enter = useCallback3(() => pushLayer(id), [id]);
+  const leave = useCallback3(() => popLayer(id), [id]);
+  return { id, depth, isTop, enter, leave };
+}
+
 // src/utils/scrollLock.js
 var locks = 0;
 var previous = null;
@@ -2125,12 +2169,17 @@ function unlockScroll() {
 import { jsx as jsx9, jsxs as jsxs4 } from "react/jsx-runtime";
 function CustomModal({ open, onClose, onCloseComplete, children, triggerRef, animation, className, style }) {
   verifyTypesCustomModal({ open, onClose, onCloseComplete, triggerRef, animation });
-  const modalRef = useRef4(null);
-  const overlayRef = useRef4(null);
-  const panelRef = useRef4(null);
-  const contentRef = useRef4(null);
+  const modalRef = useRef5(null);
+  const overlayRef = useRef5(null);
+  const panelRef = useRef5(null);
+  const contentRef = useRef5(null);
   const activeAnimation = animation ?? (triggerRef ? morphAnimation : fadeAnimation);
-  const lockedRef = useRef4(false);
+  const latest = useRef5(null);
+  latest.current = { activeAnimation, triggerRef, onCloseComplete };
+  const { depth, isTop, enter, leave } = useModalLayer();
+  const [mounted, setMounted] = useState5(false);
+  useEffect3(() => setMounted(true), []);
+  const lockedRef = useRef5(false);
   const lock = () => {
     if (!lockedRef.current) {
       lockedRef.current = true;
@@ -2143,73 +2192,96 @@ function CustomModal({ open, onClose, onCloseComplete, children, triggerRef, ani
       unlockScroll();
     }
   };
-  useEffect3(() => unlock, []);
+  useEffect3(() => () => {
+    unlock();
+    leave();
+  }, []);
   useEffect3(() => {
     const modal = modalRef.current;
     const panel = panelRef.current;
     const overlay = overlayRef.current;
     const content = contentRef.current;
     if (!modal || !panel || !overlay) return;
-    const ctx = { dialog: modal, panel, content, overlay, trigger: triggerRef == null ? void 0 : triggerRef.current };
+    const { activeAnimation: current, triggerRef: trigger, onCloseComplete: done } = latest.current;
+    const ctx = { dialog: modal, panel, content, overlay, trigger: trigger == null ? void 0 : trigger.current };
     if (open && !modal.open) {
       lock();
+      enter();
       modal.showModal();
-      activeAnimation.open(ctx);
+      current.open(ctx);
     } else if (!open && modal.open) {
-      activeAnimation.close(ctx, () => {
+      leave();
+      current.close(ctx, () => {
         modal.close();
         unlock();
-        onCloseComplete == null ? void 0 : onCloseComplete();
+        done == null ? void 0 : done();
       });
     }
-  }, [open]);
+  }, [open, mounted]);
+  const coveredRef = useRef5(false);
+  useEffect3(() => {
+    var _a;
+    const overlay = overlayRef.current;
+    if (!overlay || !open || !((_a = modalRef.current) == null ? void 0 : _a.open)) return;
+    if (isTop && !coveredRef.current) return;
+    coveredRef.current = !isTop;
+    const to = isTop ? 1 : 0;
+    if (prefersReducedMotion()) {
+      gsap5.set(overlay, { opacity: to });
+      return;
+    }
+    gsap5.to(overlay, { opacity: to, duration: DURATION.fast, ease: EASE.standard });
+  }, [isTop, open]);
   const handleCancel = (event) => {
     event.preventDefault();
     onClose == null ? void 0 : onClose();
   };
   const handleOverlayClick = () => onClose == null ? void 0 : onClose();
-  return /* @__PURE__ */ jsxs4(
-    "dialog",
-    {
-      ref: modalRef,
-      onCancel: handleCancel,
-      className: "default-modal",
-      children: [
-        /* @__PURE__ */ jsx9(
-          "div",
-          {
-            ref: overlayRef,
-            onClick: handleOverlayClick,
-            className: "absolute inset-0 bg-[color-mix(in_srgb,var(--md-sys-color-scrim)_32%,transparent)]"
-          }
-        ),
-        /* @__PURE__ */ jsx9(
-          "div",
-          {
-            ref: panelRef,
-            className: twMerge5("relative m-auto max-w-[92vw] rounded-[var(--radius-modal)] bg-[var(--md-sys-color-surface-container-high)] p-[var(--pad-card)]", className),
-            style,
-            children: /* @__PURE__ */ jsx9("div", { ref: contentRef, children })
-          }
-        )
-      ]
-    }
+  if (!mounted) return null;
+  return createPortal2(
+    /* @__PURE__ */ jsxs4(
+      "dialog",
+      {
+        ref: modalRef,
+        onCancel: handleCancel,
+        "data-modal-depth": depth === -1 ? void 0 : depth,
+        className: "default-modal",
+        children: [
+          /* @__PURE__ */ jsx9(
+            "div",
+            {
+              ref: overlayRef,
+              onClick: handleOverlayClick,
+              className: "absolute inset-0 bg-[color-mix(in_srgb,var(--md-sys-color-scrim)_32%,transparent)]"
+            }
+          ),
+          /* @__PURE__ */ jsx9(
+            "div",
+            {
+              ref: panelRef,
+              className: twMerge5("relative m-auto max-w-[92vw] rounded-[var(--radius-modal)] bg-[var(--md-sys-color-surface-container-high)] p-[var(--pad-card)]", className),
+              style,
+              children: /* @__PURE__ */ jsx9("div", { ref: contentRef, children })
+            }
+          )
+        ]
+      }
+    ),
+    document.body
   );
 }
 
-// src/themeModal/themeModal.jsx
-import { jsx as jsx10, jsxs as jsxs5 } from "react/jsx-runtime";
-var MODES = [
-  { value: "light", icon: "light_mode", label: "Claro" },
-  { value: "dark", icon: "dark_mode", label: "Oscuro" },
-  { value: "system", icon: "brightness_4", label: "Sistema" }
-];
+// src/themeModal/swatchButton.jsx
+import { useGSAP as useGSAP3 } from "@gsap/react";
+import gsap6 from "gsap";
+import { useRef as useRef6 } from "react";
+import { jsx as jsx10 } from "react/jsx-runtime";
 var SWATCH = 56;
 var SWATCH_CLASS = "mott-shine mott-swatch flex items-center justify-center cursor-pointer border-0 p-0";
-function Swatch({ theme, selected, onSelect }) {
-  const ref = useRef5(null);
-  const checkRef = useRef5(null);
-  const didMountRef = useRef5(false);
+function SwatchButton({ theme, selected, onSelect }) {
+  const ref = useRef6(null);
+  const checkRef = useRef6(null);
+  const didMountRef = useRef6(false);
   useGSAP3(() => {
     if (!ref.current) return;
     const shape = {
@@ -2220,8 +2292,8 @@ function Swatch({ theme, selected, onSelect }) {
     const mark = { autoAlpha: selected ? 1 : 0, scale: selected ? 1 : 0.6 };
     if (!didMountRef.current) {
       didMountRef.current = true;
-      gsap5.set(ref.current, shape);
-      gsap5.set(checkRef.current, mark);
+      gsap6.set(ref.current, shape);
+      gsap6.set(checkRef.current, mark);
       return;
     }
     morphTo(ref.current, shape, { entering: selected });
@@ -2257,15 +2329,23 @@ function Swatch({ theme, selected, onSelect }) {
     }
   );
 }
+
+// src/themeModal/themeModal.jsx
+import { jsx as jsx11, jsxs as jsxs5 } from "react/jsx-runtime";
+var MODES = [
+  { value: "light", icon: "light_mode", label: "Claro" },
+  { value: "dark", icon: "dark_mode", label: "Oscuro" },
+  { value: "system", icon: "brightness_4", label: "Sistema" }
+];
 function ThemeModal({ open, onClose, triggerRef, title = "Apariencia" }) {
   verifyTypesThemeModal({ open, onClose, triggerRef, title });
   const { colorSeedHex, variant, setColorSeedHex, mode, setMode, THEMES_AVAILABLE: THEMES_AVAILABLE2 } = useTheme();
   const isActive = (theme) => theme.hex.toLowerCase() === colorSeedHex.toLowerCase() && (theme.variant ?? variant) === variant;
   const modeIndex = MODES.findIndex((m) => m.value === mode);
-  return /* @__PURE__ */ jsx10(CustomModal, { open, onClose, triggerRef, className: "w-[360px]", children: /* @__PURE__ */ jsxs5("div", { className: "flex flex-col gap-[var(--gap-page)]", children: [
+  return /* @__PURE__ */ jsx11(CustomModal, { open, onClose, triggerRef, className: "w-[360px]", children: /* @__PURE__ */ jsxs5("div", { className: "flex flex-col gap-[var(--gap-page)]", children: [
     /* @__PURE__ */ jsxs5("div", { className: "flex items-center gap-[var(--gap-group)]", children: [
-      /* @__PURE__ */ jsx10(Icon, { name: "palette", size: "lg", style: { color: "var(--md-sys-color-primary)" } }),
-      /* @__PURE__ */ jsx10(
+      /* @__PURE__ */ jsx11(Icon, { name: "palette", size: "lg", style: { color: "var(--md-sys-color-primary)" } }),
+      /* @__PURE__ */ jsx11(
         "h2",
         {
           className: "mott-headline-small mott-title-emphasis",
@@ -2274,8 +2354,8 @@ function ThemeModal({ open, onClose, triggerRef, title = "Apariencia" }) {
         }
       )
     ] }),
-    /* @__PURE__ */ jsx10("div", { className: "flex flex-wrap gap-[var(--gap-group)]", children: THEMES_AVAILABLE2.map((theme) => /* @__PURE__ */ jsx10(
-      Swatch,
+    /* @__PURE__ */ jsx11("div", { className: "flex flex-wrap gap-[var(--gap-group)]", children: THEMES_AVAILABLE2.map((theme) => /* @__PURE__ */ jsx11(
+      SwatchButton,
       {
         theme,
         selected: isActive(theme),
@@ -2284,7 +2364,7 @@ function ThemeModal({ open, onClose, triggerRef, title = "Apariencia" }) {
       theme.name
     )) }),
     /* @__PURE__ */ jsxs5("div", { className: "flex flex-col gap-[var(--gap-section)]", children: [
-      /* @__PURE__ */ jsx10(
+      /* @__PURE__ */ jsx11(
         "p",
         {
           className: "mott-body-medium",
@@ -2292,7 +2372,7 @@ function ThemeModal({ open, onClose, triggerRef, title = "Apariencia" }) {
           children: "Modo"
         }
       ),
-      /* @__PURE__ */ jsx10(
+      /* @__PURE__ */ jsx11(
         ButtonGroup,
         {
           vertical: false,
@@ -2309,7 +2389,7 @@ function ThemeModal({ open, onClose, triggerRef, title = "Apariencia" }) {
 // src/input/input.jsx
 import { useId } from "react";
 import { twMerge as twMerge6 } from "tailwind-merge";
-import { jsx as jsx11, jsxs as jsxs6 } from "react/jsx-runtime";
+import { jsx as jsx12, jsxs as jsxs6 } from "react/jsx-runtime";
 function Input({
   label,
   type = "text",
@@ -2327,7 +2407,7 @@ function Input({
   verifyTypesInput({ label, placeholder, type });
   const room = "calc(var(--md-icon) + 26px)";
   return /* @__PURE__ */ jsxs6("div", { className: "flex w-full flex-col gap-1", children: [
-    label && /* @__PURE__ */ jsx11(
+    label && /* @__PURE__ */ jsx12(
       "label",
       {
         htmlFor: inputId,
@@ -2336,7 +2416,7 @@ function Input({
       }
     ),
     /* @__PURE__ */ jsxs6("div", { className: "relative flex w-full items-center", children: [
-      /* @__PURE__ */ jsx11(
+      /* @__PURE__ */ jsx12(
         "input",
         {
           id: inputId,
@@ -2356,7 +2436,7 @@ function Input({
           ...props
         }
       ),
-      trailing && /* @__PURE__ */ jsx11("span", { className: "absolute right-[18px] flex items-center text-[var(--md-sys-color-on-surface-variant)]", children: trailing })
+      trailing && /* @__PURE__ */ jsx12("span", { className: "absolute right-[18px] flex items-center text-[var(--md-sys-color-on-surface-variant)]", children: trailing })
     ] })
   ] });
 }
@@ -2364,7 +2444,7 @@ function Input({
 // src/textarea/textarea.jsx
 import { useId as useId2 } from "react";
 import { twMerge as twMerge7 } from "tailwind-merge";
-import { jsx as jsx12, jsxs as jsxs7 } from "react/jsx-runtime";
+import { jsx as jsx13, jsxs as jsxs7 } from "react/jsx-runtime";
 function Textarea({
   label,
   id,
@@ -2379,7 +2459,7 @@ function Textarea({
   const textareaId = id ?? generatedId;
   verifyTypesTextarea({ label, placeholder, width, height });
   return /* @__PURE__ */ jsxs7("div", { className: "flex flex-col gap-1", style: { width }, children: [
-    label && /* @__PURE__ */ jsx12(
+    label && /* @__PURE__ */ jsx13(
       "label",
       {
         htmlFor: textareaId,
@@ -2387,7 +2467,7 @@ function Textarea({
         children: label
       }
     ),
-    /* @__PURE__ */ jsx12(
+    /* @__PURE__ */ jsx13(
       "textarea",
       {
         id: textareaId,
@@ -2409,19 +2489,19 @@ function Textarea({
 }
 
 // src/select/select.jsx
-import { useEffect as useEffect4, useId as useId3, useRef as useRef6, useState as useState5 } from "react";
-import { createPortal as createPortal2 } from "react-dom";
+import { useEffect as useEffect4, useId as useId3, useRef as useRef7, useState as useState6 } from "react";
+import { createPortal as createPortal3 } from "react-dom";
 import { useGSAP as useGSAP4 } from "@gsap/react";
-import gsap6 from "gsap";
-import { jsx as jsx13, jsxs as jsxs8 } from "react/jsx-runtime";
+import gsap7 from "gsap";
+import { jsx as jsx14, jsxs as jsxs8 } from "react/jsx-runtime";
 function Select({ options = [], value, onChange, label, placeholder = "Seleccionar", disabled, id }) {
   verifyTypesSelect({ options, onChange, label, placeholder, disabled });
-  const [open, setOpen] = useState5(false);
-  const [rendered, setRendered] = useState5(false);
-  const [anchor, setAnchor] = useState5(null);
-  const wrapperRef = useRef6(null);
-  const triggerRef = useRef6(null);
-  const panelRef = useRef6(null);
+  const [open, setOpen] = useState6(false);
+  const [rendered, setRendered] = useState6(false);
+  const [anchor, setAnchor] = useState6(null);
+  const wrapperRef = useRef7(null);
+  const triggerRef = useRef7(null);
+  const panelRef = useRef7(null);
   const generatedId = useId3();
   const selectId = id ?? generatedId;
   const selected = options.find((o) => o.value === value);
@@ -2445,7 +2525,7 @@ function Select({ options = [], value, onChange, label, placeholder = "Seleccion
     if (open && panelRef.current) {
       const el = panelRef.current;
       const targetHeight = el.scrollHeight;
-      gsap6.fromTo(
+      gsap7.fromTo(
         el,
         { height: 0, opacity: 0 },
         {
@@ -2454,14 +2534,14 @@ function Select({ options = [], value, onChange, label, placeholder = "Seleccion
           duration: DURATION.base,
           ease: EASE.standard,
           overwrite: "auto",
-          onComplete: () => gsap6.set(el, { height: "auto" })
+          onComplete: () => gsap7.set(el, { height: "auto" })
         }
       );
     }
   }, { dependencies: [open, rendered] });
   useEffect4(() => {
     if (!open && rendered && panelRef.current) {
-      gsap6.to(panelRef.current, {
+      gsap7.to(panelRef.current, {
         height: 0,
         opacity: 0,
         duration: DURATION.fast,
@@ -2494,7 +2574,7 @@ function Select({ options = [], value, onChange, label, placeholder = "Seleccion
     setOpen(false);
   };
   return /* @__PURE__ */ jsxs8("div", { ref: wrapperRef, className: "flex w-full flex-col gap-1", children: [
-    label && /* @__PURE__ */ jsx13(
+    label && /* @__PURE__ */ jsx14(
       "label",
       {
         htmlFor: selectId,
@@ -2513,13 +2593,13 @@ function Select({ options = [], value, onChange, label, placeholder = "Seleccion
         className: "flex w-full items-center justify-between rounded-[var(--radius-lg)] bg-[var(--md-sys-color-surface-container)] mott-body-large text-[var(--md-sys-color-on-surface)] outline-none transition-colors duration-150 focus:bg-[color-mix(in_srgb,var(--md-sys-color-on-surface)_8%,var(--md-sys-color-surface-container))] disabled:opacity-50 disabled:cursor-not-allowed",
         style: { padding: "var(--pad-input)" },
         children: [
-          /* @__PURE__ */ jsx13("span", { className: selected ? "" : "text-[var(--md-sys-color-on-surface-variant)]", children: selected ? selected.label : placeholder }),
-          /* @__PURE__ */ jsx13(Icon, { name: "expand_more", size: "sm", className: `transition-transform duration-200 ${open ? "rotate-180" : ""}` })
+          /* @__PURE__ */ jsx14("span", { className: selected ? "" : "text-[var(--md-sys-color-on-surface-variant)]", children: selected ? selected.label : placeholder }),
+          /* @__PURE__ */ jsx14(Icon, { name: "expand_more", size: "sm", className: `transition-transform duration-200 ${open ? "rotate-180" : ""}` })
         ]
       }
     ),
-    rendered && anchor && createPortal2(
-      /* @__PURE__ */ jsx13(
+    rendered && anchor && createPortal3(
+      /* @__PURE__ */ jsx14(
         "div",
         {
           ref: panelRef,
@@ -2527,7 +2607,7 @@ function Select({ options = [], value, onChange, label, placeholder = "Seleccion
           style: { top: anchor.top, left: anchor.left, width: anchor.width },
           children: options.map((option) => {
             const isSelected = option.value === value;
-            return /* @__PURE__ */ jsx13(
+            return /* @__PURE__ */ jsx14(
               "button",
               {
                 type: "button",
@@ -2556,9 +2636,9 @@ function Select({ options = [], value, onChange, label, placeholder = "Seleccion
 }
 
 // src/search/search.jsx
-import { useEffect as useEffect5, useId as useId4, useRef as useRef7, useState as useState6 } from "react";
+import { useEffect as useEffect5, useId as useId4, useRef as useRef8, useState as useState7 } from "react";
 import { twMerge as twMerge8 } from "tailwind-merge";
-import { jsx as jsx14, jsxs as jsxs9 } from "react/jsx-runtime";
+import { jsx as jsx15, jsxs as jsxs9 } from "react/jsx-runtime";
 function Search({
   label,
   id,
@@ -2572,12 +2652,12 @@ function Search({
   style,
   ...props
 }) {
-  const [internalValue, setInternalValue] = useState6(defaultValue);
+  const [internalValue, setInternalValue] = useState7(defaultValue);
   const isControlled = controlledValue !== void 0;
   const value = isControlled ? controlledValue : internalValue;
   const generatedId = useId4();
   const searchId = id ?? generatedId;
-  const timeoutRef = useRef7(null);
+  const timeoutRef = useRef8(null);
   verifyTypesSearch({ label, placeholder, delay, onSearch, onChange, value: controlledValue, defaultValue });
   useEffect5(() => {
     if (!onSearch) return;
@@ -2596,7 +2676,7 @@ function Search({
     onSearch == null ? void 0 : onSearch("");
   };
   return /* @__PURE__ */ jsxs9("div", { className: "flex w-full flex-col gap-1", children: [
-    label && /* @__PURE__ */ jsx14(
+    label && /* @__PURE__ */ jsx15(
       "label",
       {
         htmlFor: searchId,
@@ -2613,8 +2693,8 @@ function Search({
         ),
         style: { padding: "var(--pad-input)", ...style },
         children: [
-          /* @__PURE__ */ jsx14(Icon, { name: "search", size: "sm", className: "shrink-0 text-[var(--md-sys-color-on-surface-variant)]" }),
-          /* @__PURE__ */ jsx14(
+          /* @__PURE__ */ jsx15(Icon, { name: "search", size: "sm", className: "shrink-0 text-[var(--md-sys-color-on-surface-variant)]" }),
+          /* @__PURE__ */ jsx15(
             "input",
             {
               id: searchId,
@@ -2626,14 +2706,14 @@ function Search({
               ...props
             }
           ),
-          value && /* @__PURE__ */ jsx14(
+          value && /* @__PURE__ */ jsx15(
             "button",
             {
               type: "button",
               onClick: handleClear,
               "aria-label": "Limpiar b\xFAsqueda",
               className: "flex shrink-0 items-center justify-center border-0 bg-transparent cursor-pointer",
-              children: /* @__PURE__ */ jsx14(Icon, { name: "close", size: "sm", className: "text-[var(--md-sys-color-on-surface-variant)]" })
+              children: /* @__PURE__ */ jsx15(Icon, { name: "close", size: "sm", className: "text-[var(--md-sys-color-on-surface-variant)]" })
             }
           )
         ]
@@ -2643,25 +2723,25 @@ function Search({
 }
 
 // src/dropdown/dropdown.jsx
-import { useEffect as useEffect6, useRef as useRef8, useState as useState7 } from "react";
+import { useEffect as useEffect6, useRef as useRef9, useState as useState8 } from "react";
 import { useGSAP as useGSAP5 } from "@gsap/react";
-import gsap7 from "gsap";
+import gsap8 from "gsap";
 import { twMerge as twMerge9 } from "tailwind-merge";
-import { jsx as jsx15 } from "react/jsx-runtime";
+import { jsx as jsx16 } from "react/jsx-runtime";
 function Dropdown({ open, onClose, children, triggerRef, className, style, ...props }) {
   verifyTypesDropdown({ open, onClose, triggerRef });
-  const [rendered, setRendered] = useState7(open);
-  const panelRef = useRef8(null);
+  const [rendered, setRendered] = useState8(open);
+  const panelRef = useRef9(null);
   useEffect6(() => {
     if (open) setRendered(true);
   }, [open]);
   useGSAP5(() => {
     if (!open || !panelRef.current) return;
     if (prefersReducedMotion()) {
-      gsap7.set(panelRef.current, { opacity: 1, y: 0, scale: 1 });
+      gsap8.set(panelRef.current, { opacity: 1, y: 0, scale: 1 });
       return;
     }
-    gsap7.fromTo(
+    gsap8.fromTo(
       panelRef.current,
       { opacity: 0, y: -8, scale: 0.96 },
       {
@@ -2681,7 +2761,7 @@ function Dropdown({ open, onClose, children, triggerRef, className, style, ...pr
         setRendered(false);
         return;
       }
-      gsap7.to(panelRef.current, {
+      gsap8.to(panelRef.current, {
         opacity: 0,
         y: -8,
         scale: 0.96,
@@ -2711,7 +2791,7 @@ function Dropdown({ open, onClose, children, triggerRef, className, style, ...pr
     };
   }, [open, onClose, triggerRef]);
   if (!rendered) return null;
-  return /* @__PURE__ */ jsx15(
+  return /* @__PURE__ */ jsx16(
     "div",
     {
       ref: panelRef,
@@ -2726,7 +2806,7 @@ function Dropdown({ open, onClose, children, triggerRef, className, style, ...pr
 
 // src/icon/googleIcon.jsx
 import { twMerge as twMerge10 } from "tailwind-merge";
-import { jsx as jsx16, jsxs as jsxs10 } from "react/jsx-runtime";
+import { jsx as jsx17, jsxs as jsxs10 } from "react/jsx-runtime";
 var BLUE = "#4285F4";
 var GREEN = "#34A853";
 var YELLOW = "#FBBC05";
@@ -2749,28 +2829,28 @@ function GoogleIcon({
       style: { display: "block", ...style },
       ...props,
       children: [
-        /* @__PURE__ */ jsx16(
+        /* @__PURE__ */ jsx17(
           "path",
           {
             fill: RED,
             d: "M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"
           }
         ),
-        /* @__PURE__ */ jsx16(
+        /* @__PURE__ */ jsx17(
           "path",
           {
             fill: BLUE,
             d: "M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"
           }
         ),
-        /* @__PURE__ */ jsx16(
+        /* @__PURE__ */ jsx17(
           "path",
           {
             fill: YELLOW,
             d: "M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"
           }
         ),
-        /* @__PURE__ */ jsx16(
+        /* @__PURE__ */ jsx17(
           "path",
           {
             fill: GREEN,
@@ -2783,9 +2863,9 @@ function GoogleIcon({
 }
 
 // src/authModals/authShell.jsx
-import { jsx as jsx17, jsxs as jsxs11 } from "react/jsx-runtime";
+import { jsx as jsx18, jsxs as jsxs11 } from "react/jsx-runtime";
 function SwitchLink({ children, onClick, disabled }) {
-  return /* @__PURE__ */ jsx17(
+  return /* @__PURE__ */ jsx18(
     "button",
     {
       type: "button",
@@ -2849,7 +2929,7 @@ function AuthShell({
       triggerRef,
       className: "w-[400px] px-[var(--pad-card)] py-[var(--gap-page)]",
       children: [
-        /* @__PURE__ */ jsx17(
+        /* @__PURE__ */ jsx18(
           button_default,
           {
             variant: "ghost",
@@ -2859,13 +2939,13 @@ function AuthShell({
             "aria-label": "Cerrar",
             className: "absolute top-[12px] right-[12px]",
             style: { color: "var(--md-sys-color-on-surface-variant)" },
-            children: /* @__PURE__ */ jsx17(Icon, { name: "close", size: "lg" })
+            children: /* @__PURE__ */ jsx18(Icon, { name: "close", size: "lg" })
           }
         ),
         /* @__PURE__ */ jsxs11("div", { className: "flex flex-col items-start text-left", children: [
           (logo || brand) && /* @__PURE__ */ jsxs11("div", { className: "flex items-center gap-[var(--gap-group)]", children: [
             logo,
-            brand && /* @__PURE__ */ jsx17(
+            brand && /* @__PURE__ */ jsx18(
               "span",
               {
                 className: "mott-label-large",
@@ -2874,7 +2954,7 @@ function AuthShell({
               }
             )
           ] }),
-          /* @__PURE__ */ jsx17(
+          /* @__PURE__ */ jsx18(
             "h2",
             {
               className: "mott-headline-large mott-title-emphasis",
@@ -2893,10 +2973,10 @@ function AuthShell({
               className: "mt-[var(--gap-page)] flex w-full flex-col gap-[var(--gap-block)]",
               children: [
                 children,
-                error && /* @__PURE__ */ jsx17("p", { className: "mott-body-small", style: { color: "var(--md-sys-color-error)" }, role: "alert", children: error }),
-                /* @__PURE__ */ jsx17(button_default, { type: "submit", variant: "action", fullWidth: true, disabled: loading, children: submitLabel }),
+                error && /* @__PURE__ */ jsx18("p", { className: "mott-body-small", style: { color: "var(--md-sys-color-error)" }, role: "alert", children: error }),
+                /* @__PURE__ */ jsx18(button_default, { type: "submit", variant: "action", fullWidth: true, disabled: loading, children: submitLabel }),
                 onGoogle && /* @__PURE__ */ jsxs11(button_default, { variant: "default", fullWidth: true, onClick: onGoogle, disabled: loading, children: [
-                  /* @__PURE__ */ jsx17(GoogleIcon, {}),
+                  /* @__PURE__ */ jsx18(GoogleIcon, {}),
                   googleLabel
                 ] })
               ]
@@ -2912,7 +2992,7 @@ function AuthShell({
               children: [
                 switchText,
                 " ",
-                /* @__PURE__ */ jsx17(SwitchLink, { onClick: onSwitch, disabled: loading, children: switchAction })
+                /* @__PURE__ */ jsx18(SwitchLink, { onClick: onSwitch, disabled: loading, children: switchAction })
               ]
             }
           )
@@ -2923,8 +3003,8 @@ function AuthShell({
 }
 
 // src/authModals/passwordField.jsx
-import { useState as useState8 } from "react";
-import { jsx as jsx18 } from "react/jsx-runtime";
+import { useState as useState9 } from "react";
+import { jsx as jsx19 } from "react/jsx-runtime";
 function PasswordField({
   label,
   placeholder,
@@ -2934,8 +3014,8 @@ function PasswordField({
   autoComplete = "current-password",
   ...props
 }) {
-  const [visible, setVisible] = useState8(false);
-  return /* @__PURE__ */ jsx18(
+  const [visible, setVisible] = useState9(false);
+  return /* @__PURE__ */ jsx19(
     Input,
     {
       type: visible ? "text" : "password",
@@ -2946,7 +3026,7 @@ function PasswordField({
       disabled,
       autoComplete,
       ...props,
-      trailing: /* @__PURE__ */ jsx18(
+      trailing: /* @__PURE__ */ jsx19(
         "button",
         {
           type: "button",
@@ -2954,7 +3034,7 @@ function PasswordField({
           tabIndex: -1,
           "aria-label": visible ? "Ocultar contrase\xF1a" : "Mostrar contrase\xF1a",
           className: "flex cursor-pointer items-center border-0 bg-transparent p-0 text-inherit transition-opacity hover:opacity-70",
-          children: /* @__PURE__ */ jsx18(Icon, { name: visible ? "visibility_off" : "visibility", size: "md", filled: false })
+          children: /* @__PURE__ */ jsx19(Icon, { name: visible ? "visibility_off" : "visibility", size: "md", filled: false })
         }
       )
     }
@@ -2962,7 +3042,7 @@ function PasswordField({
 }
 
 // src/authModals/loginModal.jsx
-import { jsx as jsx19, jsxs as jsxs12 } from "react/jsx-runtime";
+import { jsx as jsx20, jsxs as jsxs12 } from "react/jsx-runtime";
 function LoginModal({
   open,
   onClose,
@@ -3010,7 +3090,7 @@ function LoginModal({
       error,
       loading,
       children: [
-        /* @__PURE__ */ jsx19(
+        /* @__PURE__ */ jsx20(
           Input,
           {
             type: "text",
@@ -3023,7 +3103,7 @@ function LoginModal({
             disabled: loading
           }
         ),
-        /* @__PURE__ */ jsx19(
+        /* @__PURE__ */ jsx20(
           PasswordField,
           {
             label: passwordLabel,
@@ -3033,14 +3113,14 @@ function LoginModal({
             disabled: loading
           }
         ),
-        onForgotPassword && /* @__PURE__ */ jsx19("div", { className: "mott-body-medium", children: /* @__PURE__ */ jsx19(SwitchLink, { onClick: onForgotPassword, disabled: loading, children: forgotPasswordText }) })
+        onForgotPassword && /* @__PURE__ */ jsx20("div", { className: "mott-body-medium", children: /* @__PURE__ */ jsx20(SwitchLink, { onClick: onForgotPassword, disabled: loading, children: forgotPasswordText }) })
       ]
     }
   );
 }
 
 // src/authModals/registerModal.jsx
-import { jsx as jsx20, jsxs as jsxs13 } from "react/jsx-runtime";
+import { jsx as jsx21, jsxs as jsxs13 } from "react/jsx-runtime";
 function RegisterModal({
   open,
   onClose,
@@ -3098,7 +3178,7 @@ function RegisterModal({
       error,
       loading,
       children: [
-        /* @__PURE__ */ jsx20(
+        /* @__PURE__ */ jsx21(
           Input,
           {
             type: "text",
@@ -3111,7 +3191,7 @@ function RegisterModal({
             disabled: loading
           }
         ),
-        /* @__PURE__ */ jsx20(
+        /* @__PURE__ */ jsx21(
           PasswordField,
           {
             autoComplete: "new-password",
@@ -3122,7 +3202,7 @@ function RegisterModal({
             disabled: loading
           }
         ),
-        /* @__PURE__ */ jsx20(
+        /* @__PURE__ */ jsx21(
           PasswordField,
           {
             autoComplete: "new-password",
@@ -3139,8 +3219,8 @@ function RegisterModal({
 }
 
 // src/authModals/otpFields.jsx
-import { useRef as useRef9 } from "react";
-import { Fragment, jsx as jsx21, jsxs as jsxs14 } from "react/jsx-runtime";
+import { useRef as useRef10 } from "react";
+import { Fragment, jsx as jsx22, jsxs as jsxs14 } from "react/jsx-runtime";
 var BOX2 = "flex-1 min-w-0 aspect-square rounded-[var(--radius-lg)] bg-[var(--md-sys-color-surface-container)] mott-title-large text-center text-[var(--md-sys-color-on-surface)] outline-none transition-colors duration-150 focus:bg-[color-mix(in_srgb,var(--md-sys-color-on-surface)_8%,var(--md-sys-color-surface-container))] disabled:opacity-50 disabled:cursor-not-allowed";
 var GAP2 = " ";
 function OtpFields({
@@ -3152,7 +3232,7 @@ function OtpFields({
   disabled = false,
   groupLabel
 }) {
-  const boxes = useRef9([]);
+  const boxes = useRef10([]);
   const charAt = (index) => {
     const char = code[index];
     return char && char !== GAP2 ? char : "";
@@ -3212,8 +3292,8 @@ function OtpFields({
   };
   const message = description ?? (email ? `Escribe el c\xF3digo de ${length} d\xEDgitos que enviamos a ${email}.` : `Escribe el c\xF3digo de ${length} d\xEDgitos que te enviamos.`);
   return /* @__PURE__ */ jsxs14(Fragment, { children: [
-    /* @__PURE__ */ jsx21("p", { className: "mott-body-medium", style: { color: "var(--md-sys-color-on-surface-variant)" }, children: message }),
-    /* @__PURE__ */ jsx21("div", { role: "group", "aria-label": groupLabel, className: "flex w-full gap-[var(--gap-group)]", children: Array.from({ length }, (_, index) => /* @__PURE__ */ jsx21(
+    /* @__PURE__ */ jsx22("p", { className: "mott-body-medium", style: { color: "var(--md-sys-color-on-surface-variant)" }, children: message }),
+    /* @__PURE__ */ jsx22("div", { role: "group", "aria-label": groupLabel, className: "flex w-full gap-[var(--gap-group)]", children: Array.from({ length }, (_, index) => /* @__PURE__ */ jsx22(
       "input",
       {
         ref: (node) => {
@@ -3238,7 +3318,7 @@ function OtpFields({
 }
 
 // src/authModals/otpModal.jsx
-import { jsx as jsx22 } from "react/jsx-runtime";
+import { jsx as jsx23 } from "react/jsx-runtime";
 function OtpModal({
   open,
   onClose,
@@ -3260,7 +3340,7 @@ function OtpModal({
   loading = false
 }) {
   verifyTypesOtpModal({ code, onCodeChange, length, onSubmit, email, onResend });
-  return /* @__PURE__ */ jsx22(
+  return /* @__PURE__ */ jsx23(
     AuthShell,
     {
       open,
@@ -3276,7 +3356,7 @@ function OtpModal({
       onSwitch: onResend,
       error,
       loading,
-      children: /* @__PURE__ */ jsx22(
+      children: /* @__PURE__ */ jsx23(
         OtpFields,
         {
           code,
@@ -3293,7 +3373,7 @@ function OtpModal({
 }
 
 // src/authModals/recoverPasswordModal.jsx
-import { Fragment as Fragment2, jsx as jsx23, jsxs as jsxs15 } from "react/jsx-runtime";
+import { Fragment as Fragment2, jsx as jsx24, jsxs as jsxs15 } from "react/jsx-runtime";
 function RecoverPasswordModal({
   open,
   onClose,
@@ -3347,7 +3427,7 @@ function RecoverPasswordModal({
     onSubmitPassword
   });
   const isCode = step === "code";
-  return /* @__PURE__ */ jsx23(
+  return /* @__PURE__ */ jsx24(
     AuthShell,
     {
       open,
@@ -3363,7 +3443,7 @@ function RecoverPasswordModal({
       onSwitch: isCode ? onResend : onSwitch,
       error,
       loading,
-      children: isCode ? /* @__PURE__ */ jsx23(
+      children: isCode ? /* @__PURE__ */ jsx24(
         OtpFields,
         {
           code,
@@ -3375,7 +3455,7 @@ function RecoverPasswordModal({
           groupLabel: codeTitle
         }
       ) : /* @__PURE__ */ jsxs15(Fragment2, { children: [
-        /* @__PURE__ */ jsx23(
+        /* @__PURE__ */ jsx24(
           PasswordField,
           {
             autoFocus: true,
@@ -3387,7 +3467,7 @@ function RecoverPasswordModal({
             disabled: loading
           }
         ),
-        /* @__PURE__ */ jsx23(
+        /* @__PURE__ */ jsx24(
           PasswordField,
           {
             autoComplete: "new-password",
@@ -3404,10 +3484,10 @@ function RecoverPasswordModal({
 }
 
 // src/loading/loading.jsx
-import { useRef as useRef10 } from "react";
+import { useRef as useRef11 } from "react";
 import { useGSAP as useGSAP6 } from "@gsap/react";
-import gsap8 from "gsap";
-import { jsx as jsx24 } from "react/jsx-runtime";
+import gsap9 from "gsap";
+import { jsx as jsx25 } from "react/jsx-runtime";
 var SHAPES = [
   "50% 50% 50% 50% / 50% 50% 50% 50%",
   // circle
@@ -3421,16 +3501,16 @@ var SHAPES = [
 var PENTAGON = "polygon(50% 0%, 97.55% 34.55%, 79.4% 90.45%, 20.6% 90.45%, 2.45% 34.55%)";
 function Loading({ size = "sm", color = "primary", className, style, ...props }) {
   verifyTypesLoading({ size, color });
-  const shapeRef = useRef10(null);
+  const shapeRef = useRef11(null);
   const box = `var(--control-size-${size})`;
   const background = ACCENTS[color] ?? color;
   useGSAP6(() => {
     const el = shapeRef.current;
     if (prefersReducedMotion()) {
-      gsap8.to(el, { rotate: 360, duration: 12, repeat: -1, ease: "none" });
+      gsap9.to(el, { rotate: 360, duration: 12, repeat: -1, ease: "none" });
       return;
     }
-    const tl = gsap8.timeline({ repeat: -1 });
+    const tl = gsap9.timeline({ repeat: -1 });
     const morph = (shape) => {
       tl.to(el, { borderRadius: shape, scale: 1.12, duration: 0.5, ease: "power2.out" }, "+=0.05").to(el, { scale: 1, duration: 0.45, ease: "power2.in" });
     };
@@ -3439,9 +3519,9 @@ function Loading({ size = "sm", color = "primary", className, style, ...props })
     morph(SHAPES[3]);
     tl.to(el, { opacity: 0, scale: 0.85, duration: 0.2, ease: "power2.in" }, "+=0.05").set(el, { clipPath: PENTAGON }).to(el, { opacity: 1, scale: 1.12, duration: 0.3, ease: "power2.out" }).to(el, { scale: 1, duration: 0.45, ease: "power2.in" });
     tl.to(el, { opacity: 0, scale: 0.85, duration: 0.2, ease: "power2.in" }, "+=0.3").set(el, { clipPath: "none", borderRadius: SHAPES[0] }).to(el, { opacity: 1, scale: 1.12, duration: 0.3, ease: "power2.out" }).to(el, { scale: 1, duration: 0.45, ease: "power2.in" });
-    gsap8.to(el, { rotate: 360, duration: 5, repeat: -1, ease: "none" });
+    gsap9.to(el, { rotate: 360, duration: 5, repeat: -1, ease: "none" });
   }, []);
-  return /* @__PURE__ */ jsx24(
+  return /* @__PURE__ */ jsx25(
     "div",
     {
       ref: shapeRef,
@@ -3462,11 +3542,11 @@ function Loading({ size = "sm", color = "primary", className, style, ...props })
 }
 
 // src/navbar/navbar.jsx
-import { useRef as useRef11, useState as useState9 } from "react";
+import { useRef as useRef12, useState as useState10 } from "react";
 import { useGSAP as useGSAP7 } from "@gsap/react";
-import gsap9 from "gsap";
+import gsap10 from "gsap";
 import { twMerge as twMerge11 } from "tailwind-merge";
-import { Fragment as Fragment3, jsx as jsx25, jsxs as jsxs16 } from "react/jsx-runtime";
+import { Fragment as Fragment3, jsx as jsx26, jsxs as jsxs16 } from "react/jsx-runtime";
 var DESKTOP_ALIGN = {
   center: "justify-center",
   top: "justify-start pt-8"
@@ -3480,10 +3560,10 @@ var attachRef = (node, store, i, forwarded) => {
   else if (forwarded) forwarded.current = node;
 };
 function NavItems({ items, selectedItem, onSelect, vertical }) {
-  const itemRefs = useRef11([]);
-  const containerRef = useRef11(null);
-  const prevSelectedRef = useRef11(selectedItem);
-  const prevCountRef = useRef11(null);
+  const itemRefs = useRef12([]);
+  const containerRef = useRef12(null);
+  const prevSelectedRef = useRef12(selectedItem);
+  const prevCountRef = useRef12(null);
   useGSAP7(() => {
     itemRefs.current.length = items.length;
     const shapeOf = (i) => selectionShape(i === selectedItem);
@@ -3491,7 +3571,7 @@ function NavItems({ items, selectedItem, onSelect, vertical }) {
     prevCountRef.current = items.length;
     if (settleOnly) {
       itemRefs.current.forEach((el, i) => {
-        if (el) gsap9.set(el, shapeOf(i));
+        if (el) gsap10.set(el, shapeOf(i));
       });
       prevSelectedRef.current = selectedItem;
       return;
@@ -3503,7 +3583,7 @@ function NavItems({ items, selectedItem, onSelect, vertical }) {
       if (el) morphSelection(el, i === selectedItem);
     });
   }, { dependencies: [selectedItem, items.length], scope: containerRef });
-  return /* @__PURE__ */ jsx25("div", { ref: containerRef, className: twMerge11("inline-flex gap-[var(--gap-group)]", vertical && "flex-col"), children: items.map((item, i) => {
+  return /* @__PURE__ */ jsx26("div", { ref: containerRef, className: twMerge11("inline-flex gap-[var(--gap-group)]", vertical && "flex-col"), children: items.map((item, i) => {
     const iconOnly = !item.label;
     return /* @__PURE__ */ jsxs16(
       "button",
@@ -3519,8 +3599,8 @@ function NavItems({ items, selectedItem, onSelect, vertical }) {
           ...iconOnly ? { width: "var(--control-size-md)" } : { padding: "0 20px" }
         },
         children: [
-          item.icon && (typeof item.icon === "string" ? /* @__PURE__ */ jsx25(Icon, { name: item.icon }) : item.icon),
-          item.label && /* @__PURE__ */ jsx25("span", { children: item.label })
+          item.icon && (typeof item.icon === "string" ? /* @__PURE__ */ jsx26(Icon, { name: item.icon }) : item.icon),
+          item.label && /* @__PURE__ */ jsx26("span", { children: item.label })
         ]
       },
       item.id ?? i
@@ -3528,19 +3608,19 @@ function NavItems({ items, selectedItem, onSelect, vertical }) {
   }) });
 }
 function LogoButton({ logo }) {
-  const ref = useRef11(null);
-  const didMountRef = useRef11(false);
+  const ref = useRef12(null);
+  const didMountRef = useRef12(false);
   useGSAP7(() => {
     if (!ref.current) return;
     const shape = selectionShape(!!logo.active);
     if (!didMountRef.current) {
       didMountRef.current = true;
-      gsap9.set(ref.current, shape);
+      gsap10.set(ref.current, shape);
       return;
     }
     morphSelection(ref.current, !!logo.active);
   }, { dependencies: [logo.active] });
-  return /* @__PURE__ */ jsx25(
+  return /* @__PURE__ */ jsx26(
     "button",
     {
       ref: (el) => attachRef(el, ref, null, logo.buttonRef),
@@ -3554,7 +3634,7 @@ function LogoButton({ logo }) {
         width: "var(--control-size-md)",
         height: "var(--control-size-md)"
       },
-      children: typeof logo.icon === "string" ? /* @__PURE__ */ jsx25(Icon, { name: logo.icon }) : logo.icon
+      children: typeof logo.icon === "string" ? /* @__PURE__ */ jsx26(Icon, { name: logo.icon }) : logo.icon
     }
   );
 }
@@ -3569,7 +3649,7 @@ function Navbar({
   style
 }) {
   verifyTypesNavbar({ items, logo, selected, defaultSelected, onChange, align });
-  const [internalSelected, setInternalSelected] = useState9(defaultSelected);
+  const [internalSelected, setInternalSelected] = useState10(defaultSelected);
   const isControlled = selected !== void 0;
   const selectedItem = isControlled ? selected : internalSelected;
   const handleSelect = (i) => {
@@ -3581,18 +3661,18 @@ function Navbar({
       "nav",
       {
         className: twMerge11(
-          "hidden md:flex sticky top-0 h-dvh flex-col items-center px-4 gap-[var(--gap-group)]",
+          "hidden md:flex sticky top-0 h-dvh w-fit shrink-0 flex-col items-center px-1 gap-[var(--gap-group)]",
           DESKTOP_ALIGN[align] ?? DESKTOP_ALIGN.center,
           className
         ),
         style,
         children: [
-          logo && /* @__PURE__ */ jsx25(LogoButton, { logo }),
-          /* @__PURE__ */ jsx25(NavItems, { items, selectedItem, onSelect: handleSelect, vertical: true })
+          logo && /* @__PURE__ */ jsx26(LogoButton, { logo }),
+          /* @__PURE__ */ jsx26(NavItems, { items, selectedItem, onSelect: handleSelect, vertical: true })
         ]
       }
     ),
-    /* @__PURE__ */ jsx25(
+    /* @__PURE__ */ jsx26(
       "nav",
       {
         className: twMerge11(
@@ -3600,12 +3680,12 @@ function Navbar({
           className
         ),
         style,
-        children: /* @__PURE__ */ jsx25(
+        children: /* @__PURE__ */ jsx26(
           "div",
           {
             className: "flex items-center gap-1 rounded-[var(--radius-full)] bg-[var(--md-sys-color-surface)] p-1",
             style: { boxShadow: "var(--shadow-floating)" },
-            children: /* @__PURE__ */ jsx25(NavItems, { items, selectedItem, onSelect: handleSelect, vertical: false })
+            children: /* @__PURE__ */ jsx26(NavItems, { items, selectedItem, onSelect: handleSelect, vertical: false })
           }
         )
       }
@@ -3614,13 +3694,13 @@ function Navbar({
 }
 
 // src/dragScroll/dragScroll.jsx
-import { useCallback as useCallback3, useEffect as useEffect7, useLayoutEffect, useRef as useRef12, useState as useState10 } from "react";
+import { useCallback as useCallback4, useEffect as useEffect7, useLayoutEffect, useRef as useRef13, useState as useState11 } from "react";
 import { twMerge as twMerge12 } from "tailwind-merge";
-import gsap10 from "gsap";
+import gsap11 from "gsap";
 import { Draggable as Draggable2 } from "gsap/Draggable";
 import { InertiaPlugin } from "gsap/InertiaPlugin";
-import { jsx as jsx26 } from "react/jsx-runtime";
-gsap10.registerPlugin(Draggable2, InertiaPlugin);
+import { jsx as jsx27 } from "react/jsx-runtime";
+gsap11.registerPlugin(Draggable2, InertiaPlugin);
 var DRAG_TYPE = { y: "scrollTop", x: "scrollLeft", both: "scroll" };
 var EDGE_RESISTANCE = 0.85;
 function useDragScroll(ref, { axis = "y", inertia = true, disabled = false } = {}) {
@@ -3659,8 +3739,8 @@ function useDragScroll(ref, { axis = "y", inertia = true, disabled = false } = {
   }, [ref, axis, inertia, disabled]);
 }
 function useEdgeFade(ref, axis, size) {
-  const [edges, setEdges] = useState10([0, 0]);
-  const measure = useCallback3(() => {
+  const [edges, setEdges] = useState11([0, 0]);
+  const measure = useCallback4(() => {
     const el = ref.current;
     if (!el) return;
     const horizontal = axis === "x";
@@ -3697,12 +3777,12 @@ function DragScroll({
   ...props
 }) {
   verifyTypesDragScroll({ axis, inertia, disabled, fade, fadeSize });
-  const scrollRef = useRef12(null);
+  const scrollRef = useRef13(null);
   useDragScroll(scrollRef, { axis, inertia, disabled });
   const size = fadeSize ?? 32;
   const [fadeStart, fadeEnd] = useEdgeFade(scrollRef, axis, fade ? size : 0);
   const horizontal = axis === "x";
-  return /* @__PURE__ */ jsx26(
+  return /* @__PURE__ */ jsx27(
     "div",
     {
       ref: scrollRef,
@@ -3723,7 +3803,7 @@ function DragScroll({
 // src/shapes/shapes.jsx
 import { forwardRef as forwardRef2, useId as useId5 } from "react";
 import { twMerge as twMerge13 } from "tailwind-merge";
-import { Fragment as Fragment4, jsx as jsx27, jsxs as jsxs17 } from "react/jsx-runtime";
+import { Fragment as Fragment4, jsx as jsx28, jsxs as jsxs17 } from "react/jsx-runtime";
 var SIZE_TOKEN2 = {
   sm: "var(--control-size-sm)",
   md: "var(--control-size-md)",
@@ -3756,7 +3836,7 @@ var Shape = forwardRef2(function Shape2({
   const on = contentColor ?? ACCENT_ON[color] ?? "inherit";
   const decorative = !label && children == null;
   return /* @__PURE__ */ jsxs17(Fragment4, { children: [
-    /* @__PURE__ */ jsx27(
+    /* @__PURE__ */ jsx28(
       "svg",
       {
         "aria-hidden": "true",
@@ -3764,10 +3844,10 @@ var Shape = forwardRef2(function Shape2({
         width: "0",
         height: "0",
         style: { position: "absolute", width: 0, height: 0, overflow: "hidden" },
-        children: /* @__PURE__ */ jsx27("defs", { children: /* @__PURE__ */ jsx27("clipPath", { id: clipId, clipPathUnits: "objectBoundingBox", children: /* @__PURE__ */ jsx27("path", { d: shapePath(name, { points }), transform: `scale(0.01)${spin(rotate)}` }) }) })
+        children: /* @__PURE__ */ jsx28("defs", { children: /* @__PURE__ */ jsx28("clipPath", { id: clipId, clipPathUnits: "objectBoundingBox", children: /* @__PURE__ */ jsx28("path", { d: shapePath(name, { points }), transform: `scale(0.01)${spin(rotate)}` }) }) })
       }
     ),
-    /* @__PURE__ */ jsx27(
+    /* @__PURE__ */ jsx28(
       "div",
       {
         ref,
@@ -3795,7 +3875,7 @@ var shapes_default = Shape;
 import { useMemo as useMemo3 } from "react";
 import { Style, Avatar as Dicebear } from "@dicebear/core";
 import critters from "@dicebear/styles/critters.json";
-import { jsx as jsx28 } from "react/jsx-runtime";
+import { jsx as jsx29 } from "react/jsx-runtime";
 var SIZE_TOKEN3 = {
   sm: "var(--control-size-sm)",
   md: "var(--control-size-md)",
@@ -3901,7 +3981,7 @@ function Avatar({
   }), [styleDefinition, options, seed]);
   const box = SIZE_TOKEN3[size] ?? size;
   const unselectable = { userSelect: "none", WebkitUserSelect: "none", WebkitUserDrag: "none" };
-  const image = /* @__PURE__ */ jsx28(
+  const image = /* @__PURE__ */ jsx29(
     "img",
     {
       src: uri,
@@ -3913,7 +3993,241 @@ function Avatar({
     }
   );
   if (!shape) return image;
-  return /* @__PURE__ */ jsx28(shapes_default, { name: shape, size, className, style, ...props, children: image });
+  return /* @__PURE__ */ jsx29(shapes_default, { name: shape, size, className, style, ...props, children: image });
+}
+
+// src/GeneratorGradientProfile/GeneratorGradientProfile.jsx
+import { useCallback as useCallback5, useEffect as useEffect8, useMemo as useMemo4, useRef as useRef14, useState as useState12 } from "react";
+
+// src/GeneratorGradientProfile/gradientCanvas.js
+var CARD_W = 440;
+var CARD_H = 600;
+var BAYER8 = [
+  [0, 32, 8, 40, 2, 34, 10, 42],
+  [48, 16, 56, 24, 50, 18, 58, 26],
+  [12, 44, 4, 36, 14, 46, 6, 38],
+  [60, 28, 52, 20, 62, 30, 54, 22],
+  [3, 35, 11, 43, 1, 33, 9, 41],
+  [51, 19, 59, 27, 49, 17, 57, 25],
+  [15, 47, 7, 39, 13, 45, 5, 37],
+  [63, 31, 55, 23, 61, 29, 53, 21]
+];
+var PIXEL = 5;
+var LEVELS = 5;
+var RADIUS = 30;
+function roundRectPath(ctx, x, y, w, h, r) {
+  const rr = Math.min(r, w / 2, h / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + rr, y);
+  ctx.arcTo(x + w, y, x + w, y + h, rr);
+  ctx.arcTo(x + w, y + h, x, y + h, rr);
+  ctx.arcTo(x, y + h, x, y, rr);
+  ctx.arcTo(x, y, x + w, y, rr);
+  ctx.closePath();
+}
+function waveT(u, v) {
+  let t = u * 0.52 + v * 0.78;
+  t += Math.sin((u * 3.2 + 1.2) * Math.PI) * 0.13 + Math.sin((v * 5 - u * 2.4 + 2.7) * Math.PI) * 0.075;
+  return t / 1.3;
+}
+function smoothstep(t) {
+  return t * t * (3 - 2 * t);
+}
+function colorAt(u, v, ramp) {
+  const t = Math.min(1, Math.max(0, waveT(u, v)));
+  const stops = ramp.stops;
+  let i = 0;
+  while (i < stops.length - 2 && t > stops[i + 1].t) i++;
+  const s0 = stops[i];
+  const s1 = stops[i + 1];
+  const span = s1.t - s0.t || 1;
+  const lt = smoothstep(Math.min(1, Math.max(0, (t - s0.t) / span)));
+  let r = s0.color[0] + (s1.color[0] - s0.color[0]) * lt;
+  let g = s0.color[1] + (s1.color[1] - s0.color[1]) * lt;
+  let b = s0.color[2] + (s1.color[2] - s0.color[2]) * lt;
+  const a = ramp.accent;
+  if (a) {
+    const d = Math.hypot(u - a.cx, v - a.cy) / a.r;
+    const w = Math.max(0, 1 - d);
+    const w2 = w * w * 0.75;
+    r += (a.color[0] - r) * w2;
+    g += (a.color[1] - g) * w2;
+    b += (a.color[2] - b) * w2;
+  }
+  return [r, g, b];
+}
+function drawDither(ctx, w, h, ramp) {
+  const cols = Math.ceil(w / PIXEL);
+  const rows = Math.ceil(h / PIXEL);
+  const step = 255 / (LEVELS - 1);
+  for (let j = 0; j < rows; j++) {
+    for (let i = 0; i < cols; i++) {
+      const u = i / (cols - 1);
+      const v = j / (rows - 1);
+      const c = colorAt(u, v, ramp);
+      const thr = (BAYER8[j & 7][i & 7] + 0.5) / 64 - 0.5;
+      const out = [0, 0, 0];
+      for (let k = 0; k < 3; k++) {
+        const q = Math.round(c[k] / step + thr * 0.9) * step;
+        out[k] = Math.min(255, Math.max(0, q));
+      }
+      ctx.fillStyle = `rgb(${out[0] | 0},${out[1] | 0},${out[2] | 0})`;
+      ctx.fillRect(i * PIXEL, j * PIXEL, PIXEL, PIXEL);
+    }
+  }
+}
+function drawCard(ctx, { name, email, ramp, verifiedLabel }) {
+  const W = CARD_W;
+  const H = CARD_H;
+  ctx.clearRect(0, 0, W, H);
+  ctx.save();
+  roundRectPath(ctx, 0, 0, W, H, RADIUS);
+  ctx.clip();
+  drawDither(ctx, W, H, ramp);
+  const scrim = ctx.createLinearGradient(0, H * 0.5, 0, H);
+  scrim.addColorStop(0, "rgba(8,9,7,0)");
+  scrim.addColorStop(1, "rgba(8,9,7,0.72)");
+  ctx.fillStyle = scrim;
+  ctx.fillRect(0, H * 0.5, W, H * 0.5);
+  const textX = 28;
+  let ty = H - 168;
+  ctx.textBaseline = "alphabetic";
+  ctx.fillStyle = "rgba(255,255,255,0.6)";
+  ctx.font = "600 14px system-ui, sans-serif";
+  ctx.fillText("Correo", textX, ty);
+  ty += 32;
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "800 26px system-ui, sans-serif";
+  let emailText = email || " ";
+  const maxWidth = W - textX - 32;
+  while (ctx.measureText(emailText).width > maxWidth && emailText.length > 1) {
+    emailText = emailText.slice(0, -1);
+  }
+  if (emailText !== (email || " ")) emailText = emailText.trim() + "\u2026";
+  ctx.fillText(emailText, textX, ty);
+  ty += 32;
+  ctx.fillStyle = "rgba(255,255,255,0.6)";
+  ctx.font = "600 14px system-ui, sans-serif";
+  ctx.fillText("Nombre", textX, ty);
+  ty += 32;
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "800 26px system-ui, sans-serif";
+  ctx.fillText(name || " ", textX, ty);
+  const footerY = H - 34;
+  ctx.beginPath();
+  ctx.arc(textX + 11, footerY, 12, 0, Math.PI * 2);
+  ctx.fillStyle = "#ffffff";
+  ctx.fill();
+  ctx.strokeStyle = "#12140f";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(textX + 5, footerY);
+  ctx.lineTo(textX + 9, footerY + 4);
+  ctx.lineTo(textX + 17, footerY - 5);
+  ctx.stroke();
+  ctx.fillStyle = "rgba(255,255,255,0.85)";
+  ctx.font = "700 14px system-ui, sans-serif";
+  ctx.fillText(verifiedLabel, textX + 30, footerY + 5);
+  ctx.restore();
+}
+
+// src/GeneratorGradientProfile/gradientPalette.js
+import { Hct as Hct2, argbFromHex as argbFromHex2 } from "@material/material-color-utilities";
+var MIN_SEED_CHROMA2 = 8;
+var CHROMA_FLOOR = 40;
+var T = [0, 0.26, 0.5, 0.6, 0.68, 0.86, 1];
+var GRADIENT_RECIPE = {
+  id: "medianoche",
+  label: "Medianoche",
+  hueOffset: [-6, 6, 22, 30, 56, 84, 118],
+  chromaScale: [0.8, 1.1, 1.2, 0.12, 0.9, 1.1, 0.95],
+  tone: {
+    light: [14, 30, 52, 96, 76, 60, 72],
+    dark: [8, 22, 44, 92, 66, 50, 62]
+  },
+  blob: { cx: 0.88, cy: 0.42, r: 0.38, hueOffset: 96, chromaScale: 1, tone: 62 }
+};
+var rgbFromArgb = (argb) => [argb >> 16 & 255, argb >> 8 & 255, argb & 255];
+var hctRgb = (hue, chroma, tone) => rgbFromArgb(Hct2.from(hue, chroma, tone).toInt());
+function buildGradientStops(seedHex, mode, recipe = GRADIENT_RECIPE) {
+  const seed = Hct2.fromInt(argbFromHex2(seedHex));
+  const hasHue = seed.chroma >= MIN_SEED_CHROMA2;
+  const baseChroma = hasHue ? Math.max(seed.chroma, CHROMA_FLOOR) : 0;
+  const hueAt = (offset) => hasHue ? (seed.hue + offset + 360) % 360 : 0;
+  const tones = recipe.tone[mode] ?? recipe.tone.light;
+  const stops = T.map((t, i) => ({
+    t,
+    color: hctRgb(hueAt(recipe.hueOffset[i]), baseChroma * recipe.chromaScale[i], tones[i])
+  }));
+  const blob = recipe.blob;
+  const accent = {
+    cx: blob.cx,
+    cy: blob.cy,
+    r: blob.r,
+    color: hctRgb(hueAt(blob.hueOffset), baseChroma * blob.chromaScale, blob.tone)
+  };
+  return { stops, accent };
+}
+
+// src/GeneratorGradientProfile/GeneratorGradientProfile.jsx
+import { jsx as jsx30, jsxs as jsxs18 } from "react/jsx-runtime";
+function GeneratorGradientProfile({
+  name = "",
+  email = "",
+  showControls = true,
+  verifiedLabel = "Correo verificado",
+  className
+}) {
+  verifyTypesGradientProfile({ name, email, showControls, verifiedLabel });
+  const { colorSeedHex, resolvedMode } = useTheme();
+  const canvasRef = useRef14(null);
+  const [nameValue, setNameValue] = useState12(name);
+  const [emailValue, setEmailValue] = useState12(email);
+  useEffect8(() => setNameValue(name), [name]);
+  useEffect8(() => setEmailValue(email), [email]);
+  const ramp = useMemo4(
+    () => buildGradientStops(colorSeedHex, resolvedMode),
+    [colorSeedHex, resolvedMode]
+  );
+  const render2 = useCallback5(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = CARD_W * dpr;
+    canvas.height = CARD_H * dpr;
+    const ctx = canvas.getContext("2d");
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    drawCard(ctx, { name: nameValue, email: emailValue, ramp, verifiedLabel });
+  }, [nameValue, emailValue, ramp, verifiedLabel]);
+  useEffect8(() => {
+    render2();
+  }, [render2]);
+  return /* @__PURE__ */ jsxs18(
+    "div",
+    {
+      className: ["flex w-full flex-col items-center gap-[var(--gap-page)] md:flex-row md:items-start md:justify-center", className].filter(Boolean).join(" "),
+      children: [
+        showControls && /* @__PURE__ */ jsxs18("div", { className: "flex w-full max-w-xs flex-col gap-[var(--gap-page)]", children: [
+          /* @__PURE__ */ jsxs18("div", { className: "flex flex-col gap-[var(--gap-section)]", children: [
+            /* @__PURE__ */ jsx30(Text, { variant: "title-medium", as: "h2", children: "Tarjeta de perfil" }),
+            /* @__PURE__ */ jsx30(Text, { variant: "body-small", tone: "muted", children: "El degradado se genera a partir del acento del tema." })
+          ] }),
+          /* @__PURE__ */ jsxs18("div", { className: "flex flex-col gap-[var(--gap-group)]", children: [
+            /* @__PURE__ */ jsx30(Input, { label: "Nombre", value: nameValue, onChange: setNameValue }),
+            /* @__PURE__ */ jsx30(Input, { label: "Correo", type: "email", value: emailValue, onChange: setEmailValue })
+          ] })
+        ] }),
+        /* @__PURE__ */ jsx30("div", { className: "w-full max-w-[300px]", children: /* @__PURE__ */ jsx30(
+          "canvas",
+          {
+            ref: canvasRef,
+            "aria-label": `Tarjeta de perfil de ${nameValue || "usuario"}`,
+            className: "block h-auto w-full rounded-[30px]"
+          }
+        ) })
+      ]
+    }
+  );
 }
 export {
   AnchoredAnimation,
@@ -3927,6 +4241,8 @@ export {
   Dropdown,
   EASE,
   FabButton,
+  GRADIENT_RECIPE,
+  GeneratorGradientProfile,
   GoogleIcon,
   Icon,
   Input,
@@ -3953,6 +4269,7 @@ export {
   Toast,
   ToastProvider,
   anchoredAnimation,
+  buildGradientStops,
   morphAnimation,
   morphTo,
   prefersReducedMotion,

@@ -83,7 +83,7 @@ function assertPlainObject(component, prop, value) {
     }
 }
 
-// NOTE: `color` (Badge, FabButton, ButtonFullRounded, Loading, Progress) and Icon's `size` do NOT
+// NOTE: `color` (FabButton, Loading) and Icon's `size` do NOT
 // belong here. Those resolve with `PRESETS[x] ?? x` on purpose, so they accept any CSS color or
 // length — checking them against a list would be a false positive (e.g. color="#7c3aed").
 const CONTROL_SIZES = ['sm', 'md', 'lg'];
@@ -236,13 +236,6 @@ export function verifyTypesSelect({ options, onChange, label, placeholder, disab
     assertType('Select', 'label', label, 'string');
     assertType('Select', 'placeholder', placeholder, 'string');
     assertType('Select', 'disabled', disabled, 'boolean');
-    return true;
-}
-
-export function verifyTypesProgress({ value, color } = {}) {
-    // undefined/null is the indeterminate mode, not an error (see progress.jsx)
-    assertRange('Progress', 'value', value, 0, 100);
-    assertType('Progress', 'color', color, 'string');
     return true;
 }
 
@@ -486,5 +479,13 @@ export function verifyTypesThemeProvider({ defaultSeed, defaultMode, themes } = 
             verifyTypesThemeVariant('ThemeProvider', `${path}.variant`, item.variant);
         }
     });
+    return true;
+}
+
+export function verifyTypesGradientProfile({ name, email, showControls, verifiedLabel } = {}) {
+    assertType('GeneratorGradientProfile', 'name', name, 'string');
+    assertType('GeneratorGradientProfile', 'email', email, 'string');
+    assertType('GeneratorGradientProfile', 'showControls', showControls, 'boolean');
+    assertType('GeneratorGradientProfile', 'verifiedLabel', verifiedLabel, 'string');
     return true;
 }
