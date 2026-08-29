@@ -347,7 +347,7 @@ export const SHAPE_PATHS = {
     // oval joined to its neighbours by a narrow notch
     flower: ({ points = 8 } = {}) => scallop(points, { innerRadius: 34, bumpRadius: 12.5 }),
     // shallow valleys and a small bump: the wave barely dips, which is what a scalloped biscuit is
-    cookie: ({ points = 12 } = {}) => scallop(points, { innerRadius: 46, bumpRadius: 11 }),
+    cookie: ({ points = 20 } = {}) => scallop(points, { innerRadius: 46, bumpRadius: 11 }),
 };
 
 export const SHAPE_NAMES = Object.keys(SHAPE_PATHS);

@@ -83,7 +83,7 @@ function assertPlainObject(component, prop, value) {
     }
 }
 
-// NOTE: `color` (FabButton, Loading) and Icon's `size` do NOT
+// NOTE: `color` (FabButton, Loading) and the `size` of Icon, Shape, Avatar and Loading do NOT
 // belong here. Those resolve with `PRESETS[x] ?? x` on purpose, so they accept any CSS color or
 // length — checking them against a list would be a false positive (e.g. color="#7c3aed").
 const CONTROL_SIZES = ['sm', 'md', 'lg'];
@@ -239,10 +239,22 @@ export function verifyTypesSelect({ options, onChange, label, placeholder, disab
     return true;
 }
 
-export function verifyTypesLoading({ size, color } = {}) {
-    // closed set here: the box comes from `var(--control-size-${size})`, defined only for sm/md/lg
-    assertOneOf('Loading', 'size', size, CONTROL_SIZES, 'sm');
+export function verifyTypesLoading({ size, color, shapes, label } = {}) {
+    // open set, like Shape and Avatar: a token or any CSS length
+    assertType('Loading', 'size', size, 'string');
     assertType('Loading', 'color', color, 'string');
+    assertType('Loading', 'label', label, 'string');
+    assertArrayOf('Loading', 'shapes', shapes, (item, prop) => {
+        assertPlainObject('Loading', prop, item);
+        assertRequired('Loading', `${prop}.name`, item?.name);
+        assertOneOf('Loading', `${prop}.name`, item?.name, SHAPE_NAMES);
+        // A warning and not a failure: the cycle still runs, the number is simply ignored - the
+        // same thing Shape does with `points` on a shape that has no bumps to count.
+        if (item?.points !== undefined && !SCALLOPED_SHAPES.includes(item?.name)) {
+            warn('Loading', `\`${prop}.points\` does nothing on \`${item.name}\`. Only ${SCALLOPED_SHAPES.join(' and ')} count bumps.`);
+        }
+        assertRange('Loading', `${prop}.points`, item?.points, 3, 60);
+    });
     return true;
 }
 
@@ -487,5 +499,15 @@ export function verifyTypesGradientProfile({ name, email, showControls, verified
     assertType('GeneratorGradientProfile', 'email', email, 'string');
     assertType('GeneratorGradientProfile', 'showControls', showControls, 'boolean');
     assertType('GeneratorGradientProfile', 'verifiedLabel', verifiedLabel, 'string');
+    return true;
+}
+
+export function verifyTypesOnboardingModal({ open, onClose, triggerRef, icon, onComplete } = {}) {
+    assertType('OnboardingModal', 'open', open, 'boolean');
+    assertType('OnboardingModal', 'onClose', onClose, 'function');
+    assertRef('OnboardingModal', 'triggerRef', triggerRef);
+    // a ReactNode and not an icon name: this is where a brand's own SVG logo goes
+    assertNode('OnboardingModal', 'icon', icon);
+    assertType('OnboardingModal', 'onComplete', onComplete, 'function');
     return true;
 }

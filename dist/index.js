@@ -302,7 +302,7 @@ var SHAPE_PATHS = {
   // oval joined to its neighbours by a narrow notch
   flower: ({ points = 8 } = {}) => scallop(points, { innerRadius: 34, bumpRadius: 12.5 }),
   // shallow valleys and a small bump: the wave barely dips, which is what a scalloped biscuit is
-  cookie: ({ points = 12 } = {}) => scallop(points, { innerRadius: 46, bumpRadius: 11 })
+  cookie: ({ points = 20 } = {}) => scallop(points, { innerRadius: 46, bumpRadius: 11 })
 };
 var SHAPE_NAMES = Object.keys(SHAPE_PATHS);
 var SCALLOPED_SHAPES = ["flower", "cookie"];
@@ -574,9 +574,19 @@ function verifyTypesSelect({ options, onChange, label, placeholder, disabled } =
   assertType("Select", "disabled", disabled, "boolean");
   return true;
 }
-function verifyTypesLoading({ size, color } = {}) {
-  assertOneOf("Loading", "size", size, CONTROL_SIZES, "sm");
+function verifyTypesLoading({ size, color, shapes, label } = {}) {
+  assertType("Loading", "size", size, "string");
   assertType("Loading", "color", color, "string");
+  assertType("Loading", "label", label, "string");
+  assertArrayOf("Loading", "shapes", shapes, (item, prop) => {
+    assertPlainObject("Loading", prop, item);
+    assertRequired("Loading", `${prop}.name`, item == null ? void 0 : item.name);
+    assertOneOf("Loading", `${prop}.name`, item == null ? void 0 : item.name, SHAPE_NAMES);
+    if ((item == null ? void 0 : item.points) !== void 0 && !SCALLOPED_SHAPES.includes(item == null ? void 0 : item.name)) {
+      warn("Loading", `\`${prop}.points\` does nothing on \`${item.name}\`. Only ${SCALLOPED_SHAPES.join(" and ")} count bumps.`);
+    }
+    assertRange("Loading", `${prop}.points`, item == null ? void 0 : item.points, 3, 60);
+  });
   return true;
 }
 function verifyTypesDropdown({ open, onClose, triggerRef } = {}) {
@@ -821,6 +831,14 @@ function verifyTypesGradientProfile({ name, email, showControls, verifiedLabel }
   assertType("GeneratorGradientProfile", "email", email, "string");
   assertType("GeneratorGradientProfile", "showControls", showControls, "boolean");
   assertType("GeneratorGradientProfile", "verifiedLabel", verifiedLabel, "string");
+  return true;
+}
+function verifyTypesOnboardingModal({ open, onClose, triggerRef, icon, onComplete } = {}) {
+  assertType("OnboardingModal", "open", open, "boolean");
+  assertType("OnboardingModal", "onClose", onClose, "function");
+  assertRef("OnboardingModal", "triggerRef", triggerRef);
+  assertNode("OnboardingModal", "icon", icon);
+  assertType("OnboardingModal", "onComplete", onComplete, "function");
   return true;
 }
 
@@ -2278,7 +2296,7 @@ import { useRef as useRef6 } from "react";
 import { jsx as jsx10 } from "react/jsx-runtime";
 var SWATCH = 56;
 var SWATCH_CLASS = "mott-shine mott-swatch flex items-center justify-center cursor-pointer border-0 p-0";
-function SwatchButton({ theme, selected, onSelect }) {
+function SwatchButton({ theme, selected, onSelect, size = SWATCH }) {
   const ref = useRef6(null);
   const checkRef = useRef6(null);
   const didMountRef = useRef6(false);
@@ -2311,8 +2329,12 @@ function SwatchButton({ theme, selected, onSelect }) {
       className: SWATCH_CLASS,
       ...pressHandlers(selected ? MORPH_SCALE : 1),
       style: {
-        width: SWATCH,
-        height: SWATCH,
+        /*El alto sale del ancho y no de un segundo numero: asi `size` admite tambien un
+          porcentaje - una rejilla puede darle el ancho de su columna - y el swatch sigue
+          siendo redondo sin que nadie tenga que calcular nada.*/
+        width: size,
+        height: "auto",
+        aspectRatio: "1 / 1",
         borderRadius: CIRCLE_RADIUS,
         background: `linear-gradient(98deg, rgb(255 255 255 / 0) 22%, rgb(255 255 255 / 0.20) 76%, rgb(255 255 255 / 0.12) 100%), ${theme.hex}`,
         "--mott-swatch-ring": selected ? "0.3" : "0.1"
@@ -3483,327 +3505,20 @@ function RecoverPasswordModal({
   );
 }
 
-// src/loading/loading.jsx
-import { useRef as useRef11 } from "react";
+// src/onBoardingModal/onboardingModal.jsx
+import { useCallback as useCallback4, useEffect as useEffect7, useLayoutEffect, useMemo as useMemo4, useRef as useRef11, useState as useState10 } from "react";
 import { useGSAP as useGSAP6 } from "@gsap/react";
-import gsap9 from "gsap";
-import { jsx as jsx25 } from "react/jsx-runtime";
-var SHAPES = [
-  "50% 50% 50% 50% / 50% 50% 50% 50%",
-  // circle
-  "30% 30% 30% 30% / 30% 30% 30% 30%",
-  // squircle
-  "22% 22% 22% 22% / 22% 22% 22% 22%",
-  // rounded square
-  "30% 30% 30% 30% / 30% 30% 30% 30%"
-  // squircle (closes the loop)
-];
-var PENTAGON = "polygon(50% 0%, 97.55% 34.55%, 79.4% 90.45%, 20.6% 90.45%, 2.45% 34.55%)";
-function Loading({ size = "sm", color = "primary", className, style, ...props }) {
-  verifyTypesLoading({ size, color });
-  const shapeRef = useRef11(null);
-  const box = `var(--control-size-${size})`;
-  const background = ACCENTS[color] ?? color;
-  useGSAP6(() => {
-    const el = shapeRef.current;
-    if (prefersReducedMotion()) {
-      gsap9.to(el, { rotate: 360, duration: 12, repeat: -1, ease: "none" });
-      return;
-    }
-    const tl = gsap9.timeline({ repeat: -1 });
-    const morph = (shape) => {
-      tl.to(el, { borderRadius: shape, scale: 1.12, duration: 0.5, ease: "power2.out" }, "+=0.05").to(el, { scale: 1, duration: 0.45, ease: "power2.in" });
-    };
-    morph(SHAPES[1]);
-    morph(SHAPES[2]);
-    morph(SHAPES[3]);
-    tl.to(el, { opacity: 0, scale: 0.85, duration: 0.2, ease: "power2.in" }, "+=0.05").set(el, { clipPath: PENTAGON }).to(el, { opacity: 1, scale: 1.12, duration: 0.3, ease: "power2.out" }).to(el, { scale: 1, duration: 0.45, ease: "power2.in" });
-    tl.to(el, { opacity: 0, scale: 0.85, duration: 0.2, ease: "power2.in" }, "+=0.3").set(el, { clipPath: "none", borderRadius: SHAPES[0] }).to(el, { opacity: 1, scale: 1.12, duration: 0.3, ease: "power2.out" }).to(el, { scale: 1, duration: 0.45, ease: "power2.in" });
-    gsap9.to(el, { rotate: 360, duration: 5, repeat: -1, ease: "none" });
-  }, []);
-  return /* @__PURE__ */ jsx25(
-    "div",
-    {
-      ref: shapeRef,
-      role: "status",
-      "aria-label": "Cargando",
-      className,
-      style: {
-        width: box,
-        height: box,
-        backgroundColor: background,
-        borderRadius: SHAPES[0],
-        boxShadow: "0 4px 14px rgb(0 0 0 / 0.2)",
-        ...style
-      },
-      ...props
-    }
-  );
-}
-
-// src/navbar/navbar.jsx
-import { useRef as useRef12, useState as useState10 } from "react";
-import { useGSAP as useGSAP7 } from "@gsap/react";
 import gsap10 from "gsap";
-import { twMerge as twMerge11 } from "tailwind-merge";
-import { Fragment as Fragment3, jsx as jsx26, jsxs as jsxs16 } from "react/jsx-runtime";
-var DESKTOP_ALIGN = {
-  center: "justify-center",
-  top: "justify-start pt-8"
-};
-var ITEM_BASE = "mott-state-layer mott-morph inline-flex items-center justify-center gap-2 border-0 cursor-pointer p-0 mott-label-large mott-trim [--mott-morph-bg:var(--md-sys-color-surface-container)] text-[var(--md-sys-color-on-surface-variant)] transition-[color] duration-[var(--duration-morph)] ease-[var(--ease-morph)]";
-var ITEM_SELECTED = "[--mott-morph-bg:var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)]";
-var attachRef = (node, store, i, forwarded) => {
-  if (i === null) store.current = node;
-  else store.current[i] = node;
-  if (typeof forwarded === "function") forwarded(node);
-  else if (forwarded) forwarded.current = node;
-};
-function NavItems({ items, selectedItem, onSelect, vertical }) {
-  const itemRefs = useRef12([]);
-  const containerRef = useRef12(null);
-  const prevSelectedRef = useRef12(selectedItem);
-  const prevCountRef = useRef12(null);
-  useGSAP7(() => {
-    itemRefs.current.length = items.length;
-    const shapeOf = (i) => selectionShape(i === selectedItem);
-    const settleOnly = prevCountRef.current !== items.length;
-    prevCountRef.current = items.length;
-    if (settleOnly) {
-      itemRefs.current.forEach((el, i) => {
-        if (el) gsap10.set(el, shapeOf(i));
-      });
-      prevSelectedRef.current = selectedItem;
-      return;
-    }
-    const changed = /* @__PURE__ */ new Set([prevSelectedRef.current, selectedItem]);
-    prevSelectedRef.current = selectedItem;
-    changed.forEach((i) => {
-      const el = itemRefs.current[i];
-      if (el) morphSelection(el, i === selectedItem);
-    });
-  }, { dependencies: [selectedItem, items.length], scope: containerRef });
-  return /* @__PURE__ */ jsx26("div", { ref: containerRef, className: twMerge11("inline-flex gap-[var(--gap-group)]", vertical && "flex-col"), children: items.map((item, i) => {
-    const iconOnly = !item.label;
-    return /* @__PURE__ */ jsxs16(
-      "button",
-      {
-        ref: (el) => attachRef(el, itemRefs, i, item.buttonRef),
-        type: "button",
-        onClick: () => onSelect(i),
-        "aria-pressed": selectedItem === i,
-        className: twMerge11(ITEM_BASE, selectedItem === i && ITEM_SELECTED),
-        ...pressHandlers(),
-        style: {
-          height: "var(--control-size-md)",
-          ...iconOnly ? { width: "var(--control-size-md)" } : { padding: "0 20px" }
-        },
-        children: [
-          item.icon && (typeof item.icon === "string" ? /* @__PURE__ */ jsx26(Icon, { name: item.icon }) : item.icon),
-          item.label && /* @__PURE__ */ jsx26("span", { children: item.label })
-        ]
-      },
-      item.id ?? i
-    );
-  }) });
-}
-function LogoButton({ logo }) {
-  const ref = useRef12(null);
-  const didMountRef = useRef12(false);
-  useGSAP7(() => {
-    if (!ref.current) return;
-    const shape = selectionShape(!!logo.active);
-    if (!didMountRef.current) {
-      didMountRef.current = true;
-      gsap10.set(ref.current, shape);
-      return;
-    }
-    morphSelection(ref.current, !!logo.active);
-  }, { dependencies: [logo.active] });
-  return /* @__PURE__ */ jsx26(
-    "button",
-    {
-      ref: (el) => attachRef(el, ref, null, logo.buttonRef),
-      type: "button",
-      onClick: logo.onClick,
-      "aria-pressed": !!logo.active,
-      "aria-label": logo.label ?? "Inicio",
-      className: twMerge11(ITEM_BASE, logo.active && ITEM_SELECTED),
-      ...pressHandlers(),
-      style: {
-        width: "var(--control-size-md)",
-        height: "var(--control-size-md)"
-      },
-      children: typeof logo.icon === "string" ? /* @__PURE__ */ jsx26(Icon, { name: logo.icon }) : logo.icon
-    }
-  );
-}
-function Navbar({
-  items = [],
-  selected,
-  defaultSelected = null,
-  onChange,
-  logo,
-  align = "top",
-  className,
-  style
-}) {
-  verifyTypesNavbar({ items, logo, selected, defaultSelected, onChange, align });
-  const [internalSelected, setInternalSelected] = useState10(defaultSelected);
-  const isControlled = selected !== void 0;
-  const selectedItem = isControlled ? selected : internalSelected;
-  const handleSelect = (i) => {
-    if (!isControlled) setInternalSelected(i);
-    onChange == null ? void 0 : onChange(i, items[i]);
-  };
-  return /* @__PURE__ */ jsxs16(Fragment3, { children: [
-    /* @__PURE__ */ jsxs16(
-      "nav",
-      {
-        className: twMerge11(
-          "hidden md:flex sticky top-0 h-dvh w-fit shrink-0 flex-col items-center px-1 gap-[var(--gap-group)]",
-          DESKTOP_ALIGN[align] ?? DESKTOP_ALIGN.center,
-          className
-        ),
-        style,
-        children: [
-          logo && /* @__PURE__ */ jsx26(LogoButton, { logo }),
-          /* @__PURE__ */ jsx26(NavItems, { items, selectedItem, onSelect: handleSelect, vertical: true })
-        ]
-      }
-    ),
-    /* @__PURE__ */ jsx26(
-      "nav",
-      {
-        className: twMerge11(
-          "flex md:hidden fixed bottom-4 left-1/2 z-[var(--z-nav)] -translate-x-1/2 items-center gap-3",
-          className
-        ),
-        style,
-        children: /* @__PURE__ */ jsx26(
-          "div",
-          {
-            className: "flex items-center gap-1 rounded-[var(--radius-full)] bg-[var(--md-sys-color-surface)] p-1",
-            style: { boxShadow: "var(--shadow-floating)" },
-            children: /* @__PURE__ */ jsx26(NavItems, { items, selectedItem, onSelect: handleSelect, vertical: false })
-          }
-        )
-      }
-    )
-  ] });
-}
 
-// src/dragScroll/dragScroll.jsx
-import { useCallback as useCallback4, useEffect as useEffect7, useLayoutEffect, useRef as useRef13, useState as useState11 } from "react";
-import { twMerge as twMerge12 } from "tailwind-merge";
-import gsap11 from "gsap";
-import { Draggable as Draggable2 } from "gsap/Draggable";
-import { InertiaPlugin } from "gsap/InertiaPlugin";
-import { jsx as jsx27 } from "react/jsx-runtime";
-gsap11.registerPlugin(Draggable2, InertiaPlugin);
-var DRAG_TYPE = { y: "scrollTop", x: "scrollLeft", both: "scroll" };
-var EDGE_RESISTANCE = 0.85;
-function useDragScroll(ref, { axis = "y", inertia = true, disabled = false } = {}) {
-  useEffect7(() => {
-    if (disabled || !ref.current) return;
-    if (typeof window !== "undefined" && !window.matchMedia("(pointer: fine)").matches) return;
-    const el = ref.current;
-    let draggable = null;
-    const overflows = () => axis === "x" ? el.scrollWidth > el.clientWidth : axis === "both" ? el.scrollWidth > el.clientWidth || el.scrollHeight > el.clientHeight : el.scrollHeight > el.clientHeight;
-    const sync = () => {
-      if (overflows() && !draggable) {
-        [draggable] = Draggable2.create(el, {
-          type: DRAG_TYPE[axis] ?? DRAG_TYPE.y,
-          inertia,
-          edgeResistance: EDGE_RESISTANCE,
-          minimumMovement: 3,
-          dragClickables: true,
-          cursor: "grab",
-          activeCursor: "grabbing"
-        });
-      } else if (!overflows() && draggable) {
-        draggable.kill();
-        draggable = null;
-        el.style.cursor = "";
-      }
-    };
-    sync();
-    const observer = new ResizeObserver(sync);
-    observer.observe(el);
-    if (el.firstElementChild) observer.observe(el.firstElementChild);
-    return () => {
-      observer.disconnect();
-      draggable == null ? void 0 : draggable.kill();
-      el.style.cursor = "";
-    };
-  }, [ref, axis, inertia, disabled]);
-}
-function useEdgeFade(ref, axis, size) {
-  const [edges, setEdges] = useState11([0, 0]);
-  const measure = useCallback4(() => {
-    const el = ref.current;
-    if (!el) return;
-    const horizontal = axis === "x";
-    const pos = horizontal ? el.scrollLeft : el.scrollTop;
-    const total = horizontal ? el.scrollWidth : el.scrollHeight;
-    const visible = horizontal ? el.clientWidth : el.clientHeight;
-    const remaining = total - visible - pos;
-    setEdges([Math.min(pos, size), Math.min(Math.max(remaining, 0), size)]);
-  }, [ref, axis, size]);
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    measure();
-    el.addEventListener("scroll", measure, { passive: true });
-    const observer = new ResizeObserver(measure);
-    observer.observe(el);
-    if (el.firstElementChild) observer.observe(el.firstElementChild);
-    return () => {
-      el.removeEventListener("scroll", measure);
-      observer.disconnect();
-    };
-  }, [ref, measure]);
-  return edges;
-}
-function DragScroll({
-  children,
-  axis = "y",
-  inertia = true,
-  disabled = false,
-  fade = true,
-  fadeSize,
-  className,
-  style,
-  ...props
-}) {
-  verifyTypesDragScroll({ axis, inertia, disabled, fade, fadeSize });
-  const scrollRef = useRef13(null);
-  useDragScroll(scrollRef, { axis, inertia, disabled });
-  const size = fadeSize ?? 32;
-  const [fadeStart, fadeEnd] = useEdgeFade(scrollRef, axis, fade ? size : 0);
-  const horizontal = axis === "x";
-  return /* @__PURE__ */ jsx27(
-    "div",
-    {
-      ref: scrollRef,
-      className: twMerge12(fade && (horizontal ? "mott-fade-x" : "mott-fade-y"), className),
-      style: {
-        overflowX: horizontal || axis === "both" ? "auto" : "hidden",
-        overflowY: horizontal ? "hidden" : "auto",
-        "--mott-fade-start": `${fadeStart}px`,
-        "--mott-fade-end": `${fadeEnd}px`,
-        ...style
-      },
-      ...props,
-      children
-    }
-  );
-}
+// src/avatars/avatars.jsx
+import { useMemo as useMemo3 } from "react";
+import { Style, Avatar as Dicebear } from "@dicebear/core";
+import critters from "@dicebear/styles/critters.json";
 
 // src/shapes/shapes.jsx
 import { forwardRef as forwardRef2, useId as useId5 } from "react";
-import { twMerge as twMerge13 } from "tailwind-merge";
-import { Fragment as Fragment4, jsx as jsx28, jsxs as jsxs17 } from "react/jsx-runtime";
+import { twMerge as twMerge11 } from "tailwind-merge";
+import { Fragment as Fragment3, jsx as jsx25, jsxs as jsxs16 } from "react/jsx-runtime";
 var SIZE_TOKEN2 = {
   sm: "var(--control-size-sm)",
   md: "var(--control-size-md)",
@@ -3835,8 +3550,8 @@ var Shape = forwardRef2(function Shape2({
   const surface = ACCENTS[color] ?? color;
   const on = contentColor ?? ACCENT_ON[color] ?? "inherit";
   const decorative = !label && children == null;
-  return /* @__PURE__ */ jsxs17(Fragment4, { children: [
-    /* @__PURE__ */ jsx28(
+  return /* @__PURE__ */ jsxs16(Fragment3, { children: [
+    /* @__PURE__ */ jsx25(
       "svg",
       {
         "aria-hidden": "true",
@@ -3844,17 +3559,17 @@ var Shape = forwardRef2(function Shape2({
         width: "0",
         height: "0",
         style: { position: "absolute", width: 0, height: 0, overflow: "hidden" },
-        children: /* @__PURE__ */ jsx28("defs", { children: /* @__PURE__ */ jsx28("clipPath", { id: clipId, clipPathUnits: "objectBoundingBox", children: /* @__PURE__ */ jsx28("path", { d: shapePath(name, { points }), transform: `scale(0.01)${spin(rotate)}` }) }) })
+        children: /* @__PURE__ */ jsx25("defs", { children: /* @__PURE__ */ jsx25("clipPath", { id: clipId, clipPathUnits: "objectBoundingBox", children: /* @__PURE__ */ jsx25("path", { d: shapePath(name, { points }), transform: `scale(0.01)${spin(rotate)}` }) }) })
       }
     ),
-    /* @__PURE__ */ jsx28(
+    /* @__PURE__ */ jsx25(
       "div",
       {
         ref,
         role: label ? "img" : void 0,
         "aria-label": label,
         "aria-hidden": decorative || void 0,
-        className: twMerge13("inline-flex shrink-0 items-center justify-center", className),
+        className: twMerge11("inline-flex shrink-0 items-center justify-center", className),
         style: {
           width: box,
           height: box,
@@ -3872,10 +3587,7 @@ var Shape = forwardRef2(function Shape2({
 var shapes_default = Shape;
 
 // src/avatars/avatars.jsx
-import { useMemo as useMemo3 } from "react";
-import { Style, Avatar as Dicebear } from "@dicebear/core";
-import critters from "@dicebear/styles/critters.json";
-import { jsx as jsx29 } from "react/jsx-runtime";
+import { jsx as jsx26 } from "react/jsx-runtime";
 var SIZE_TOKEN3 = {
   sm: "var(--control-size-sm)",
   md: "var(--control-size-md)",
@@ -3981,7 +3693,7 @@ function Avatar({
   }), [styleDefinition, options, seed]);
   const box = SIZE_TOKEN3[size] ?? size;
   const unselectable = { userSelect: "none", WebkitUserSelect: "none", WebkitUserDrag: "none" };
-  const image = /* @__PURE__ */ jsx29(
+  const image = /* @__PURE__ */ jsx26(
     "img",
     {
       src: uri,
@@ -3993,11 +3705,832 @@ function Avatar({
     }
   );
   if (!shape) return image;
-  return /* @__PURE__ */ jsx29(shapes_default, { name: shape, size, className, style, ...props, children: image });
+  return /* @__PURE__ */ jsx26(shapes_default, { name: shape, size, className, style, ...props, children: image });
+}
+
+// src/onBoardingModal/stepTransition.js
+import gsap9 from "gsap";
+var TRAVEL = 24;
+var HANDOFF2 = { out: 0.8, lead: 0.1 };
+var RUNNING = /* @__PURE__ */ Symbol.for("mott.runningStep");
+var FLOAT = { position: "absolute", top: 0, left: 0, width: "100%" };
+function transitionStep({ viewport, outgoing, incoming, direction = 1, onDone }) {
+  var _a;
+  if (!viewport || !incoming) {
+    onDone == null ? void 0 : onDone();
+    return null;
+  }
+  (_a = viewport[RUNNING]) == null ? void 0 : _a.kill();
+  gsap9.set(incoming, { ...FLOAT, autoAlpha: 0 });
+  const from = viewport.offsetHeight;
+  const to = incoming.offsetHeight;
+  if (outgoing) gsap9.set(outgoing, FLOAT);
+  const total = dur(DURATION.base);
+  gsap9.set(viewport, { overflow: "hidden" });
+  const timeline = gsap9.timeline({
+    onComplete: () => {
+      viewport[RUNNING] = null;
+      gsap9.set(viewport, { clearProps: "height,overflow" });
+      gsap9.set(incoming, { clearProps: "position,top,left,width,transform,opacity,visibility" });
+      onDone == null ? void 0 : onDone();
+    }
+  });
+  timeline.fromTo(
+    viewport,
+    { height: from },
+    { height: to, duration: total, ease: EASE.inOut },
+    0
+  );
+  if (outgoing) {
+    timeline.to(
+      outgoing,
+      { x: -TRAVEL * direction, autoAlpha: 0, duration: total * HANDOFF2.out, ease: EASE.exit },
+      0
+    );
+  }
+  timeline.fromTo(
+    incoming,
+    { x: TRAVEL * direction, autoAlpha: 0 },
+    { x: 0, autoAlpha: 1, duration: total, ease: EASE.emphasized },
+    total * HANDOFF2.lead
+  );
+  viewport[RUNNING] = timeline;
+  return timeline;
+}
+
+// src/onBoardingModal/onboardingModal.jsx
+import { Fragment as Fragment4, jsx as jsx27, jsxs as jsxs17 } from "react/jsx-runtime";
+var STEPS2 = ["welcome", "profile", "color", "done"];
+var MEDIA = "144px";
+var MEDIA_HERO = "184px";
+var STEPS_MIN_HEIGHT = 300;
+var SETTLE = 500;
+var GLYPH_OUT = { autoAlpha: 0, scale: 0.6 };
+var GLYPH_IN = { autoAlpha: 1, scale: 1 };
+function OnboardingModal({
+  open,
+  onClose,
+  triggerRef,
+  icon,
+  welcomeTitle = "Te damos la bienvenida",
+  profileTitle = "\xBFC\xF3mo te llamas?",
+  nameLabel = "Nombre",
+  namePlaceholder = "Escribe tu nombre",
+  colorTitle = "P\xEDntalo a tu manera",
+  doneTitle = "Todo listo",
+  onComplete
+}) {
+  verifyTypesOnboardingModal({ open, onClose, triggerRef, icon, onComplete });
+  const { colorSeedHex, variant, setColorSeedHex, THEMES_AVAILABLE: THEMES_AVAILABLE2 } = useTheme();
+  const [step, setStep] = useState10(0);
+  const [previous2, setPrevious] = useState10(null);
+  const [name, setName] = useState10("");
+  const [seedName, setSeedName] = useState10("");
+  const viewportRef = useRef11(null);
+  const nodes = useRef11({});
+  const trimmed = name.trim();
+  const avatarSeed = seedName || "mott";
+  useEffect7(() => {
+    const id = setTimeout(() => setSeedName(trimmed), SETTLE);
+    return () => clearTimeout(id);
+  }, [trimmed]);
+  const isLast = step === STEPS2.length - 1;
+  const canAdvance = step !== 1 || trimmed !== "";
+  const canGoBack = step >= 2;
+  const advance = () => {
+    if (!canAdvance) return;
+    if (isLast) {
+      onComplete == null ? void 0 : onComplete({ name: trimmed, avatarSeed, colorSeedHex });
+      onClose == null ? void 0 : onClose();
+      return;
+    }
+    setPrevious(step);
+    setStep(step + 1);
+  };
+  const goBack = () => {
+    if (!canGoBack) return;
+    setPrevious(step);
+    setStep(step - 1);
+  };
+  useLayoutEffect(() => {
+    if (previous2 === null) return;
+    const leaving = previous2;
+    transitionStep({
+      viewport: viewportRef.current,
+      outgoing: nodes.current[STEPS2[leaving]],
+      incoming: nodes.current[STEPS2[step]],
+      // Sale de comparar el par que se esta cruzando ahora mismo, no de un estado aparte que
+      // pudiera quedarse desincronizado de el.
+      direction: step > leaving ? 1 : -1,
+      onDone: () => {
+        var _a;
+        setPrevious((current) => current === leaving ? null : current);
+        (_a = nodes.current[STEPS2[step]]) == null ? void 0 : _a.focus();
+      }
+    });
+  }, [step, previous2]);
+  const [glyph, setGlyph] = useState10("arrow_forward");
+  const glyphRef = useRef11(null);
+  const didMountRef = useRef11(false);
+  useEffect7(() => {
+    const next = isLast ? "check" : "arrow_forward";
+    if (!didMountRef.current) {
+      didMountRef.current = true;
+      setGlyph(next);
+      return;
+    }
+    if (next === glyph || !glyphRef.current) return;
+    gsap10.to(glyphRef.current, {
+      ...GLYPH_OUT,
+      duration: dur(DURATION.instant),
+      ease: EASE.exit,
+      overwrite: "auto",
+      onComplete: () => {
+        setGlyph(next);
+        gsap10.to(glyphRef.current, {
+          ...GLYPH_IN,
+          duration: dur(DURATION.fast),
+          ease: EASE.emphasized
+        });
+      }
+    });
+  }, [isLast, glyph]);
+  const backRef = useRef11(null);
+  const backSlotRef = useRef11(null);
+  useEffect7(() => {
+    const el = backRef.current;
+    const slot = backSlotRef.current;
+    if (!el || !slot) return;
+    const shown = { autoAlpha: canGoBack ? 1 : 0, scale: canGoBack ? 1 : 0.6 };
+    const full = el.offsetWidth + parseFloat(getComputedStyle(el).marginRight || 0);
+    const width = canGoBack ? full : 0;
+    if (prefersReducedMotion()) {
+      gsap10.set(el, shown);
+      gsap10.set(slot, { width });
+      return;
+    }
+    gsap10.to(el, { ...shown, duration: DURATION.fast, ease: EASE.emphasized, overwrite: "auto" });
+    gsap10.to(slot, { width, duration: DURATION.fast, ease: EASE.emphasized, overwrite: "auto" });
+  }, [canGoBack]);
+  const reset = useCallback4(() => {
+    setStep(0);
+    setPrevious(null);
+    setName("");
+    setSeedName("");
+  }, []);
+  const isActive = (theme) => theme.hex.toLowerCase() === colorSeedHex.toLowerCase() && (theme.variant ?? variant) === variant;
+  const registrars = useRef11({});
+  const register = (id) => registrars.current[id] ??= (node) => {
+    nodes.current[id] = node;
+  };
+  const content = useMemo4(() => ({
+    welcome: {
+      title: welcomeTitle,
+      body: /* @__PURE__ */ jsx27(Media, { children: /* @__PURE__ */ jsx27(
+        "div",
+        {
+          className: "flex items-center justify-center",
+          style: {
+            width: MEDIA_HERO,
+            height: MEDIA_HERO,
+            borderRadius: "var(--radius-full)",
+            backgroundColor: "var(--md-sys-color-primary-container)",
+            color: "var(--md-sys-color-on-primary-container)"
+          },
+          children: icon ?? /* @__PURE__ */ jsx27(Icon, { name: "waving_hand", size: "64px" })
+        }
+      ) })
+    },
+    profile: {
+      title: profileTitle,
+      body: /* @__PURE__ */ jsxs17(Fragment4, { children: [
+        /* @__PURE__ */ jsx27(Media, { children: /* @__PURE__ */ jsx27(Face, { children: /* @__PURE__ */ jsx27(
+          Avatar,
+          {
+            seed: avatarSeed,
+            size: MEDIA,
+            alt: trimmed || "Tu avatar",
+            style: { borderRadius: "var(--radius-full)" }
+          }
+        ) }, avatarSeed) }),
+        /* @__PURE__ */ jsx27("div", { className: "w-full", children: /* @__PURE__ */ jsx27(
+          Input,
+          {
+            label: nameLabel,
+            placeholder: namePlaceholder,
+            value: name,
+            onChange: setName,
+            autoComplete: "name"
+          }
+        ) })
+      ] })
+    },
+    color: {
+      title: colorTitle,
+      /*Cinco columnas que ocupan el ancho entero, y cada swatch tan grande como su columna.
+        Envolviendo con un tamano fijo la rejilla medía 312px dentro de un panel de 376:
+        sobraban 64px a la derecha que dejaban el bloque de colores sin alinear con el titulo,
+        y ese hueco muerto era lo unico que se miraba en un paso que no tiene nada mas.
+        Estirados, la rejilla es un bloque de la modal.*/
+      body: /* @__PURE__ */ jsx27("div", { className: "grid w-full grid-cols-5 gap-[var(--gap-group)]", children: THEMES_AVAILABLE2.map((theme) => /* @__PURE__ */ jsx27(
+        SwatchButton,
+        {
+          theme,
+          size: "100%",
+          selected: isActive(theme),
+          onSelect: () => setColorSeedHex(theme.hex, theme.variant)
+        },
+        theme.name
+      )) })
+    },
+    done: {
+      title: trimmed ? `${doneTitle}, ${trimmed}` : doneTitle,
+      body: /* @__PURE__ */ jsx27(Media, { children: /* @__PURE__ */ jsx27(Face, { children: /* @__PURE__ */ jsx27(
+        Avatar,
+        {
+          seed: avatarSeed,
+          size: MEDIA_HERO,
+          alt: trimmed || "Tu avatar",
+          style: { borderRadius: "var(--radius-full)" }
+        }
+      ) }, avatarSeed) })
+    }
+  }), [
+    icon,
+    welcomeTitle,
+    profileTitle,
+    nameLabel,
+    namePlaceholder,
+    colorTitle,
+    doneTitle,
+    avatarSeed,
+    trimmed,
+    name,
+    THEMES_AVAILABLE2,
+    colorSeedHex,
+    variant,
+    setColorSeedHex
+  ]);
+  const visible = previous2 === null ? [step] : [previous2, step];
+  return /* @__PURE__ */ jsxs17(
+    CustomModal,
+    {
+      open,
+      onClose,
+      onCloseComplete: reset,
+      triggerRef,
+      className: "w-[440px] p-[var(--gap-page)]",
+      children: [
+        /* @__PURE__ */ jsx27(
+          button_default,
+          {
+            variant: "ghost",
+            iconOnly: true,
+            shape: "pill",
+            onClick: onClose,
+            "aria-label": "Cerrar",
+            className: "absolute top-[12px] right-[12px]",
+            style: { color: "var(--md-sys-color-on-surface-variant)" },
+            children: /* @__PURE__ */ jsx27(Icon, { name: "close", size: "lg" })
+          }
+        ),
+        /* @__PURE__ */ jsx27(
+          "div",
+          {
+            ref: viewportRef,
+            className: "relative w-full",
+            "data-onboarding-viewport": "",
+            children: visible.map((index) => {
+              const id = STEPS2[index];
+              return /* @__PURE__ */ jsxs17(
+                "div",
+                {
+                  ref: register(id),
+                  role: "group",
+                  tabIndex: -1,
+                  "aria-label": id,
+                  className: "flex w-full flex-col items-start outline-none",
+                  style: { minHeight: STEPS_MIN_HEIGHT },
+                  children: [
+                    /* @__PURE__ */ jsx27(Title, { children: content[id].title }),
+                    /* @__PURE__ */ jsx27("div", { className: "flex w-full flex-1 flex-col items-start justify-center gap-[var(--gap-block)]", children: content[id].body })
+                  ]
+                },
+                id
+              );
+            })
+          }
+        ),
+        /* @__PURE__ */ jsxs17("div", { className: "mt-[var(--gap-page)] flex w-full items-center justify-center", children: [
+          /* @__PURE__ */ jsx27("span", { ref: backSlotRef, className: "flex overflow-hidden", style: { width: 0 }, children: /* @__PURE__ */ jsx27(
+            button_default,
+            {
+              ref: backRef,
+              variant: "default",
+              iconOnly: true,
+              shape: "pill",
+              onClick: goBack,
+              disabled: !canGoBack,
+              "aria-label": "Volver",
+              style: {
+                width: "var(--control-size-md)",
+                height: "var(--control-size-md)",
+                padding: 0,
+                marginRight: "var(--gap-block)",
+                opacity: 0,
+                visibility: "hidden"
+              },
+              ...pressHandlers(),
+              children: /* @__PURE__ */ jsx27(Icon, { name: "arrow_back", size: "lg" })
+            }
+          ) }),
+          /* @__PURE__ */ jsx27(
+            button_default,
+            {
+              variant: "action",
+              iconOnly: true,
+              shape: "pill",
+              onClick: advance,
+              disabled: !canAdvance,
+              "aria-label": isLast ? "Terminar" : "Continuar",
+              style: { width: "var(--control-size-md)", height: "var(--control-size-md)", padding: 0 },
+              ...pressHandlers(),
+              children: /* @__PURE__ */ jsx27("span", { ref: glyphRef, className: "flex", children: /* @__PURE__ */ jsx27(Icon, { name: glyph, size: "lg" }) })
+            }
+          )
+        ] })
+      ]
+    }
+  );
+}
+function Title({ children }) {
+  return /* @__PURE__ */ jsx27(
+    "h2",
+    {
+      className: "mott-headline-large mott-title-emphasis",
+      style: { color: "var(--md-sys-color-on-surface)", margin: 0, paddingRight: "var(--control-size-sm)" },
+      children
+    }
+  );
+}
+function Face({ children }) {
+  const ref = useRef11(null);
+  useGSAP6(() => {
+    if (!ref.current) return;
+    const landed = { autoAlpha: 1, scale: 1 };
+    if (prefersReducedMotion()) {
+      gsap10.set(ref.current, landed);
+      return;
+    }
+    gsap10.fromTo(ref.current, { autoAlpha: 0.25, scale: 0.94 }, {
+      ...landed,
+      duration: DURATION.slow,
+      ease: EASE.standard
+    });
+  }, { scope: ref });
+  return /* @__PURE__ */ jsx27("div", { ref, className: "flex", children });
+}
+function Media({ children }) {
+  return /* @__PURE__ */ jsx27("div", { className: "flex w-full justify-center py-[var(--gap-group)]", children });
+}
+
+// src/loading/loading.jsx
+import { useMemo as useMemo5, useRef as useRef12 } from "react";
+import { useGSAP as useGSAP7 } from "@gsap/react";
+import gsap11 from "gsap";
+
+// src/loading/shapeMorph.js
+var TAU2 = Math.PI * 2;
+var CENTRE = 50;
+var SAMPLES = 120;
+var WALK = 720;
+var START = -Math.PI / 2;
+var round2 = (n) => Math.round(n * 100) / 100;
+var SVG_NS = "http://www.w3.org/2000/svg";
+function walk(d) {
+  const svg = document.createElementNS(SVG_NS, "svg");
+  svg.setAttribute("aria-hidden", "true");
+  svg.style.cssText = "position:absolute;width:0;height:0;overflow:hidden;pointer-events:none";
+  const path = document.createElementNS(SVG_NS, "path");
+  path.setAttribute("d", d);
+  svg.appendChild(path);
+  document.body.appendChild(svg);
+  const total = path.getTotalLength();
+  const points = [];
+  for (let i = 0; i < WALK; i += 1) {
+    const { x, y } = path.getPointAtLength(total * i / WALK);
+    points.push([Math.atan2(y - CENTRE, x - CENTRE), Math.hypot(x - CENTRE, y - CENTRE)]);
+  }
+  svg.remove();
+  return points;
+}
+function radiiFrom(points) {
+  const unwrapped = [];
+  let previous2 = points[0][0];
+  for (const [angle, radius] of points) {
+    let a = angle;
+    while (a - previous2 > Math.PI) a -= TAU2;
+    while (previous2 - a > Math.PI) a += TAU2;
+    unwrapped.push([a, radius]);
+    previous2 = a;
+  }
+  if (unwrapped[unwrapped.length - 1][0] < unwrapped[0][0]) unwrapped.reverse();
+  const first = unwrapped[0][0];
+  const inside = (angle) => {
+    let a = angle;
+    while (a < first) a += TAU2;
+    while (a >= first + TAU2) a -= TAU2;
+    return a;
+  };
+  const radii = new Float64Array(SAMPLES);
+  for (let i = 0; i < SAMPLES; i += 1) {
+    const target = inside(START + TAU2 * i / SAMPLES);
+    let lo = 0;
+    let hi = unwrapped.length - 1;
+    while (hi - lo > 1) {
+      const mid = lo + hi >> 1;
+      if (unwrapped[mid][0] <= target) lo = mid;
+      else hi = mid;
+    }
+    const [a0, r0] = unwrapped[lo];
+    const [a1, r1] = unwrapped[hi];
+    const span = a1 - a0;
+    radii[i] = span === 0 ? r0 : r0 + (r1 - r0) * (target - a0) / span;
+  }
+  return radii;
+}
+var measured = /* @__PURE__ */ new Map();
+function radiiOf({ name, points } = {}) {
+  if (typeof document === "undefined") return null;
+  const key = `${name}|${points ?? ""}`;
+  if (measured.has(key)) return measured.get(key);
+  const d = shapePath(name, { points });
+  if (!d) return null;
+  const radii = radiiFrom(walk(d));
+  measured.set(key, radii);
+  return radii;
+}
+function morphPath(from, to, t) {
+  if (!from || !to) return null;
+  const points = new Array(SAMPLES);
+  for (let i = 0; i < SAMPLES; i += 1) {
+    const radius = from[i] + (to[i] - from[i]) * t;
+    const angle = START + TAU2 * i / SAMPLES;
+    points[i] = `${round2(CENTRE + Math.cos(angle) * radius)} ${round2(CENTRE + Math.sin(angle) * radius)}`;
+  }
+  return `M ${points[0]} L ${points.slice(1).join(" L ")} Z`;
+}
+
+// src/loading/loading.jsx
+import { jsx as jsx28 } from "react/jsx-runtime";
+var SIZE_TOKEN4 = {
+  sm: "var(--control-size-sm)",
+  md: "var(--control-size-md)",
+  lg: "var(--control-size-lg)"
+};
+var LOADER_SHAPES = [
+  { name: "cookie", points: 20 },
+  { name: "triangle" },
+  { name: "diamond" }
+];
+var MORPH2 = 0.6;
+var HOLD = 0.25;
+var SPIN = 6;
+var SPIN_STILL = 12;
+function Loading({
+  size = "sm",
+  color = "primary",
+  shapes = LOADER_SHAPES,
+  label = "Cargando",
+  className,
+  style,
+  ...props
+}) {
+  var _a, _b;
+  verifyTypesLoading({ size, color, shapes, label });
+  const svgRef = useRef12(null);
+  const pathRef = useRef12(null);
+  const box = SIZE_TOKEN4[size] ?? size;
+  const fill = ACCENTS[color] ?? color;
+  const cycle = useMemo5(
+    () => shapes.map((shape) => `${shape.name}|${shape.points ?? ""}`).join(","),
+    [shapes]
+  );
+  const initial = shapePath((_a = shapes[0]) == null ? void 0 : _a.name, { points: (_b = shapes[0]) == null ? void 0 : _b.points }) ?? "";
+  useGSAP7(() => {
+    const svg = svgRef.current;
+    const path = pathRef.current;
+    if (!svg || !path) return;
+    const still = prefersReducedMotion();
+    gsap11.to(svg, {
+      rotate: 360,
+      duration: still ? SPIN_STILL : SPIN,
+      repeat: -1,
+      ease: "none"
+    });
+    if (still) return;
+    const radii = shapes.map(radiiOf);
+    if (radii.some((entry) => !entry)) return;
+    const timeline = gsap11.timeline({ repeat: -1 });
+    radii.forEach((from, index) => {
+      const to = radii[(index + 1) % radii.length];
+      const state = { t: 0 };
+      timeline.to(state, {
+        t: 1,
+        duration: MORPH2,
+        /*`EASE.inOut` es la unica del vocabulario que arranca y acaba practicamente parada y
+          reparte el viaje por igual - la que motion.js describe para mirar algo
+          transformarse. Una curva de cabeza rapida dejaria el morph hecho en el primer
+          cuarto y dos tercios del tiempo sin ensenar nada.*/
+        ease: EASE.inOut,
+        onUpdate: () => path.setAttribute("d", morphPath(from, to, state.t))
+      }, `+=${HOLD}`);
+    });
+  }, { dependencies: [cycle] });
+  return /* @__PURE__ */ jsx28(
+    "svg",
+    {
+      ref: svgRef,
+      viewBox: "0 0 100 100",
+      role: "status",
+      "aria-label": label,
+      className,
+      style: {
+        width: box,
+        height: box,
+        display: "block",
+        // El color va por `currentColor` para que el consumidor pueda pisarlo desde CSS sin
+        // tener que saber que dentro hay un <path>.
+        color: fill,
+        ...style
+      },
+      ...props,
+      children: /* @__PURE__ */ jsx28("path", { ref: pathRef, d: initial, fill: "currentColor" })
+    }
+  );
+}
+
+// src/navbar/navbar.jsx
+import { useRef as useRef13, useState as useState11 } from "react";
+import { useGSAP as useGSAP8 } from "@gsap/react";
+import gsap12 from "gsap";
+import { twMerge as twMerge12 } from "tailwind-merge";
+import { Fragment as Fragment5, jsx as jsx29, jsxs as jsxs18 } from "react/jsx-runtime";
+var DESKTOP_ALIGN = {
+  center: "justify-center",
+  top: "justify-start pt-8"
+};
+var ITEM_BASE = "mott-state-layer mott-morph inline-flex items-center justify-center gap-2 border-0 cursor-pointer p-0 mott-label-large mott-trim [--mott-morph-bg:var(--md-sys-color-surface-container)] text-[var(--md-sys-color-on-surface-variant)] transition-[color] duration-[var(--duration-morph)] ease-[var(--ease-morph)]";
+var ITEM_SELECTED = "[--mott-morph-bg:var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)]";
+var attachRef = (node, store, i, forwarded) => {
+  if (i === null) store.current = node;
+  else store.current[i] = node;
+  if (typeof forwarded === "function") forwarded(node);
+  else if (forwarded) forwarded.current = node;
+};
+function NavItems({ items, selectedItem, onSelect, vertical }) {
+  const itemRefs = useRef13([]);
+  const containerRef = useRef13(null);
+  const prevSelectedRef = useRef13(selectedItem);
+  const prevCountRef = useRef13(null);
+  useGSAP8(() => {
+    itemRefs.current.length = items.length;
+    const shapeOf = (i) => selectionShape(i === selectedItem);
+    const settleOnly = prevCountRef.current !== items.length;
+    prevCountRef.current = items.length;
+    if (settleOnly) {
+      itemRefs.current.forEach((el, i) => {
+        if (el) gsap12.set(el, shapeOf(i));
+      });
+      prevSelectedRef.current = selectedItem;
+      return;
+    }
+    const changed = /* @__PURE__ */ new Set([prevSelectedRef.current, selectedItem]);
+    prevSelectedRef.current = selectedItem;
+    changed.forEach((i) => {
+      const el = itemRefs.current[i];
+      if (el) morphSelection(el, i === selectedItem);
+    });
+  }, { dependencies: [selectedItem, items.length], scope: containerRef });
+  return /* @__PURE__ */ jsx29("div", { ref: containerRef, className: twMerge12("inline-flex gap-[var(--gap-group)]", vertical && "flex-col"), children: items.map((item, i) => {
+    const iconOnly = !item.label;
+    return /* @__PURE__ */ jsxs18(
+      "button",
+      {
+        ref: (el) => attachRef(el, itemRefs, i, item.buttonRef),
+        type: "button",
+        onClick: () => onSelect(i),
+        "aria-pressed": selectedItem === i,
+        className: twMerge12(ITEM_BASE, selectedItem === i && ITEM_SELECTED),
+        ...pressHandlers(),
+        style: {
+          height: "var(--control-size-md)",
+          ...iconOnly ? { width: "var(--control-size-md)" } : { padding: "0 20px" }
+        },
+        children: [
+          item.icon && (typeof item.icon === "string" ? /* @__PURE__ */ jsx29(Icon, { name: item.icon }) : item.icon),
+          item.label && /* @__PURE__ */ jsx29("span", { children: item.label })
+        ]
+      },
+      item.id ?? i
+    );
+  }) });
+}
+function LogoButton({ logo }) {
+  const ref = useRef13(null);
+  const didMountRef = useRef13(false);
+  useGSAP8(() => {
+    if (!ref.current) return;
+    const shape = selectionShape(!!logo.active);
+    if (!didMountRef.current) {
+      didMountRef.current = true;
+      gsap12.set(ref.current, shape);
+      return;
+    }
+    morphSelection(ref.current, !!logo.active);
+  }, { dependencies: [logo.active] });
+  return /* @__PURE__ */ jsx29(
+    "button",
+    {
+      ref: (el) => attachRef(el, ref, null, logo.buttonRef),
+      type: "button",
+      onClick: logo.onClick,
+      "aria-pressed": !!logo.active,
+      "aria-label": logo.label ?? "Inicio",
+      className: twMerge12(ITEM_BASE, logo.active && ITEM_SELECTED),
+      ...pressHandlers(),
+      style: {
+        width: "var(--control-size-md)",
+        height: "var(--control-size-md)"
+      },
+      children: typeof logo.icon === "string" ? /* @__PURE__ */ jsx29(Icon, { name: logo.icon }) : logo.icon
+    }
+  );
+}
+function Navbar({
+  items = [],
+  selected,
+  defaultSelected = null,
+  onChange,
+  logo,
+  align = "top",
+  className,
+  style
+}) {
+  verifyTypesNavbar({ items, logo, selected, defaultSelected, onChange, align });
+  const [internalSelected, setInternalSelected] = useState11(defaultSelected);
+  const isControlled = selected !== void 0;
+  const selectedItem = isControlled ? selected : internalSelected;
+  const handleSelect = (i) => {
+    if (!isControlled) setInternalSelected(i);
+    onChange == null ? void 0 : onChange(i, items[i]);
+  };
+  return /* @__PURE__ */ jsxs18(Fragment5, { children: [
+    /* @__PURE__ */ jsxs18(
+      "nav",
+      {
+        className: twMerge12(
+          "hidden md:flex sticky top-0 h-dvh w-fit shrink-0 flex-col items-center px-1 gap-[var(--gap-group)]",
+          DESKTOP_ALIGN[align] ?? DESKTOP_ALIGN.center,
+          className
+        ),
+        style,
+        children: [
+          logo && /* @__PURE__ */ jsx29(LogoButton, { logo }),
+          /* @__PURE__ */ jsx29(NavItems, { items, selectedItem, onSelect: handleSelect, vertical: true })
+        ]
+      }
+    ),
+    /* @__PURE__ */ jsx29(
+      "nav",
+      {
+        className: twMerge12(
+          "flex md:hidden fixed bottom-4 left-1/2 z-[var(--z-nav)] -translate-x-1/2 items-center gap-3",
+          className
+        ),
+        style,
+        children: /* @__PURE__ */ jsx29(
+          "div",
+          {
+            className: "flex items-center gap-1 rounded-[var(--radius-full)] bg-[var(--md-sys-color-surface)] p-1",
+            style: { boxShadow: "var(--shadow-floating)" },
+            children: /* @__PURE__ */ jsx29(NavItems, { items, selectedItem, onSelect: handleSelect, vertical: false })
+          }
+        )
+      }
+    )
+  ] });
+}
+
+// src/dragScroll/dragScroll.jsx
+import { useCallback as useCallback5, useEffect as useEffect8, useLayoutEffect as useLayoutEffect2, useRef as useRef14, useState as useState12 } from "react";
+import { twMerge as twMerge13 } from "tailwind-merge";
+import gsap13 from "gsap";
+import { Draggable as Draggable2 } from "gsap/Draggable";
+import { InertiaPlugin } from "gsap/InertiaPlugin";
+import { jsx as jsx30 } from "react/jsx-runtime";
+gsap13.registerPlugin(Draggable2, InertiaPlugin);
+var DRAG_TYPE = { y: "scrollTop", x: "scrollLeft", both: "scroll" };
+var EDGE_RESISTANCE = 0.85;
+function useDragScroll(ref, { axis = "y", inertia = true, disabled = false } = {}) {
+  useEffect8(() => {
+    if (disabled || !ref.current) return;
+    if (typeof window !== "undefined" && !window.matchMedia("(pointer: fine)").matches) return;
+    const el = ref.current;
+    let draggable = null;
+    const overflows = () => axis === "x" ? el.scrollWidth > el.clientWidth : axis === "both" ? el.scrollWidth > el.clientWidth || el.scrollHeight > el.clientHeight : el.scrollHeight > el.clientHeight;
+    const sync = () => {
+      if (overflows() && !draggable) {
+        [draggable] = Draggable2.create(el, {
+          type: DRAG_TYPE[axis] ?? DRAG_TYPE.y,
+          inertia,
+          edgeResistance: EDGE_RESISTANCE,
+          minimumMovement: 3,
+          dragClickables: true,
+          cursor: "grab",
+          activeCursor: "grabbing"
+        });
+      } else if (!overflows() && draggable) {
+        draggable.kill();
+        draggable = null;
+        el.style.cursor = "";
+      }
+    };
+    sync();
+    const observer = new ResizeObserver(sync);
+    observer.observe(el);
+    if (el.firstElementChild) observer.observe(el.firstElementChild);
+    return () => {
+      observer.disconnect();
+      draggable == null ? void 0 : draggable.kill();
+      el.style.cursor = "";
+    };
+  }, [ref, axis, inertia, disabled]);
+}
+function useEdgeFade(ref, axis, size) {
+  const [edges, setEdges] = useState12([0, 0]);
+  const measure = useCallback5(() => {
+    const el = ref.current;
+    if (!el) return;
+    const horizontal = axis === "x";
+    const pos = horizontal ? el.scrollLeft : el.scrollTop;
+    const total = horizontal ? el.scrollWidth : el.scrollHeight;
+    const visible = horizontal ? el.clientWidth : el.clientHeight;
+    const remaining = total - visible - pos;
+    setEdges([Math.min(pos, size), Math.min(Math.max(remaining, 0), size)]);
+  }, [ref, axis, size]);
+  useLayoutEffect2(() => {
+    const el = ref.current;
+    if (!el) return;
+    measure();
+    el.addEventListener("scroll", measure, { passive: true });
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    if (el.firstElementChild) observer.observe(el.firstElementChild);
+    return () => {
+      el.removeEventListener("scroll", measure);
+      observer.disconnect();
+    };
+  }, [ref, measure]);
+  return edges;
+}
+function DragScroll({
+  children,
+  axis = "y",
+  inertia = true,
+  disabled = false,
+  fade = true,
+  fadeSize,
+  className,
+  style,
+  ...props
+}) {
+  verifyTypesDragScroll({ axis, inertia, disabled, fade, fadeSize });
+  const scrollRef = useRef14(null);
+  useDragScroll(scrollRef, { axis, inertia, disabled });
+  const size = fadeSize ?? 32;
+  const [fadeStart, fadeEnd] = useEdgeFade(scrollRef, axis, fade ? size : 0);
+  const horizontal = axis === "x";
+  return /* @__PURE__ */ jsx30(
+    "div",
+    {
+      ref: scrollRef,
+      className: twMerge13(fade && (horizontal ? "mott-fade-x" : "mott-fade-y"), className),
+      style: {
+        overflowX: horizontal || axis === "both" ? "auto" : "hidden",
+        overflowY: horizontal ? "hidden" : "auto",
+        "--mott-fade-start": `${fadeStart}px`,
+        "--mott-fade-end": `${fadeEnd}px`,
+        ...style
+      },
+      ...props,
+      children
+    }
+  );
 }
 
 // src/GeneratorGradientProfile/GeneratorGradientProfile.jsx
-import { useCallback as useCallback5, useEffect as useEffect8, useMemo as useMemo4, useRef as useRef14, useState as useState12 } from "react";
+import { useCallback as useCallback6, useEffect as useEffect9, useMemo as useMemo6, useRef as useRef15, useState as useState13 } from "react";
 
 // src/GeneratorGradientProfile/gradientCanvas.js
 var CARD_W = 440;
@@ -4170,7 +4703,7 @@ function buildGradientStops(seedHex, mode, recipe = GRADIENT_RECIPE) {
 }
 
 // src/GeneratorGradientProfile/GeneratorGradientProfile.jsx
-import { jsx as jsx30, jsxs as jsxs18 } from "react/jsx-runtime";
+import { jsx as jsx31, jsxs as jsxs19 } from "react/jsx-runtime";
 function GeneratorGradientProfile({
   name = "",
   email = "",
@@ -4180,16 +4713,16 @@ function GeneratorGradientProfile({
 }) {
   verifyTypesGradientProfile({ name, email, showControls, verifiedLabel });
   const { colorSeedHex, resolvedMode } = useTheme();
-  const canvasRef = useRef14(null);
-  const [nameValue, setNameValue] = useState12(name);
-  const [emailValue, setEmailValue] = useState12(email);
-  useEffect8(() => setNameValue(name), [name]);
-  useEffect8(() => setEmailValue(email), [email]);
-  const ramp = useMemo4(
+  const canvasRef = useRef15(null);
+  const [nameValue, setNameValue] = useState13(name);
+  const [emailValue, setEmailValue] = useState13(email);
+  useEffect9(() => setNameValue(name), [name]);
+  useEffect9(() => setEmailValue(email), [email]);
+  const ramp = useMemo6(
     () => buildGradientStops(colorSeedHex, resolvedMode),
     [colorSeedHex, resolvedMode]
   );
-  const render2 = useCallback5(() => {
+  const render2 = useCallback6(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -4199,25 +4732,25 @@ function GeneratorGradientProfile({
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     drawCard(ctx, { name: nameValue, email: emailValue, ramp, verifiedLabel });
   }, [nameValue, emailValue, ramp, verifiedLabel]);
-  useEffect8(() => {
+  useEffect9(() => {
     render2();
   }, [render2]);
-  return /* @__PURE__ */ jsxs18(
+  return /* @__PURE__ */ jsxs19(
     "div",
     {
       className: ["flex w-full flex-col items-center gap-[var(--gap-page)] md:flex-row md:items-start md:justify-center", className].filter(Boolean).join(" "),
       children: [
-        showControls && /* @__PURE__ */ jsxs18("div", { className: "flex w-full max-w-xs flex-col gap-[var(--gap-page)]", children: [
-          /* @__PURE__ */ jsxs18("div", { className: "flex flex-col gap-[var(--gap-section)]", children: [
-            /* @__PURE__ */ jsx30(Text, { variant: "title-medium", as: "h2", children: "Tarjeta de perfil" }),
-            /* @__PURE__ */ jsx30(Text, { variant: "body-small", tone: "muted", children: "El degradado se genera a partir del acento del tema." })
+        showControls && /* @__PURE__ */ jsxs19("div", { className: "flex w-full max-w-xs flex-col gap-[var(--gap-page)]", children: [
+          /* @__PURE__ */ jsxs19("div", { className: "flex flex-col gap-[var(--gap-section)]", children: [
+            /* @__PURE__ */ jsx31(Text, { variant: "title-medium", as: "h2", children: "Tarjeta de perfil" }),
+            /* @__PURE__ */ jsx31(Text, { variant: "body-small", tone: "muted", children: "El degradado se genera a partir del acento del tema." })
           ] }),
-          /* @__PURE__ */ jsxs18("div", { className: "flex flex-col gap-[var(--gap-group)]", children: [
-            /* @__PURE__ */ jsx30(Input, { label: "Nombre", value: nameValue, onChange: setNameValue }),
-            /* @__PURE__ */ jsx30(Input, { label: "Correo", type: "email", value: emailValue, onChange: setEmailValue })
+          /* @__PURE__ */ jsxs19("div", { className: "flex flex-col gap-[var(--gap-group)]", children: [
+            /* @__PURE__ */ jsx31(Input, { label: "Nombre", value: nameValue, onChange: setNameValue }),
+            /* @__PURE__ */ jsx31(Input, { label: "Correo", type: "email", value: emailValue, onChange: setEmailValue })
           ] })
         ] }),
-        /* @__PURE__ */ jsx30("div", { className: "w-full max-w-[300px]", children: /* @__PURE__ */ jsx30(
+        /* @__PURE__ */ jsx31("div", { className: "w-full max-w-[300px]", children: /* @__PURE__ */ jsx31(
           "canvas",
           {
             ref: canvasRef,
@@ -4246,6 +4779,7 @@ export {
   GoogleIcon,
   Icon,
   Input,
+  LOADER_SHAPES,
   Loading,
   LoginModal,
   MORPH,
@@ -4253,6 +4787,7 @@ export {
   ModalAnimation,
   MorphAnimation,
   Navbar,
+  OnboardingModal,
   OtpModal,
   PRESS_SCALE,
   RecoverPasswordModal,

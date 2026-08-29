@@ -26,6 +26,7 @@ import LoginModal from '../src/authModals/loginModal.jsx';
 import RegisterModal from '../src/authModals/registerModal.jsx';
 import OtpModal from '../src/authModals/otpModal.jsx';
 import RecoverPasswordModal from '../src/authModals/recoverPasswordModal.jsx';
+import OnboardingModal from '../src/onBoardingModal/onboardingModal.jsx';
 
 function Section({ title, wide, children }) {
   return (
@@ -231,8 +232,7 @@ function AuthDemo() {
     setScreen('recover');
   };
 
-  const brand = { brand: 'aguilarIA', logo: <Shape name="flower" size="20px" color="primary" /> };
-
+  
   return (
     <>
       <Row>
@@ -243,7 +243,6 @@ function AuthDemo() {
       </Row>
 
       <LoginModal
-        {...brand}
         open={screen === 'login'}
         onClose={close}
         triggerRef={loginRef}
@@ -259,7 +258,6 @@ function AuthDemo() {
       />
 
       <RegisterModal
-        {...brand}
         open={screen === 'register'}
         onClose={close}
         triggerRef={registerRef}
@@ -278,7 +276,6 @@ function AuthDemo() {
       />
 
       <OtpModal
-        {...brand}
         open={screen === 'otp'}
         onClose={close}
         triggerRef={otpRef}
@@ -291,7 +288,6 @@ function AuthDemo() {
       />
 
       <RecoverPasswordModal
-        {...brand}
         open={screen === 'recover'}
         onClose={close}
         triggerRef={recoverRef}
@@ -331,6 +327,34 @@ function Row({ children }) {
     <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
       {children}
     </div>
+  );
+}
+
+
+/*El onboarding se lleva su propio estado y su propio trigger: lo unico que hay que cablear desde
+  fuera es abrirlo y recoger lo que devuelve al terminar.*/
+function OnboardingDemo() {
+  const [open, setOpen] = useState(false);
+  const triggerRef = useRef(null);
+  const { success } = useToast();
+
+  return (
+    <>
+      <Button ref={triggerRef} variant="action" onClick={() => setOpen(true)}>
+        Abrir onboarding
+      </Button>
+      <Text variant="body-small" tone="muted">
+        Cuatro pasos, un solo boton. El paso del color se aplica al tema en vivo.
+      </Text>
+      <OnboardingModal
+        open={open}
+        onClose={() => setOpen(false)}
+        triggerRef={triggerRef}
+        onComplete={({ name, avatarSeed, colorSeedHex }) => {
+          success({ title: `Hola, ${name}`, message: `avatar "${avatarSeed}" · acento ${colorSeedHex}` });
+        }}
+      />
+    </>
   );
 }
 
@@ -648,11 +672,29 @@ export default function App() {
                 />
               </Section>
 
-              <Section title="Loading">
+              <Section title="Loading — las formas de M3 transformándose">
+                <Text variant="body-medium" tone="muted">
+                  El ciclo por defecto es <code>LOADER_SHAPES</code>: cookie de 20 puntas, cookie de 6, triángulo
+                  y diamante. No hay corte entre forma y forma — cada contorno se mide como radio por ángulo y se
+                  interpola, así que una se convierte en la otra de verdad. El giro va aparte, para que no se
+                  pare en las pausas.
+                </Text>
                 <Row>
                   <Loading size="sm" color="primary" />
                   <Loading size="md" color="danger" />
                   <Loading size="lg" color="#7c3aed" />
+                  <Loading size="120px" color="success" />
+                </Row>
+                <Text variant="body-medium" tone="muted">
+                  Con <code>shapes</code> el ciclo es otro. Acá solo formas onduladas, que se transforman entre
+                  sí de manera mucho más suave.
+                </Text>
+                <Row>
+                  <Loading
+                    size="lg"
+                    color="secondary"
+                    shapes={[{ name: 'flower', points: 5 }, { name: 'flower', points: 8 }, { name: 'cookie', points: 12 }]}
+                  />
                 </Row>
               </Section>
 
@@ -674,6 +716,10 @@ export default function App() {
                     </div>
                   </Dropdown>
                 </div>
+              </Section>
+
+              <Section title="OnboardingModal">
+                <OnboardingDemo />
               </Section>
 
               <Section title="CustomModal — anclada al botón">

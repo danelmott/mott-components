@@ -1,79 +1,142 @@
 'use client';
-import { useRef } from 'react';
+import { useMemo, useRef } from 'react';
 import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
+import { EASE, prefersReducedMotion } from '../animations/motion.js';
+import { shapePath } from '../shapes/shapePaths.js';
 import { ACCENTS } from '../theme/roles.js';
-import { prefersReducedMotion } from '../animations/motion.js';
 import { verifyTypesLoading } from '../utils/verifyTypes.js';
+import { morphPath, radiiOf } from './shapeMorph.js';
 
 
-const SHAPES = [
-    '50% 50% 50% 50% / 50% 50% 50% 50%',   // circle
-    '30% 30% 30% 30% / 30% 30% 30% 30%',   // squircle
-    '22% 22% 22% 22% / 22% 22% 22% 22%',   // rounded square
-    '30% 30% 30% 30% / 30% 30% 30% 30%',   // squircle (closes the loop)
+const SIZE_TOKEN = {
+    sm: 'var(--control-size-sm)',
+    md: 'var(--control-size-md)',
+    lg: 'var(--control-size-lg)',
+};
+
+/*El ciclo por defecto, exportado para que un consumidor pueda partir de el en vez de reinventarlo.
+
+  Mezcla ondas y poligonos a proposito: dos formas blandas seguidas se transforman una en otra sin
+  que se note gran cosa, y es el paso de una onda a una esquina lo que hace que el morph de M3 se
+  lea vivo.
+
+  Aqui NO va el cookie de 6. Con tan pocos bumps sobre un radio interior tan alto la onda deja de
+  leerse como una onda: sale un poligono irregular de lobulos gordos que a tamano de loader parece
+  un error de dibujo mas que una forma. Sigue existiendo - es `cookie` con `points: 6`, y cualquiera
+  puede pedirlo por `shapes` - simplemente no es una forma que aguante estar en bucle.*/
+export const LOADER_SHAPES = [
+    { name: 'cookie', points: 20 },
+    { name: 'triangle' },
+    { name: 'diamond' },
 ];
 
-// regular pentagon (5 vertices) - needs clip-path; border-radius cannot make straight corners
-const PENTAGON = 'polygon(50% 0%, 97.55% 34.55%, 79.4% 90.45%, 20.6% 90.45%, 2.45% 34.55%)';
+/*Un morph mas largo que cualquier respuesta a un clic, porque no responde a nada: es un viaje que
+  se mira. La pausa en cada forma es lo que deja leerla antes de que se deshaga - sin ella el loader
+  no ensena ninguna de sus formas, solo la transicion perpetua entre ellas.*/
+const MORPH = 0.6;
+const HOLD = 0.25;
 
-//component for loading in mott-design - shapes morphing in a loop, animated with GSAP
-export default function Loading({ size = 'sm', color = 'primary', className, style, ...props }) {
-    verifyTypesLoading({ size, color });
-    const shapeRef = useRef(null);
-    const box = `var(--control-size-${size})`;
-    const background = ACCENTS[color] ?? color;
+// Una vuelta completa. Deliberadamente incomensurable con el ciclo de formas (3 x 0.85 = 2.55s): asi
+// la forma no vuelve nunca al mismo angulo y el bucle no se delata.
+const SPIN = 6;
+// Con prefers-reduced-motion no queda morph, asi que el giro es lo unico que dice "sigo trabajando".
+// Tan lento que no pulsa, pero se mueve.
+const SPIN_STILL = 12;
+
+
+/*Loader indeterminado: las formas de M3 transformandose una en otra, girando sin parar.
+
+  Dibuja un <path> y no un <div> con `clip-path` como hacia antes, porque lo que se anima es la
+  geometria en si: reescribir el `d` es una linea, y a traves de un clip-path habria que reescribir
+  el <clipPath> del <defs> para conseguir exactamente lo mismo.*/
+export default function Loading({
+    size = 'sm',
+    color = 'primary',
+    shapes = LOADER_SHAPES,
+    label = 'Cargando',
+    className,
+    style,
+    ...props
+}) {
+    verifyTypesLoading({ size, color, shapes, label });
+
+    const svgRef = useRef(null);
+    const pathRef = useRef(null);
+
+    const box = SIZE_TOKEN[size] ?? size;
+    const fill = ACCENTS[color] ?? color;
+
+    // Identidad del ciclo, no del array: `shapes` casi siempre llega escrito en el JSX, o sea nuevo
+    // en cada render, y sin esto el timeline se reconstruiria en cada pasada.
+    const cycle = useMemo(
+        () => shapes.map((shape) => `${shape.name}|${shape.points ?? ''}`).join(','),
+        [shapes]
+    );
+
+    // Primer pintado: el path REAL de la primera forma, con sus arcos, no el poligono muestreado.
+    // Es lo que se ve en SSR y antes de que corra el efecto, y es exacto.
+    const initial = shapePath(shapes[0]?.name, { points: shapes[0]?.points }) ?? '';
 
     useGSAP(() => {
-        const el = shapeRef.current;
+        const svg = svgRef.current;
+        const path = pathRef.current;
+        if (!svg || !path) return;
 
-        /*The shape loop is decoration; the spin is the part that actually says "still working".
-          Under reduced motion the morphing stops and only a slow rotation stays, so the component
-          still reads as a spinner without the pulsing.*/
-        if (prefersReducedMotion()) {
-            gsap.to(el, { rotate: 360, duration: 12, repeat: -1, ease: 'none' });
-            return;
-        }
+        const still = prefersReducedMotion();
 
-        const tl = gsap.timeline({ repeat: -1 });
+        gsap.to(svg, {
+            rotate: 360,
+            duration: still ? SPIN_STILL : SPIN,
+            repeat: -1,
+            ease: 'none',
+        });
 
-        const morph = (shape) => {
-            tl.to(el, { borderRadius: shape, scale: 1.12, duration: 0.5, ease: 'power2.out' }, '+=0.05')
-                .to(el, { scale: 1, duration: 0.45, ease: 'power2.in' });
-        };
+        if (still) return;
 
-        morph(SHAPES[1]); // squircle
-        morph(SHAPES[2]); // rounded square
-        morph(SHAPES[3]); // squircle back
+        const radii = shapes.map(radiiOf);
+        // Sin DOM que medir no hay morph posible; el loader se queda en su forma estatica girando,
+        // que sigue siendo un loader.
+        if (radii.some((entry) => !entry)) return;
 
-        tl.to(el, { opacity: 0, scale: 0.85, duration: 0.2, ease: 'power2.in' }, '+=0.05')
-            .set(el, { clipPath: PENTAGON })
-            .to(el, { opacity: 1, scale: 1.12, duration: 0.3, ease: 'power2.out' })
-            .to(el, { scale: 1, duration: 0.45, ease: 'power2.in' });
+        const timeline = gsap.timeline({ repeat: -1 });
 
-        tl.to(el, { opacity: 0, scale: 0.85, duration: 0.2, ease: 'power2.in' }, '+=0.3')
-            .set(el, { clipPath: 'none', borderRadius: SHAPES[0] })
-            .to(el, { opacity: 1, scale: 1.12, duration: 0.3, ease: 'power2.out' })
-            .to(el, { scale: 1, duration: 0.45, ease: 'power2.in' });
+        radii.forEach((from, index) => {
+            const to = radii[(index + 1) % radii.length];
+            const state = { t: 0 };
 
-        gsap.to(el, { rotate: 360, duration: 5, repeat: -1, ease: 'none' });
-    }, []);
+            timeline.to(state, {
+                t: 1,
+                duration: MORPH,
+                /*`EASE.inOut` es la unica del vocabulario que arranca y acaba practicamente parada y
+                  reparte el viaje por igual - la que motion.js describe para mirar algo
+                  transformarse. Una curva de cabeza rapida dejaria el morph hecho en el primer
+                  cuarto y dos tercios del tiempo sin ensenar nada.*/
+                ease: EASE.inOut,
+                onUpdate: () => path.setAttribute('d', morphPath(from, to, state.t)),
+            }, `+=${HOLD}`);
+        });
+    }, { dependencies: [cycle] });
 
     return (
-        <div
-            ref={shapeRef}
+        <svg
+            ref={svgRef}
+            viewBox="0 0 100 100"
             role="status"
-            aria-label="Cargando"
+            aria-label={label}
             className={className}
             style={{
                 width: box,
                 height: box,
-                backgroundColor: background,
-                borderRadius: SHAPES[0],
-                boxShadow: '0 4px 14px rgb(0 0 0 / 0.2)',
+                display: 'block',
+                // El color va por `currentColor` para que el consumidor pueda pisarlo desde CSS sin
+                // tener que saber que dentro hay un <path>.
+                color: fill,
                 ...style,
             }}
             {...props}
-        />
+        >
+            <path ref={pathRef} d={initial} fill="currentColor" />
+        </svg>
     )
 }

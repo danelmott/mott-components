@@ -248,7 +248,7 @@ soft step of the neutral family and `ghost` has no surface to soften, so on thos
 | `RecoverPasswordModal` | password recovery in two steps — the code, then the new password — in one panel |
 | `Icon` | Material Symbols Rounded with `fill`, `weight`, `grade`, `opticalSize` |
 | `GoogleIcon` | the Google mark in its own four brand colours — the one thing here that does not follow the theme |
-| `Loading` | spinner, sizes `sm`/`md`/`lg` |
+| `Loading` | indeterminate spinner: the M3 shapes morphing into one another while it turns. `size` takes a token or any CSS length; `shapes` replaces the cycle (`LOADER_SHAPES` is the default) |
 | `Progress` | determinate bar, or indeterminate when `value` is omitted |
 | `Navbar` | rail with items, optional logo, `top` or `center` alignment |
 | `DragScroll` / `useDragScroll` | drag-to-scroll with inertia and edge fade; hook form for your own element |
@@ -442,7 +442,7 @@ const [error, setError] = useState('');
   open={open}
   onClose={() => setOpen(false)}
   triggerRef={buttonRef}
-  brand="aguilarIA"
+  brand="Your brand"
   logo={<Shape name="flower" size="20px" />}
   email={email} onEmailChange={setEmail}
   password={password} onPasswordChange={setPassword}

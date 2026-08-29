@@ -8,7 +8,6 @@ import LoginModal from '../src/authModals/loginModal.jsx';
 import RegisterModal from '../src/authModals/registerModal.jsx';
 import OtpModal from '../src/authModals/otpModal.jsx';
 import RecoverPasswordModal from '../src/authModals/recoverPasswordModal.jsx';
-import Shape from '../src/shapes/shapes.jsx';
 import '../src/globals.css';
 
 const params = new URLSearchParams(location.search);
@@ -17,7 +16,6 @@ const mode = params.get('mode') ?? 'light';
 const filled = params.get('filled') === '1';
 const error = params.get('error') ?? undefined;
 
-const brand = { brand: 'aguilarIA', logo: <Shape name="flower" size="20px" color="primary" /> };
 const noop = () => {};
 
 function Harness() {
@@ -28,7 +26,7 @@ function Harness() {
 
     // `onSubmit`/`onGoogle` are ignored by the modals that do not take them, so one object covers
     // every screen here.
-    const common = { ...brand, open: true, onClose: noop, error, onGoogle: noop, onSwitch: noop, onSubmit: noop };
+    const common = { open: true, onClose: noop, error, onGoogle: noop, onSwitch: noop, onSubmit: noop };
 
     if (screen === 'register') {
         return (

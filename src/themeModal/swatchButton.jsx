@@ -8,11 +8,13 @@ import { onColorFor } from '../theme/palette.js';
 
 
 
+// El tamaño por defecto, que es el que usa ThemeModal. Es un prop para que el onboarding pueda
+// pedir uno mayor sin que aparezca un segundo componente de swatch que haya que mantener a la par.
 const SWATCH = 56;
 const SWATCH_CLASS = 'mott-shine mott-swatch flex items-center justify-center cursor-pointer border-0 p-0';
 
 
-export default function SwatchButton({ theme, selected, onSelect }) {
+export default function SwatchButton({ theme, selected, onSelect, size = SWATCH }) {
     const ref = useRef(null);
     const checkRef = useRef(null);
     const didMountRef = useRef(false);
@@ -46,8 +48,12 @@ export default function SwatchButton({ theme, selected, onSelect }) {
             className={SWATCH_CLASS}
             {...pressHandlers(selected ? MORPH_SCALE : 1)}
             style={{
-                width: SWATCH,
-                height: SWATCH,
+                /*El alto sale del ancho y no de un segundo numero: asi `size` admite tambien un
+                  porcentaje - una rejilla puede darle el ancho de su columna - y el swatch sigue
+                  siendo redondo sin que nadie tenga que calcular nada.*/
+                width: size,
+                height: 'auto',
+                aspectRatio: '1 / 1',
                 borderRadius: CIRCLE_RADIUS,
                 background: `linear-gradient(98deg, rgb(255 255 255 / 0) 22%, rgb(255 255 255 / 0.20) 76%, rgb(255 255 255 / 0.12) 100%), ${theme.hex}`,
                 '--mott-swatch-ring': selected ? '0.3' : '0.1',
