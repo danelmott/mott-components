@@ -1,4 +1,5 @@
 'use client';
+import { pressProps } from '../animations/motion.js';
 import Icon from '../icon/icon.jsx';
 import { controlTint } from '../theme/roles.js';
 import { verifyTypesIconButton } from '../utils/verifyTypes.js';
@@ -42,6 +43,10 @@ export default function FabButton({
                 ...style,
             }}
             {...props}
+            /*El pulsado va por GSAP, como en Button y por el mismo motivo (ver `mott-btn` en
+              globals.css). Aqui sin `scale` propio: un FAB es un control de tamano fijo, igual que
+              los del Navbar o los del ButtonGroup, asi que le vale el 0.94 que comparten todos.*/
+            {...pressProps(props)}
         >
             <Icon name={icon} size={dimensions.icon} />
         </button>

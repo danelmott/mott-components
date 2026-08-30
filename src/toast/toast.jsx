@@ -28,7 +28,8 @@ const VARIANT_ICONS = {
 const COUNTER_DRAG = 0.12;
 
 //component for toast in mott-design - semantic, animated with GSAP, drag to dismiss.
-//It renders into a fixed stack in the top-right corner (see toastStack.js), not where it is declared.
+//It renders into a fixed stack, not where it is declared: arriba a la derecha, en cualquier medida de
+//pantalla (ver toastStack.js y `[data-mott-toast-stack]` en globals.css).
 export default function Toast({
     variant = 'info',
     title,
@@ -231,10 +232,13 @@ export default function Toast({
                 // use, so everything that floats above the page sits at the same elevation.
                 backgroundColor: 'var(--md-sys-color-surface-container-high)',
                 boxShadow: 'var(--shadow-floating)',
-                // sized by its text, with no minimum: a short toast has no reason to drag empty space
-                // around. The cap comes from the stack, which has a fixed width - that is where the
-                // text starts wrapping.
-                maxWidth: '100%',
+                // El toast mide lo que mide su texto, sin minimo: un aviso corto no tiene por que
+                // arrastrar espacio vacio. Esta linea es solo donde deja de crecer, y es la que
+                // sustituye a la media query que habia aqui antes: en una pantalla ancha gana
+                // `--toast-width` (24rem) y ahi empieza a partir lineas; en una de 390px gana el
+                // 100% y el tope es el ancho que deje la pila. Un solo tope para las dos, en vez de
+                // dos comportamientos distintos segun el breakpoint.
+                maxWidth: 'min(var(--toast-width), 100%)',
                 // the stack sets `pointer-events: none` so it does not block the page; each toast
                 // re-enables itself
                 pointerEvents: 'auto',

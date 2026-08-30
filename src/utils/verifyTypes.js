@@ -83,9 +83,8 @@ function assertPlainObject(component, prop, value) {
     }
 }
 
-// NOTE: `color` (FabButton, Loading) and the `size` of Icon, Shape, Avatar and Loading do NOT
-// belong here. Those resolve with `PRESETS[x] ?? x` on purpose, so they accept any CSS color or
-// length — checking them against a list would be a false positive (e.g. color="#7c3aed").
+
+
 const CONTROL_SIZES = ['sm', 'md', 'lg'];
 const BUTTON_TYPES = ['button', 'submit', 'reset'];
 const TOAST_VARIANTS = ['info', 'success', 'warning', 'danger'];
@@ -175,24 +174,17 @@ export function verifyTypesIcon({ name, size, filled, weight, grade, opticalSize
 export function verifyTypesShape({ name, size, color, contentColor, points, rotate, label } = {}) {
     assertRequired('Shape', 'name', name);
     assertOneOf('Shape', 'name', name, SHAPE_NAMES);
-    // `size`, `color` and `contentColor` resolve with `PRESETS[x] ?? x`, so they are open sets - see
-    // the note above CONTROL_SIZES. Only their type can be checked here.
     assertType('Shape', 'size', size, 'string');
     assertType('Shape', 'color', color, 'string');
     assertType('Shape', 'contentColor', contentColor, 'string');
     assertType('Shape', 'label', label, 'string');
-    // under 3 there is no star left to draw, and past 24 the tips are thinner than the border of the
-    // element they sit in
     assertRange('Shape', 'points', points, 3, 24);
     assertRange('Shape', 'rotate', rotate, -360, 360);
-    /*`action`, `support`, `default`... are the *button* vocabulary: intents for something you click.
-      A shape is decoration, so it takes an accent or a CSS colour instead - and since that is an open
-      set, an intent slipped in here would sail through as an invalid background and the shape would
-      come out transparent with nothing to explain why.*/
+
     if (typeof color === 'string' && !ACCENTS[color] && CONTROL_NAMES.includes(color)) {
         warn('Shape', `\`color\` takes an accent (${Object.keys(ACCENTS).join(', ')}) or any CSS colour, not the button intent ${show(color)}.`);
     }
-    // silently ignoring it would look like the shape is broken, not like the prop is
+    
     if (points !== undefined && points !== null && !SCALLOPED_SHAPES.includes(name)) {
         warn('Shape', `\`points\` only applies to ${SCALLOPED_SHAPES.join(' and ')}: it does nothing on ${show(name)}.`);
     }

@@ -141,12 +141,18 @@ export const PRESS_SCALE = 0.94;
 const pressing = new WeakSet();
 
 const release = (base) => (event) => {
-    if (!pressing.delete(event.currentTarget)) return;
-    gsap.to(event.currentTarget, {
+    const el = event.currentTarget;
+    if (!pressing.delete(el)) return;
+    gsap.to(el, {
         scale: base,
         duration: dur(DURATION.fast),
         ease: EASE.standard,
         overwrite: 'auto',
+        force3D: false,
+        // El will-change se suelta cuando el control ha vuelto a su sitio, no antes: si se quitara
+        // al soltar el dedo, la capa se destruiria justo al empezar el camino de vuelta y el
+        // temblor volveria en la mitad de la animacion que mas se mira.
+        onComplete: () => gsap.set(el, { clearProps: 'willChange' }),
     });
 };
 
@@ -154,20 +160,73 @@ const release = (base) => (event) => {
   de ThemeModal). Los controles que morfean por `mott-morph` descansan siempre en 1 - su seleccion
   vive en --mott-morph-scale, sobre ::before - asi que el pulsado se compone solo y no hay dos
   tweens peleandose por `scale`.*/
-export const pressHandlers = (base = 1) => ({
+/*`scale` es cuanto encoge, y es un parametro porque no todos los controles miden lo mismo. En uno
+  de 56px, 0.94 son 3.4px de encogido y se leen; en un boton de ancho completo esa misma fraccion son
+  veinte pixeles y ya no es un pulsado, es un rebote. El que lo llama sabe su tamano.*/
+export const pressHandlers = (base = 1, scale = PRESS_SCALE) => ({
     onPointerDown: (event) => {
-        pressing.add(event.currentTarget);
-        gsap.to(event.currentTarget, {
-            scale: base * PRESS_SCALE,
+        const el = event.currentTarget;
+        pressing.add(el);
+        /*El mismo `will-change` que pone `morphTo`, y por el mismo motivo, que aqui se habia quedado
+          sin poner. Este tween escala el CONTROL, y dentro del control va el icono o la etiqueta: sin
+          nada que fije la escala de rasterizado, el navegador redibuja el texto a un tamano distinto
+          en cada cuadro del encogido, rehintando y re-antialiasando el glifo cada vez. Eso es el
+          temblor - el mismo que `mott-morph` curo sacando la geometria de la seleccion a un
+          pseudo-elemento sin texto, solo que el pulsado no puede hacer eso: lo que encoge ES el
+          boton entero, con lo que lleva dentro.
+
+          Puesto ANTES del tween y no dentro: esto corre sincrono dentro del manejador del evento,
+          mientras que el primer cuadro del tween no aterriza hasta el siguiente rAF, asi que el
+          navegador tiene una pasada entera para promover la capa. Declarado dentro del tween
+          llegaria en el mismo cuadro en que hace falta y no compraria nada.
+
+          Y se limpia al terminar (ver `release`): una capa promovida para siempre dibuja el texto a
+          traves de ella tambien en reposo, que es otro aspecto, no uno gratis. Si un clic cae encima
+          de otro, `overwrite: 'auto'` mata el tween de vuelta sin disparar su onComplete, pero el
+          pulsado que lo sustituye vuelve a poner la pista y su propia vuelta si la limpia: nunca
+          queda una capa suelta.*/
+        gsap.set(el, { willChange: 'transform' });
+        gsap.to(el, {
+            scale: base * scale,
             duration: dur(DURATION.instant),
             ease: EASE.standard,
             overwrite: 'auto',
+            /*`force3D: false` en los dos tweens, y es la otra mitad del arreglo del temblor - la que
+              explica el SALTO, no el rehintado.
+
+              Por defecto GSAP va en `force3D: 'auto'`: escribe una matriz 3D mientras el tween corre
+              y vuelve a la 2D al acabar. Ese cambio de tipo de matriz no es neutro - una 3D se
+              compone en su propia capa y redondea a pixel distinto que una 2D - asi que el contenido
+              del boton pega un tironcito en el cuadro en que arranca el tween y otro en el que
+              termina. Justo lo que se ve: el salto es del contenido, y ocurre cuando el boton empieza
+              a encoger.
+
+              Aqui la capa no hace falta pedirla por esa via: el `will-change` de arriba ya la ha
+              pedido, y encima con un cuadro de adelanto. Fijada la matriz en 2D no hay ningun cambio
+              de tipo a mitad del gesto - una sola promocion, puesta antes de empezar y soltada al
+              aterrizar.*/
+            force3D: false,
         });
     },
     onPointerUp: release(base),
     onPointerLeave: release(base),
     onPointerCancel: release(base),
 });
+
+/*Los controles que reciben props del consumidor no pueden limitarse a esparcir `pressHandlers`:
+  quien pase su propio `onPointerDown` se quedaria sin pulsado, o se cargaria el del consumidor,
+  segun el orden en que se esparzan los dos objetos. Esto los compone - primero el de la libreria,
+  luego el de fuera - para que ninguno de los dos desaparezca en silencio.*/
+export const pressProps = (props, { base = 1, scale = PRESS_SCALE } = {}) => {
+    const press = pressHandlers(base, scale);
+    const merged = {};
+    for (const key of Object.keys(press)) {
+        const own = props?.[key];
+        merged[key] = own ? (event) => { press[key](event); own(event); } : press[key];
+    }
+    return merged;
+};
+
 
 /*GSAP interpolates border-radius as a complex string, and the start value it reads back from
   getComputedStyle is the full eight-value form. Handing it the one-value form ('28%') makes the

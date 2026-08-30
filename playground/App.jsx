@@ -438,10 +438,18 @@ export default function App() {
            of forcing the row wider than the viewport - a flex item's default min-width is `auto`,
            which is its content's own natural width, and a wide masonry easily exceeds that. */}
         <div style={{ flex: 1, minWidth: 0 }}>
-          {/* The content column, and the only box with a gutter: the page's padding, its maximum
-             width and its centring all live here and never on the row. Everything inside it - the
-             title included - scrolls away with the document while the rail stays put. */}
-          <div style={{ padding: '2rem', maxWidth: 1400, margin: '0 auto' }}>
+          {/* The content column, and the only box with a gutter: the page's padding and its maximum
+             width live here and never on the row. Everything inside it - the title included -
+             scrolls away with the document while the rail stays put.
+
+             Sin hueco por la izquierda y SIN centrar, las dos cosas por el mismo motivo. El rail ya
+             trae 8px de padding por ese lado; sumarle los 32 del padding dejaba 40px de aire, y el
+             `margin: 0 auto` anadia encima la mitad de todo lo que sobrara hasta los 1400 - en una
+             pantalla de 1860 eso son 185px mas, y el rail acababa leyendose como algo suelto
+             flotando lejos del contenido en vez de como la columna de la pagina. Con el tope de
+             ancho anclado a la izquierda, la holgura se va entera al lado derecho, que es donde no
+             molesta, y los 8px del rail son toda la separacion. */}
+          <div style={{ padding: '2rem 2rem 2rem 0', maxWidth: 1400 }}>
             <h1
               style={{
                 font: 'var(--md-sys-typescale-display-small)', letterSpacing: 'var(--md-sys-typescale-display-small-tracking)',

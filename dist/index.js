@@ -3,6 +3,143 @@ import { forwardRef } from "react";
 import { cva as cva2 } from "class-variance-authority";
 import { twMerge as twMerge2 } from "tailwind-merge";
 
+// src/animations/motion.js
+import gsap from "gsap";
+import CustomEase from "gsap/CustomEase";
+gsap.registerPlugin(CustomEase);
+var DURATION = {
+  instant: 0.12,
+  fast: 0.2,
+  base: 0.28,
+  slow: 0.4,
+  modal: 0.55,
+  /*El morph de seleccion pide la suya. Con --duration-base y la curva vieja el 78% del
+        recorrido cabia en los primeros 70ms y los 210 restantes no ensenaban nada: se leia como un
+        salto, no como un movimiento. Repartida la curva, este numero ES el tiempo que se ve - por eso
+        es mas corto de lo que parece que deberia.
+  
+        Bajo de 300 a 220 y de ahi a 120 al mover la geometria fuera del boton (ver `mott-morph` en
+        globals.css). Lo que ataba el numero por abajo no era la lectura, era el temblor: cuanto mas
+        corta la curva, mas px avanza el glifo entre cuadro y cuadro y mas se notaba el rehinteado.
+        Sin glifos que reescalar ese suelo desaparece. A 120ms - siete cuadros a 60fps - la seleccion
+        ya no acompana al clic, contesta; queda a la par de --duration-instant, que es lo que dura el
+        pulsado, asi que encoger y morfear se leen como una sola respuesta.*/
+  morph: 0.12,
+  // The odd one out: every value above answers a click, so it is measured in how fast a control
+  // can respond. This one is the length of a journey across a surface - a highlight sweeping a
+  // control - and a travel that reads as light has to take its time.
+  sweep: 0.9
+};
+var EASE = {
+  standard: CustomEase.create("mottStandard", "0.2, 0, 0, 1"),
+  emphasized: CustomEase.create("mottEmphasized", "0.32, 0.72, 0, 1"),
+  inOut: CustomEase.create("mottInOut", "0.65, 0, 0.35, 1"),
+  exit: CustomEase.create("mottExit", "0.3, 0, 0.8, 0.15"),
+  morph: CustomEase.create("mottMorph", "0.35, 0, 0.45, 1")
+};
+var MORPH = {
+  duration: DURATION.morph,
+  ease: EASE.morph,
+  overwrite: "auto",
+  force3D: true
+};
+var MORPH_SCALE = 62 / 56;
+var HANDOFF = { out: 0.8, lead: 0.1 };
+var morphTo = (el, shape, { entering = false } = {}) => {
+  gsap.set(el, { willChange: "transform" });
+  return gsap.to(el, {
+    ...shape,
+    ...MORPH,
+    // dur() lo colapsa a 0 con prefers-reduced-motion; onComplete sigue disparando, asi que el
+    // will-change se limpia igual y el control simplemente llega en el primer cuadro.
+    duration: dur(entering ? DURATION.morph : DURATION.morph * HANDOFF.out),
+    delay: entering ? dur(DURATION.morph * HANDOFF.lead) : 0,
+    onComplete: () => gsap.set(el, { clearProps: "willChange" })
+  });
+};
+var PRESS_SCALE = 0.94;
+var pressing = /* @__PURE__ */ new WeakSet();
+var release = (base) => (event) => {
+  const el = event.currentTarget;
+  if (!pressing.delete(el)) return;
+  gsap.to(el, {
+    scale: base,
+    duration: dur(DURATION.fast),
+    ease: EASE.standard,
+    overwrite: "auto",
+    force3D: false,
+    // El will-change se suelta cuando el control ha vuelto a su sitio, no antes: si se quitara
+    // al soltar el dedo, la capa se destruiria justo al empezar el camino de vuelta y el
+    // temblor volveria en la mitad de la animacion que mas se mira.
+    onComplete: () => gsap.set(el, { clearProps: "willChange" })
+  });
+};
+var pressHandlers = (base = 1, scale = PRESS_SCALE) => ({
+  onPointerDown: (event) => {
+    const el = event.currentTarget;
+    pressing.add(el);
+    gsap.set(el, { willChange: "transform" });
+    gsap.to(el, {
+      scale: base * scale,
+      duration: dur(DURATION.instant),
+      ease: EASE.standard,
+      overwrite: "auto",
+      /*`force3D: false` en los dos tweens, y es la otra mitad del arreglo del temblor - la que
+                    explica el SALTO, no el rehintado.
+      
+                    Por defecto GSAP va en `force3D: 'auto'`: escribe una matriz 3D mientras el tween corre
+                    y vuelve a la 2D al acabar. Ese cambio de tipo de matriz no es neutro - una 3D se
+                    compone en su propia capa y redondea a pixel distinto que una 2D - asi que el contenido
+                    del boton pega un tironcito en el cuadro en que arranca el tween y otro en el que
+                    termina. Justo lo que se ve: el salto es del contenido, y ocurre cuando el boton empieza
+                    a encoger.
+      
+                    Aqui la capa no hace falta pedirla por esa via: el `will-change` de arriba ya la ha
+                    pedido, y encima con un cuadro de adelanto. Fijada la matriz en 2D no hay ningun cambio
+                    de tipo a mitad del gesto - una sola promocion, puesta antes de empezar y soltada al
+                    aterrizar.*/
+      force3D: false
+    });
+  },
+  onPointerUp: release(base),
+  onPointerLeave: release(base),
+  onPointerCancel: release(base)
+});
+var pressProps = (props, { base = 1, scale = PRESS_SCALE } = {}) => {
+  const press = pressHandlers(base, scale);
+  const merged = {};
+  for (const key of Object.keys(press)) {
+    const own = props == null ? void 0 : props[key];
+    merged[key] = own ? (event) => {
+      press[key](event);
+      own(event);
+    } : press[key];
+  }
+  return merged;
+};
+var longForm = (value) => `${value} ${value} ${value} ${value} / ${value} ${value} ${value} ${value}`;
+var CIRCLE_RADIUS = longForm("50%");
+var squircleRadius = () => longForm(
+  typeof document !== "undefined" && getComputedStyle(document.documentElement).getPropertyValue("--control-radius").trim() || "28%"
+);
+var CIRCLE_PCT = 50;
+var squirclePct = () => typeof document !== "undefined" && parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--control-radius")) || 28;
+var selectionShape = (selected) => ({
+  "--mott-morph-r": selected ? squirclePct() : CIRCLE_PCT,
+  "--mott-morph-scale": selected ? MORPH_SCALE : 1
+});
+var morphSelection = (el, selected) => gsap.to(el, {
+  ...selectionShape(selected),
+  duration: dur(selected ? DURATION.morph : DURATION.morph * HANDOFF.out),
+  delay: selected ? dur(DURATION.morph * HANDOFF.lead) : 0,
+  ease: EASE.morph,
+  // sin esto, un segundo clic apila un tween nuevo sobre el que sigue corriendo y los dos
+  // escriben la misma variable en el mismo cuadro desde origenes distintos
+  overwrite: "auto"
+});
+var prefersReducedMotion = () => typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+var dur = (seconds) => prefersReducedMotion() ? 0 : seconds;
+
 // src/theme/roles.js
 var family = (fill, on, container, onContainer) => ({
   fill: `var(${fill})`,
@@ -844,6 +981,7 @@ function verifyTypesOnboardingModal({ open, onClose, triggerRef, icon, onComplet
 
 // src/buttons/button.jsx
 import { jsx as jsx2 } from "react/jsx-runtime";
+var PRESS = 0.97;
 var buttonVariants = cva2("mott-btn", {
   variants: {
     shape: {
@@ -892,6 +1030,7 @@ var Button = forwardRef(function Button2({
         ...style
       },
       ...props,
+      ...pressProps(props, { scale: PRESS }),
       children
     }
   );
@@ -971,6 +1110,7 @@ function FabButton({
         ...style
       },
       ...props,
+      ...pressProps(props),
       children: /* @__PURE__ */ jsx4(Icon, { name: icon, size: dimensions.icon })
     }
   );
@@ -981,110 +1121,6 @@ import { useRef, useState } from "react";
 import { useGSAP } from "@gsap/react";
 import gsap2 from "gsap";
 import { twMerge as twMerge4 } from "tailwind-merge";
-
-// src/animations/motion.js
-import gsap from "gsap";
-import CustomEase from "gsap/CustomEase";
-gsap.registerPlugin(CustomEase);
-var DURATION = {
-  instant: 0.12,
-  fast: 0.2,
-  base: 0.28,
-  slow: 0.4,
-  modal: 0.55,
-  /*El morph de seleccion pide la suya. Con --duration-base y la curva vieja el 78% del
-        recorrido cabia en los primeros 70ms y los 210 restantes no ensenaban nada: se leia como un
-        salto, no como un movimiento. Repartida la curva, este numero ES el tiempo que se ve - por eso
-        es mas corto de lo que parece que deberia.
-  
-        Bajo de 300 a 220 y de ahi a 120 al mover la geometria fuera del boton (ver `mott-morph` en
-        globals.css). Lo que ataba el numero por abajo no era la lectura, era el temblor: cuanto mas
-        corta la curva, mas px avanza el glifo entre cuadro y cuadro y mas se notaba el rehinteado.
-        Sin glifos que reescalar ese suelo desaparece. A 120ms - siete cuadros a 60fps - la seleccion
-        ya no acompana al clic, contesta; queda a la par de --duration-instant, que es lo que dura el
-        pulsado, asi que encoger y morfear se leen como una sola respuesta.*/
-  morph: 0.12,
-  // The odd one out: every value above answers a click, so it is measured in how fast a control
-  // can respond. This one is the length of a journey across a surface - a highlight sweeping a
-  // control - and a travel that reads as light has to take its time.
-  sweep: 0.9
-};
-var EASE = {
-  standard: CustomEase.create("mottStandard", "0.2, 0, 0, 1"),
-  emphasized: CustomEase.create("mottEmphasized", "0.32, 0.72, 0, 1"),
-  inOut: CustomEase.create("mottInOut", "0.65, 0, 0.35, 1"),
-  exit: CustomEase.create("mottExit", "0.3, 0, 0.8, 0.15"),
-  morph: CustomEase.create("mottMorph", "0.35, 0, 0.45, 1")
-};
-var MORPH = {
-  duration: DURATION.morph,
-  ease: EASE.morph,
-  overwrite: "auto",
-  force3D: true
-};
-var MORPH_SCALE = 62 / 56;
-var HANDOFF = { out: 0.8, lead: 0.1 };
-var morphTo = (el, shape, { entering = false } = {}) => {
-  gsap.set(el, { willChange: "transform" });
-  return gsap.to(el, {
-    ...shape,
-    ...MORPH,
-    // dur() lo colapsa a 0 con prefers-reduced-motion; onComplete sigue disparando, asi que el
-    // will-change se limpia igual y el control simplemente llega en el primer cuadro.
-    duration: dur(entering ? DURATION.morph : DURATION.morph * HANDOFF.out),
-    delay: entering ? dur(DURATION.morph * HANDOFF.lead) : 0,
-    onComplete: () => gsap.set(el, { clearProps: "willChange" })
-  });
-};
-var PRESS_SCALE = 0.94;
-var pressing = /* @__PURE__ */ new WeakSet();
-var release = (base) => (event) => {
-  if (!pressing.delete(event.currentTarget)) return;
-  gsap.to(event.currentTarget, {
-    scale: base,
-    duration: dur(DURATION.fast),
-    ease: EASE.standard,
-    overwrite: "auto"
-  });
-};
-var pressHandlers = (base = 1) => ({
-  onPointerDown: (event) => {
-    pressing.add(event.currentTarget);
-    gsap.to(event.currentTarget, {
-      scale: base * PRESS_SCALE,
-      duration: dur(DURATION.instant),
-      ease: EASE.standard,
-      overwrite: "auto"
-    });
-  },
-  onPointerUp: release(base),
-  onPointerLeave: release(base),
-  onPointerCancel: release(base)
-});
-var longForm = (value) => `${value} ${value} ${value} ${value} / ${value} ${value} ${value} ${value}`;
-var CIRCLE_RADIUS = longForm("50%");
-var squircleRadius = () => longForm(
-  typeof document !== "undefined" && getComputedStyle(document.documentElement).getPropertyValue("--control-radius").trim() || "28%"
-);
-var CIRCLE_PCT = 50;
-var squirclePct = () => typeof document !== "undefined" && parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--control-radius")) || 28;
-var selectionShape = (selected) => ({
-  "--mott-morph-r": selected ? squirclePct() : CIRCLE_PCT,
-  "--mott-morph-scale": selected ? MORPH_SCALE : 1
-});
-var morphSelection = (el, selected) => gsap.to(el, {
-  ...selectionShape(selected),
-  duration: dur(selected ? DURATION.morph : DURATION.morph * HANDOFF.out),
-  delay: selected ? dur(DURATION.morph * HANDOFF.lead) : 0,
-  ease: EASE.morph,
-  // sin esto, un segundo clic apila un tween nuevo sobre el que sigue corriendo y los dos
-  // escriben la misma variable en el mismo cuadro desde origenes distintos
-  overwrite: "auto"
-});
-var prefersReducedMotion = () => typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-var dur = (seconds) => prefersReducedMotion() ? 0 : seconds;
-
-// src/buttons/buttonGroup.jsx
 import { jsx as jsx5, jsxs } from "react/jsx-runtime";
 function ButtonGroup({ buttons, vertical = true, variant = "support", defaultSelected = null, value, allowDeselect = true, onChange }) {
   verifyTypesButtonGroup({ buttons, vertical, variant, allowDeselect, onChange, value, defaultSelected });
@@ -1166,18 +1202,6 @@ import { Flip } from "gsap/Flip";
 
 // src/toast/toastStack.js
 var STACK_ATTR = "data-mott-toast-stack";
-var STACK_STYLE = {
-  position: "fixed",
-  top: "1rem",
-  right: "1rem",
-  width: "min(24rem, calc(100vw - 2rem))",
-  display: "flex",
-  flexDirection: "column",
-  alignItems: "flex-end",
-  gap: "var(--gap-section)",
-  zIndex: "var(--z-floating)",
-  pointerEvents: "none"
-};
 var stack = null;
 function getToastStack() {
   if (typeof document === "undefined") return null;
@@ -1186,7 +1210,6 @@ function getToastStack() {
     stack.setAttribute(STACK_ATTR, "");
     if (!stack.isConnected) document.body.appendChild(stack);
   }
-  Object.assign(stack.style, STACK_STYLE);
   return stack;
 }
 
@@ -1351,10 +1374,13 @@ function Toast({
           // use, so everything that floats above the page sits at the same elevation.
           backgroundColor: "var(--md-sys-color-surface-container-high)",
           boxShadow: "var(--shadow-floating)",
-          // sized by its text, with no minimum: a short toast has no reason to drag empty space
-          // around. The cap comes from the stack, which has a fixed width - that is where the
-          // text starts wrapping.
-          maxWidth: "100%",
+          // El toast mide lo que mide su texto, sin minimo: un aviso corto no tiene por que
+          // arrastrar espacio vacio. Esta linea es solo donde deja de crecer, y es la que
+          // sustituye a la media query que habia aqui antes: en una pantalla ancha gana
+          // `--toast-width` (24rem) y ahi empieza a partir lineas; en una de 390px gana el
+          // 100% y el tope es el ancho que deje la pila. Un solo tope para las dos, en vez de
+          // dos comportamientos distintos segun el breakpoint.
+          maxWidth: "min(var(--toast-width), 100%)",
           // the stack sets `pointer-events: none` so it does not block the page; each toast
           // re-enables itself
           pointerEvents: "auto"
@@ -2164,9 +2190,10 @@ function lockScroll() {
   if (typeof document === "undefined") return;
   if (++locks > 1) return;
   const { style } = document.body;
+  const root = document.documentElement.style;
   const gap = scrollbarGap();
-  previous = { overflow: style.overflow, paddingRight: style.paddingRight };
-  style.overflow = "hidden";
+  previous = { paddingRight: style.paddingRight, rootOverflow: root.overflow };
+  root.overflow = "hidden";
   if (gap > 0) {
     const current = parseFloat(getComputedStyle(document.body).paddingRight) || 0;
     style.paddingRight = `${current + gap}px`;
@@ -2177,7 +2204,7 @@ function unlockScroll() {
   if (locks === 0) return;
   if (--locks > 0) return;
   if (previous) {
-    document.body.style.overflow = previous.overflow;
+    document.documentElement.style.overflow = previous.rootOverflow;
     document.body.style.paddingRight = previous.paddingRight;
     previous = null;
   }
@@ -2279,7 +2306,7 @@ function CustomModal({ open, onClose, onCloseComplete, children, triggerRef, ani
               ref: panelRef,
               className: twMerge5("relative m-auto max-w-[92vw] rounded-[var(--radius-modal)] bg-[var(--md-sys-color-surface-container-high)] p-[var(--pad-card)]", className),
               style,
-              children: /* @__PURE__ */ jsx9("div", { ref: contentRef, children })
+              children: /* @__PURE__ */ jsx9("div", { ref: contentRef, className: "h-full", children })
             }
           )
         ]
@@ -2376,10 +2403,11 @@ function ThemeModal({ open, onClose, triggerRef, title = "Apariencia" }) {
         }
       )
     ] }),
-    /* @__PURE__ */ jsx11("div", { className: "flex flex-wrap gap-[var(--gap-group)]", children: THEMES_AVAILABLE2.map((theme) => /* @__PURE__ */ jsx11(
+    /* @__PURE__ */ jsx11("div", { className: "grid w-full grid-cols-5 gap-[var(--gap-group)]", children: THEMES_AVAILABLE2.map((theme) => /* @__PURE__ */ jsx11(
       SwatchButton,
       {
         theme,
+        size: "100%",
         selected: isActive(theme),
         onSelect: () => setColorSeedHex(theme.hex, theme.variant)
       },
@@ -3508,6 +3536,7 @@ function RecoverPasswordModal({
 // src/onBoardingModal/onboardingModal.jsx
 import { useCallback as useCallback4, useEffect as useEffect7, useLayoutEffect, useMemo as useMemo4, useRef as useRef11, useState as useState10 } from "react";
 import { useGSAP as useGSAP6 } from "@gsap/react";
+import { twMerge as twMerge12 } from "tailwind-merge";
 import gsap10 from "gsap";
 
 // src/avatars/avatars.jsx
@@ -3765,6 +3794,7 @@ var MEDIA = "144px";
 var MEDIA_HERO = "184px";
 var STEPS_MIN_HEIGHT = 300;
 var SETTLE = 500;
+var NAME_MAX = 24;
 var GLYPH_OUT = { autoAlpha: 0, scale: 0.6 };
 var GLYPH_IN = { autoAlpha: 1, scale: 1 };
 function OnboardingModal({
@@ -3862,8 +3892,7 @@ function OnboardingModal({
     const slot = backSlotRef.current;
     if (!el || !slot) return;
     const shown = { autoAlpha: canGoBack ? 1 : 0, scale: canGoBack ? 1 : 0.6 };
-    const full = el.offsetWidth + parseFloat(getComputedStyle(el).marginRight || 0);
-    const width = canGoBack ? full : 0;
+    const width = canGoBack ? "auto" : 0;
     if (prefersReducedMotion()) {
       gsap10.set(el, shown);
       gsap10.set(slot, { width });
@@ -3920,6 +3949,7 @@ function OnboardingModal({
             placeholder: namePlaceholder,
             value: name,
             onChange: setName,
+            maxLength: NAME_MAX,
             autoComplete: "name"
           }
         ) })
@@ -3972,103 +4002,105 @@ function OnboardingModal({
     setColorSeedHex
   ]);
   const visible = previous2 === null ? [step] : [previous2, step];
-  return /* @__PURE__ */ jsxs17(
-    CustomModal,
-    {
-      open,
-      onClose,
-      onCloseComplete: reset,
-      triggerRef,
-      className: "w-[440px] p-[var(--gap-page)]",
-      children: [
-        /* @__PURE__ */ jsx27(
-          button_default,
-          {
-            variant: "ghost",
-            iconOnly: true,
-            shape: "pill",
-            onClick: onClose,
-            "aria-label": "Cerrar",
-            className: "absolute top-[12px] right-[12px]",
-            style: { color: "var(--md-sys-color-on-surface-variant)" },
-            children: /* @__PURE__ */ jsx27(Icon, { name: "close", size: "lg" })
-          }
-        ),
-        /* @__PURE__ */ jsx27(
-          "div",
-          {
-            ref: viewportRef,
-            className: "relative w-full",
-            "data-onboarding-viewport": "",
-            children: visible.map((index) => {
-              const id = STEPS2[index];
-              return /* @__PURE__ */ jsxs17(
-                "div",
-                {
-                  ref: register(id),
-                  role: "group",
-                  tabIndex: -1,
-                  "aria-label": id,
-                  className: "flex w-full flex-col items-start outline-none",
-                  style: { minHeight: STEPS_MIN_HEIGHT },
-                  children: [
-                    /* @__PURE__ */ jsx27(Title, { children: content[id].title }),
-                    /* @__PURE__ */ jsx27("div", { className: "flex w-full flex-1 flex-col items-start justify-center gap-[var(--gap-block)]", children: content[id].body })
-                  ]
-                },
-                id
-              );
-            })
-          }
-        ),
-        /* @__PURE__ */ jsxs17("div", { className: "mt-[var(--gap-page)] flex w-full items-center justify-center", children: [
-          /* @__PURE__ */ jsx27("span", { ref: backSlotRef, className: "flex overflow-hidden", style: { width: 0 }, children: /* @__PURE__ */ jsx27(
-            button_default,
+  return (
+    /*Sin `onClose`. Es lo que cierra de golpe las dos salidas que CustomModal trae de serie:
+      Escape y el clic en el velo son los dos `onClose?.()` de customModal.jsx, asi que sin la
+      prop no hacen nada, y el `onCancel` del <dialog> ya trae su propio preventDefault para que
+      el navegador no lo cierre por su cuenta. El onboarding se recorre entero o no se recorre -
+      abandonarlo a la mitad deja la app sin nombre, sin cara y sin acento, porque `onComplete`
+      solo se dispara al final. La unica salida es `advance()` en el ultimo paso.*/
+    /* @__PURE__ */ jsx27(
+      CustomModal,
+      {
+        open,
+        onCloseComplete: reset,
+        triggerRef,
+        className: "h-full w-full max-w-none overflow-hidden rounded-none p-[var(--gap-block)] pb-[calc(var(--gap-page)+env(safe-area-inset-bottom))] md:p-[var(--gap-page)] md:pb-[calc(var(--gap-page)+env(safe-area-inset-bottom))]",
+        children: /* @__PURE__ */ jsxs17("div", { className: "mx-auto flex h-full w-full max-w-[480px] flex-col", children: [
+          /* @__PURE__ */ jsx27("div", { className: "-mx-[6px] flex min-h-0 flex-1 items-center overflow-y-auto px-[6px]", children: /* @__PURE__ */ jsx27(
+            "div",
             {
-              ref: backRef,
-              variant: "default",
-              iconOnly: true,
-              shape: "pill",
-              onClick: goBack,
-              disabled: !canGoBack,
-              "aria-label": "Volver",
-              style: {
-                width: "var(--control-size-md)",
-                height: "var(--control-size-md)",
-                padding: 0,
-                marginRight: "var(--gap-block)",
-                opacity: 0,
-                visibility: "hidden"
-              },
-              ...pressHandlers(),
-              children: /* @__PURE__ */ jsx27(Icon, { name: "arrow_back", size: "lg" })
+              ref: viewportRef,
+              className: "relative w-full",
+              "data-onboarding-viewport": "",
+              children: visible.map((index) => {
+                const id = STEPS2[index];
+                return /* @__PURE__ */ jsxs17(
+                  "div",
+                  {
+                    ref: register(id),
+                    role: "group",
+                    tabIndex: -1,
+                    "aria-label": id,
+                    className: "flex w-full flex-col items-center outline-none",
+                    style: { minHeight: STEPS_MIN_HEIGHT },
+                    children: [
+                      /* @__PURE__ */ jsx27(Title, { clamp: id === "done", children: content[id].title }),
+                      /* @__PURE__ */ jsx27("div", { className: "flex w-full flex-1 flex-col items-center justify-center gap-[var(--gap-block)]", children: content[id].body })
+                    ]
+                  },
+                  id
+                );
+              })
             }
           ) }),
-          /* @__PURE__ */ jsx27(
-            button_default,
-            {
-              variant: "action",
-              iconOnly: true,
-              shape: "pill",
-              onClick: advance,
-              disabled: !canAdvance,
-              "aria-label": isLast ? "Terminar" : "Continuar",
-              style: { width: "var(--control-size-md)", height: "var(--control-size-md)", padding: 0 },
-              ...pressHandlers(),
-              children: /* @__PURE__ */ jsx27("span", { ref: glyphRef, className: "flex", children: /* @__PURE__ */ jsx27(Icon, { name: glyph, size: "lg" }) })
-            }
-          )
+          /* @__PURE__ */ jsxs17("div", { className: "mt-[var(--gap-page)] flex w-full shrink-0 items-center justify-center", children: [
+            /* @__PURE__ */ jsx27("span", { ref: backSlotRef, className: "flex overflow-hidden", style: { width: 0 }, children: /* @__PURE__ */ jsx27(
+              button_default,
+              {
+                ref: backRef,
+                variant: "default",
+                iconOnly: true,
+                shape: "pill",
+                onClick: goBack,
+                disabled: !canGoBack,
+                "aria-label": "Volver",
+                style: {
+                  width: "var(--control-size-md)",
+                  height: "var(--control-size-md)",
+                  padding: 0,
+                  marginRight: "var(--gap-block)",
+                  /*Sin esto el boton NUNCA se ve: su hueco arranca con `width: 0` y
+                    como hijo flex de ese hueco se encoge hasta 0, asi que el
+                    `offsetWidth` con el que se mide el ancho al que abrirlo tambien
+                    vale 0 y el hueco se queda cerrado sobre si mismo.*/
+                  flexShrink: 0,
+                  opacity: 0,
+                  visibility: "hidden"
+                },
+                ...pressHandlers(),
+                children: /* @__PURE__ */ jsx27(Icon, { name: "arrow_back", size: "lg" })
+              }
+            ) }),
+            /* @__PURE__ */ jsx27(
+              button_default,
+              {
+                variant: "action",
+                iconOnly: true,
+                shape: "pill",
+                onClick: advance,
+                disabled: !canAdvance,
+                "aria-label": isLast ? "Terminar" : "Continuar",
+                style: { width: "var(--control-size-md)", height: "var(--control-size-md)", padding: 0 },
+                ...pressHandlers(),
+                children: /* @__PURE__ */ jsx27("span", { ref: glyphRef, className: "flex", children: /* @__PURE__ */ jsx27(Icon, { name: glyph, size: "lg" }) })
+              }
+            )
+          ] })
         ] })
-      ]
-    }
+      }
+    )
   );
 }
-function Title({ children }) {
+function Title({ children, clamp }) {
   return /* @__PURE__ */ jsx27(
     "h2",
     {
-      className: "mott-headline-large mott-title-emphasis",
-      style: { color: "var(--md-sys-color-on-surface)", margin: 0, paddingRight: "var(--control-size-sm)" },
+      className: twMerge12(
+        "mott-display-small md:mott-display-medium mott-title-emphasis w-full text-center",
+        clamp && "line-clamp-2 [overflow-wrap:anywhere]"
+      ),
+      style: { color: "var(--md-sys-color-on-surface)", margin: 0 },
       children
     }
   );
@@ -4274,11 +4306,13 @@ function Loading({
 import { useRef as useRef13, useState as useState11 } from "react";
 import { useGSAP as useGSAP8 } from "@gsap/react";
 import gsap12 from "gsap";
-import { twMerge as twMerge12 } from "tailwind-merge";
+import { twMerge as twMerge13 } from "tailwind-merge";
 import { Fragment as Fragment5, jsx as jsx29, jsxs as jsxs18 } from "react/jsx-runtime";
 var DESKTOP_ALIGN = {
   center: "justify-center",
-  top: "justify-start pt-8"
+  // Sin padding propio: el respiro por arriba lo pone ya el `p-[var(--gap-block)]` del <nav>, y
+  // sumarle otro dejaria los iconos al doble de distancia del borde que del lado izquierdo.
+  top: "justify-start"
 };
 var ITEM_BASE = "mott-state-layer mott-morph inline-flex items-center justify-center gap-2 border-0 cursor-pointer p-0 mott-label-large mott-trim [--mott-morph-bg:var(--md-sys-color-surface-container)] text-[var(--md-sys-color-on-surface-variant)] transition-[color] duration-[var(--duration-morph)] ease-[var(--ease-morph)]";
 var ITEM_SELECTED = "[--mott-morph-bg:var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)]";
@@ -4312,7 +4346,7 @@ function NavItems({ items, selectedItem, onSelect, vertical }) {
       if (el) morphSelection(el, i === selectedItem);
     });
   }, { dependencies: [selectedItem, items.length], scope: containerRef });
-  return /* @__PURE__ */ jsx29("div", { ref: containerRef, className: twMerge12("inline-flex gap-[var(--gap-group)]", vertical && "flex-col"), children: items.map((item, i) => {
+  return /* @__PURE__ */ jsx29("div", { ref: containerRef, className: twMerge13("inline-flex gap-[var(--gap-group)]", vertical && "flex-col"), children: items.map((item, i) => {
     const iconOnly = !item.label;
     return /* @__PURE__ */ jsxs18(
       "button",
@@ -4321,7 +4355,7 @@ function NavItems({ items, selectedItem, onSelect, vertical }) {
         type: "button",
         onClick: () => onSelect(i),
         "aria-pressed": selectedItem === i,
-        className: twMerge12(ITEM_BASE, selectedItem === i && ITEM_SELECTED),
+        className: twMerge13(ITEM_BASE, selectedItem === i && ITEM_SELECTED),
         ...pressHandlers(),
         style: {
           height: "var(--control-size-md)",
@@ -4357,7 +4391,7 @@ function LogoButton({ logo }) {
       onClick: logo.onClick,
       "aria-pressed": !!logo.active,
       "aria-label": logo.label ?? "Inicio",
-      className: twMerge12(ITEM_BASE, logo.active && ITEM_SELECTED),
+      className: twMerge13(ITEM_BASE, logo.active && ITEM_SELECTED),
       ...pressHandlers(),
       style: {
         width: "var(--control-size-md)",
@@ -4389,8 +4423,8 @@ function Navbar({
     /* @__PURE__ */ jsxs18(
       "nav",
       {
-        className: twMerge12(
-          "hidden md:flex sticky top-0 h-dvh w-fit shrink-0 flex-col items-center px-1 gap-[var(--gap-group)]",
+        className: twMerge13(
+          "hidden md:flex sticky top-[var(--gap-block)] h-[calc(100dvh_-_var(--gap-block)_*_2)] w-fit shrink-0 flex-col items-center my-[var(--gap-block)] mx-[var(--gap-section)] p-[var(--gap-block)] gap-[var(--gap-group)]",
           DESKTOP_ALIGN[align] ?? DESKTOP_ALIGN.center,
           className
         ),
@@ -4404,7 +4438,7 @@ function Navbar({
     /* @__PURE__ */ jsx29(
       "nav",
       {
-        className: twMerge12(
+        className: twMerge13(
           "flex md:hidden fixed bottom-4 left-1/2 z-[var(--z-nav)] -translate-x-1/2 items-center gap-3",
           className
         ),
@@ -4424,7 +4458,7 @@ function Navbar({
 
 // src/dragScroll/dragScroll.jsx
 import { useCallback as useCallback5, useEffect as useEffect8, useLayoutEffect as useLayoutEffect2, useRef as useRef14, useState as useState12 } from "react";
-import { twMerge as twMerge13 } from "tailwind-merge";
+import { twMerge as twMerge14 } from "tailwind-merge";
 import gsap13 from "gsap";
 import { Draggable as Draggable2 } from "gsap/Draggable";
 import { InertiaPlugin } from "gsap/InertiaPlugin";
@@ -4515,7 +4549,7 @@ function DragScroll({
     "div",
     {
       ref: scrollRef,
-      className: twMerge13(fade && (horizontal ? "mott-fade-x" : "mott-fade-y"), className),
+      className: twMerge14(fade && (horizontal ? "mott-fade-x" : "mott-fade-y"), className),
       style: {
         overflowX: horizontal || axis === "both" ? "auto" : "hidden",
         overflowY: horizontal ? "hidden" : "auto",

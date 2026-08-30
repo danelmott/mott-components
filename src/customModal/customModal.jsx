@@ -123,7 +123,11 @@ export default function CustomModal({ open, onClose, onCloseComplete, children, 
                 className={twMerge('relative m-auto max-w-[92vw] rounded-[var(--radius-modal)] bg-[var(--md-sys-color-surface-container-high)] p-[var(--pad-card)]', className)}
                 style={style}
             >
-                <div ref={contentRef}>
+                {/*`h-full` para que un panel de alto fijo - el onboarding, que ocupa la pantalla
+                   entera - pueda repartir ese alto entre sus hijos. En las demas modales el panel
+                   es de alto automatico, y un `height: 100%` contra un padre `auto` resuelve a
+                   `auto`: no cambia nada.*/}
+                <div ref={contentRef} className="h-full">
                     {children}
                 </div>
             </div>

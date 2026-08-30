@@ -14,7 +14,9 @@ import { verifyTypesNavbar } from '../utils/verifyTypes.js';
    has direct coordinates in. */
 const DESKTOP_ALIGN = {
     center: 'justify-center',
-    top: 'justify-start pt-8',
+    // Sin padding propio: el respiro por arriba lo pone ya el `p-[var(--gap-block)]` del <nav>, y
+    // sumarle otro dejaria los iconos al doble de distancia del borde que del lado izquierdo.
+    top: 'justify-start',
 };
 
 /*The navbar is deliberately neutral and has no `color` prop: its palette comes from the M3 surface
@@ -184,14 +186,50 @@ export default function Navbar({
                the page occupy separate boxes instead of the same screen space, there is nothing for
                a z-index to arbitrate.
 
-               That box is the whole point, so it is exact: the full height, and a width that is its
-               own buttons and nothing else - `--control-size-md` (56px) plus the 4px per side of
-               `px-1`, 64px in total. Those 4px are not breathing room, they are the morph: a selected
-               item paints a pill scaled to 62px over a 56px box (see `mott-morph`), so it overhangs
-               ~3px each way, and with the rail flush against x=0 the window edge would shave that
-               overhang off. `w-fit` keeps the box honest when the rail is NOT mounted inside a flex
-               row - `display: flex` on a block-level element stretches to 100% of its parent - and
-               `shrink-0` stops wide content beside it from squeezing it below its own buttons.
+               Ese `sticky` es tambien lo que hacia que el rail se esfumara al abrir una modal: el
+               bloqueo de scroll ponia `overflow: hidden` en el <body>, eso lo convertia en un
+               contenedor de scroll, y el rail pasaba a resolverse contra el en vez de contra el
+               viewport. Arreglado en su sitio - `lockScroll` usa `overflow: clip`, que no crea
+               contenedor de scroll - y explicado entero en src/utils/scrollLock.js. Aqui no hay que
+               hacer nada, pero conviene saberlo antes de "arreglarlo" cambiando el sticky.
+
+               La caja es el punto entero, asi que es exacta. Los botones miden 56px, y alrededor hay
+               dos anillos que hacen cosas distintas:
+
+               - PADDING de 16px por los cuatro lados - los 88px de ancho de la caja. Es ademas lo
+                 que deja pintar a la seleccion, que dibuja un pill escalado a 62px sobre una caja de
+                 56 (ver `mott-morph`) y se sale ~3px por lado; antes ese sitio lo daban 4px justos
+                 de `px-1` y no sobraba ni un pixel.
+               - MARGEN de 16px arriba y abajo y de 12px a cada lado - lo que despega el rail del
+                 borde de la ventana por la izquierda y del contenido por la derecha. El de los
+                 lados es mas corto que el vertical a proposito: arriba y abajo el hueco se lee
+                 contra el vacio y aguanta los 16, pero en horizontal se suma al padding y a los
+                 32px resultantes el rail empezaba a leerse como si flotara suelto en vez de ocupar
+                 su columna. 12 (`--gap-section`) es el escalon justo por debajo, y sale del mismo
+                 juego de tokens - nada de numeros sueltos.
+
+               Los cuatro lados suman lo mismo a cada lado del boton: 28px en horizontal (12 + 16) y
+               32 en vertical (16 + 16). Hubo una version con 8px de padding a la derecha, copiada de
+               una referencia, con la idea de que el contenido de la pagina ya trae su propio hueco;
+               en pantalla se veia lo que era, un rail descentrado dentro de su propia columna. Si
+               alguien lo vuelve a intentar: el hueco del contenido es cosa del `<main>`, no de aqui,
+               y la caja del rail se mide sola.
+
+               El margen vertical obliga a bajar el alto: `h-dvh` mas 16px de margen arriba y abajo se
+               saldria 32px por debajo del borde. De ahi el `calc()` - la caja mide el alto de la
+               ventana MENOS sus dos margenes, y entonces su borde de abajo cae justo a 16px del
+               fondo, igual que el de arriba. Son las dos unicas cifras que tienen que ir a la par, y
+               salen las dos del mismo token.
+
+               Y el `top` del sticky repite ese mismo margen en vez de ser 0. Comprobado, no
+               deducido: con `top-0` el navegador pega el borde de la caja al tope del scrollport y
+               el hueco de arriba se lo come - el rail estaba a 16px sin desplazar y saltaba a 0 en
+               cuanto la pagina se movia. Con `top` igual al margen se queda a 16px en los dos
+               estados y no hay salto.
+
+               `w-fit` mantiene la caja honesta cuando el rail NO se monta dentro de una fila flex -
+               `display: flex` en un elemento de bloque se estira al 100% de su padre - y `shrink-0`
+               impide que el contenido ancho de al lado lo apriete por debajo de sus propios botones.
 
                This does mean the rail needs a place to push content INTO: mount it as a flex-row
                sibling of your page content (e.g. in app/layout.jsx), not floating on its own -
@@ -204,7 +242,8 @@ export default function Navbar({
                below are for. */}
             <nav
                 className={twMerge(
-                    'hidden md:flex sticky top-0 h-dvh w-fit shrink-0 flex-col items-center px-1 gap-[var(--gap-group)]',
+                    'hidden md:flex sticky top-[var(--gap-block)] h-[calc(100dvh_-_var(--gap-block)_*_2)] w-fit shrink-0 flex-col items-center'
+                    + ' my-[var(--gap-block)] mx-[var(--gap-section)] p-[var(--gap-block)] gap-[var(--gap-group)]',
                     DESKTOP_ALIGN[align] ?? DESKTOP_ALIGN.center,
                     className
                 )}

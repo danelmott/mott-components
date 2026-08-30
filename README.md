@@ -419,6 +419,12 @@ function SaveButton() {
 </ToastProvider>
 ```
 
+Toasts stack in the **top-right corner at every screen size** — the stack is created and portalled for
+you, so it never depends on where you called `useToast()` from. Each toast is as wide as its own text
+and stops growing at `--toast-width` (24rem), or at the width the screen leaves if that is smaller;
+long messages wrap inside that. There is no separate phone layout: a toast reads the same on a 320px
+handset as on a monitor, only narrower.
+
 ---
 
 ### Auth modals
@@ -529,19 +535,36 @@ the root of your app:
 </div>
 ```
 
-**The rail is exactly its own buttons wide — 64px — and carries no margin of its own**, so it sits
-flush against the left edge and everything else starts where it ends. That is the 56px of
-`--control-size-md` plus 4px per side, and those 4px are not breathing room: a selected item paints a
-pill scaled to 62px over its 56px box, so it overhangs ~3px each way and the window edge would shave
-that off. Because of it, **the page's padding belongs to the `<main>`, never to the row** — padding on
-the flex row is exactly what pushes the rail off the edge, and a heading left outside the `<main>` is
-a heading that does not respect the rail's column. `min-w-0` is there so wide content inside the
+**The rail's column is 112px wide** — everything else starts where it ends. That is the 56px of
+`--control-size-md`, wrapped in two rings that do different jobs:
+
+- **padding** of 16px on all four sides — the box itself, 88px wide. It is also what lets the selection
+  paint: a selected item draws a pill scaled to 62px over its 56px box, so it overhangs ~3px each way
+  and a rail flush against the edge would have that shaved off.
+- **margin** of 16px top and bottom and 12px on both sides — what holds the rail off the window edge on
+  one side and off your content on the other. Its height is `calc(100dvh - 16px * 2)` and its sticky
+  offset is `top: 16px`, both so the box lands exactly inside those margins whether the page is
+  scrolled or not.
+
+Both rings are symmetric, so a button sits **28px** from whatever is to its left and to its right, and
+32px from the top and bottom of the rail.
+
+**The page's padding still belongs to the `<main>`, never to the flex row** — padding on the row adds
+to the rail's own margin and pushes it out of place, and a heading left outside the `<main>` is a
+heading that does not respect the rail's column. `min-w-0` is there so wide content inside the
 `<main>` shrinks instead of forcing the row wider than the viewport.
 
 It still stays pinned in view while the page scrolls — `sticky` plus a full-viewport-tall box gives it
-the same "always visible" feel `fixed` had, just without sitting on top of anything. The mobile bar is
-the opposite on purpose: a bottom bar is expected to float over the last bit of content, so it keeps
-its own `fixed` position and an elevated z-index.
+the same "always visible" feel `fixed` had, just without sitting on top of anything. That is also why
+the scroll lock behind every modal (`src/utils/scrollLock.js`) only ever touches the `<html>` element:
+`overflow: hidden` turns a box into a *scroll container*, and a `sticky` element resolves against the
+nearest one — so hiding the `<body>` would make every sticky element on the page resolve against a box
+whose scroll is always 0 and drop back to the top of the document. On the root that cannot happen,
+because the root's overflow propagates to the viewport and the root itself stays `visible`. **If you
+write your own scroll lock, lock the `<html>`, not the `<body>`.**
+
+The mobile bar is the opposite of the rail on purpose: a bottom bar is expected to float over the last
+bit of content, so it keeps its own `fixed` position and an elevated z-index.
 
 ---
 

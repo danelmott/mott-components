@@ -166,6 +166,11 @@
     --control-size-md: 56px;
     --control-size-lg: 80px;
     --control-radius: 28%; 
+    /* La medida de linea del toast, no su ancho: el toast mide lo que mide su texto y esto es solo
+       donde deja de crecer y empieza a partir lineas. Vive aqui y no dentro del componente porque lo
+       leen los dos sitios que forman el toast - el panel en toast.jsx y la pila en
+       `[data-mott-toast-stack]` - y son dos ficheros distintos. */
+    --toast-width: 24rem;
     /* Motion. Mirrored one-for-one by src/animations/motion.js - CSS transitions read these
        tokens, GSAP tweens read the constants, and both carry the same numbers so a control whose
        colour is transitioned by CSS and whose shape is tweened by GSAP lands on the same frame. */
@@ -510,7 +515,14 @@ body {
     pointer-events: auto;
     width: 100%;
     max-width: none;
+    /*El alto se mide en `dvh`, no en `100%`. Un elemento `fixed` mide su 100% contra el viewport
+      GRANDE - el de la barra de direcciones escondida - asi que en movil el <dialog> era mas alto
+      que la pantalla que se ve: el panel quedaba centrado en una caja mas larga, sobraba velo por
+      arriba y por abajo, y bastaba con arrastrar para bajar hasta ese sobrante. `dvh` es el alto
+      que de verdad se ve en cada momento. El `100%` de antes se queda de respaldo para navegadores
+      sin unidades dinamicas.*/
     height: 100%;
+    height: 100dvh;
     max-height: none;
     overflow: hidden;
     border: none;
@@ -705,7 +717,10 @@ body {
   font: var(--md-sys-typescale-label-large);
   letter-spacing: var(--md-sys-typescale-label-large-tracking);
 
-  transition-property: background-color, color, transform;
+  /*Sin `transform` en la lista: lo escribe GSAP inline, cuadro a cuadro (ver `pressProps` en
+    src/animations/motion.js). Una transicion de CSS sobre la misma propiedad perseguiria cada valor
+    que el tween acaba de escribir, o sea dos motores animando lo mismo con dos curvas distintas.*/
+  transition-property: background-color, color;
   transition-duration: var(--duration-instant);
 
   &::after {
@@ -723,9 +738,17 @@ body {
   &:hover::after  { opacity: 0.08; }
   &:active::after { opacity: 0.12; }
 
-  &:active {
-    transform: scale(0.97);
-  }
+  /*Aqui habia un `&:active { transform: scale(0.97) }`. El pulsado se ha ido a GSAP, con el resto de
+    los controles de la libreria (ver `pressProps` en src/animations/motion.js), y no por gusto de
+    unificar: hecho con CSS, la unica forma de fijar la escala de rasterizado del glifo era un
+    `will-change` colgado de `:active`, y esa pista nace y muere exactamente en los dos cuadros en
+    que el transform arranca y termina - o sea que cambiaba la capa justo cuando empezaba el
+    movimiento, que es el tironcito que se veia en el contenido al encoger. Ampliarla a `:hover` lo
+    tapaba pero promovia el boton estando quieto, y ahi el texto cambia de antialiasing.
+
+    Desde GSAP no hay ese dilema: la pista se pone un cuadro ANTES de empezar y se suelta cuando el
+    boton ya ha vuelto a su sitio, asi que hay una sola promocion y ningun cambio a mitad del gesto.
+    El resto del estado pulsado - el tinte del ::after - se queda en CSS, que es donde no molesta.*/
 
   &:focus-visible {
     outline: none;
@@ -739,9 +762,6 @@ body {
     pointer-events: none;
   }
 
-  &:disabled:active {
-    transform: scale(1);
-  }
 }
 
 
@@ -839,16 +859,45 @@ body {
 }
 
 
-@utility mott-toast-stack {
+/*La pila de toasts. El estilo vive aqui y no en toastStack.js - que es quien crea el elemento y le
+  pone el atributo - porque escribirlo desde JS sobre `element.style` significa estilo inline, y el
+  inline ni entiende de media queries ni deja que una hoja lo corrija.
+
+  Arriba a la derecha, y en TODAS las medidas de pantalla: un toast se lee igual en un movil que en
+  un monitor, y lo unico que cambia con el ancho es donde deja de crecer. Hubo una version que por
+  debajo de 640px lo mandaba abajo y a todo lo ancho, imitando el snackbar de Material; en un movil
+  de verdad eso convertia un aviso de dos palabras en una franja de borde a borde, y ademas caia
+  justo encima de la barra de navegacion flotante, que va abajo y centrada. Con la pila siempre
+  arriba a la derecha no hay ni franja ni choque, y no hace falta ninguna media query.
+
+  `align-items: flex-end` es lo que hace que cada toast mida su propio texto en vez de estirarse al
+  ancho de la pila; el tope lo pone el propio toast con `--toast-width` (ver toast.jsx), y en una
+  pantalla estrecha ese tope se resuelve solo a lo que haya.
+
+  La caja ocupa el hueco entero de la pantalla, y eso hay que dejarlo como esta: al cerrarse, un
+  toast se despega a `position: absolute` con el `top` que se le acaba de medir dentro de la pila
+  (ver `flyOut` en toast.jsx) para que los de abajo se recoloquen sin esperarle, y eso solo se
+  sostiene si la caja no cambia de tamano cuando el toast sale de la fila. Una pila de alto
+  automatico funcionaria estando anclada arriba, pero deja el invariante colgando de que nadie la
+  ancle nunca por abajo.
+
+  `env(safe-area-inset-*)` en los cuatro lados: en un movil con notch, 1rem a secas deja el toast por
+  debajo del hardware.*/
+[data-mott-toast-stack] {
     position: fixed;
-    top: 1rem;
-    right: 1rem;
-    width: min(24rem, calc(100vw, 2rem));
+    inset:
+        calc(1rem + env(safe-area-inset-top))
+        calc(1rem + env(safe-area-inset-right))
+        calc(1rem + env(safe-area-inset-bottom))
+        calc(1rem + env(safe-area-inset-left));
     display: flex;
-    flex-direction: colum;
-    alig-items: flex-end;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: flex-end;
     gap: var(--gap-section);
     z-index: var(--z-floating);
+    /*La caja cubre la pagina entera, asi que no puede comerse ni un clic: cada toast se rehabilita
+      a si mismo (ver `pointerEvents: 'auto'` en toast.jsx).*/
     pointer-events: none;
 }
 

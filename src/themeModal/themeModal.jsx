@@ -42,12 +42,31 @@ export default function ThemeModal({ open, onClose, triggerRef, title = 'Aparien
                     </h2>
                 </div>
 
-                {/*CONTAINER FOR THEME ACCENTS*/}
-                <div className="flex flex-wrap gap-[var(--gap-group)]">
+                {/*Los acentos. Rejilla de cinco columnas y cada swatch tan ancho como la suya - el
+                   mismo bloque, letra por letra, que el paso del color del onboarding
+                   (onBoardingModal.jsx), y conviene que se reconozca como el mismo patron.
+
+                   Rejilla y no `flex-wrap`, que es lo que habia: con diez swatches de 56px fijos en
+                   un panel de 360 caben cinco por fila en desktop, pero en un movil el panel se
+                   recorta a `92vw` y pasan a caber cuatro - el bloque se reordenaba a 4/4/2 y la
+                   modal cambiaba de forma segun el telefono. Con las columnas fijadas a cinco, lo
+                   que cede es el tamano del swatch: 56px en desktop y en un movil de 390 (o sea, ni
+                   un pixel de cambio en la practica), y 43 en uno de 320, que es el ancho mas
+                   estrecho que queda en circulacion. Medido, no estimado. Esos 43 se quedan por
+                   debajo del objetivo tactil de 48 que recomienda Material, y es un precio asumido:
+                   la alternativa era reordenar el bloque, que es justo lo que se venia a quitar.
+                   Siguen muy por encima del minimo de 24px de la WCAG y llevan 8px de separacion
+                   entre ellos, asi que no hay dos objetivos pegados.
+
+                   `SwatchButton` esta escrito para esto: saca su alto del ancho por `aspectRatio`,
+                   asi que `size="100%"` le da el ancho de la columna y sigue siendo redondo sin que
+                   nadie calcule nada.*/}
+                <div className="grid w-full grid-cols-5 gap-[var(--gap-group)]">
                     {THEMES_AVAILABLE.map((theme) => (
                         <SwatchButton
                             key={theme.name}
                             theme={theme}
+                            size="100%"
                             selected={isActive(theme)}
                             onSelect={() => setColorSeedHex(theme.hex, theme.variant)}
                         />
