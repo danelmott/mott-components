@@ -482,13 +482,16 @@ export function verifyTypesThemeModal({ open, onClose, triggerRef, title, animat
 /*El contrato de OptionsModal, que es tambien su documentacion: el README no tabula props y manda a
   leer este archivo. Un `item` es o un separador o una fila, y la fila valida como la de Navbar - el
   mismo `icon` que acepta nombre o nodo, y el mismo `buttonRef` hacia afuera.*/
-export function verifyTypesOptionsModal({ open, onClose, onCloseComplete, triggerRef, items, title, animation } = {}) {
+export function verifyTypesOptionsModal({ open, onClose, onCloseComplete, triggerRef, items, title, animation, name, email } = {}) {
     assertType('OptionsModal', 'open', open, 'boolean');
     assertType('OptionsModal', 'onClose', onClose, 'function');
     assertType('OptionsModal', 'onCloseComplete', onCloseComplete, 'function');
     assertRef('OptionsModal', 'triggerRef', triggerRef);
     assertType('OptionsModal', 'title', title, 'string');
     assertAnimation('OptionsModal', 'animation', animation);
+    // solo alimentan a la modal de Configuracion (fila `settingsItem`), si la hay entre los items
+    assertType('OptionsModal', 'name', name, 'string');
+    assertType('OptionsModal', 'email', email, 'string');
 
     if (Array.isArray(items) && items.length === 0) {
         warn('OptionsModal', '`items` is empty: the menu renders with no rows.');
@@ -529,6 +532,16 @@ export function verifyTypesThemeProvider({ defaultSeed, defaultMode, themes } = 
             verifyTypesThemeVariant('ThemeProvider', `${path}.variant`, item.variant);
         }
     });
+    return true;
+}
+
+export function verifyTypesSettingsModal({ open, onClose, triggerRef, animation, name, email } = {}) {
+    assertType('SettingsModal', 'open', open, 'boolean');
+    assertType('SettingsModal', 'onClose', onClose, 'function');
+    assertRef('SettingsModal', 'triggerRef', triggerRef);
+    assertAnimation('SettingsModal', 'animation', animation);
+    assertType('SettingsModal', 'name', name, 'string');
+    assertType('SettingsModal', 'email', email, 'string');
     return true;
 }
 

@@ -953,13 +953,15 @@ function verifyTypesThemeModal({ open, onClose, triggerRef, title, animation } =
   assertAnimation("ThemeModal", "animation", animation);
   return true;
 }
-function verifyTypesOptionsModal({ open, onClose, onCloseComplete, triggerRef, items, title, animation } = {}) {
+function verifyTypesOptionsModal({ open, onClose, onCloseComplete, triggerRef, items, title, animation, name, email } = {}) {
   assertType("OptionsModal", "open", open, "boolean");
   assertType("OptionsModal", "onClose", onClose, "function");
   assertType("OptionsModal", "onCloseComplete", onCloseComplete, "function");
   assertRef("OptionsModal", "triggerRef", triggerRef);
   assertType("OptionsModal", "title", title, "string");
   assertAnimation("OptionsModal", "animation", animation);
+  assertType("OptionsModal", "name", name, "string");
+  assertType("OptionsModal", "email", email, "string");
   if (Array.isArray(items) && items.length === 0) {
     warn("OptionsModal", "`items` is empty: the menu renders with no rows.");
   }
@@ -996,6 +998,15 @@ function verifyTypesThemeProvider({ defaultSeed, defaultMode, themes } = {}) {
       verifyTypesThemeVariant("ThemeProvider", `${path}.variant`, item.variant);
     }
   });
+  return true;
+}
+function verifyTypesSettingsModal({ open, onClose, triggerRef, animation, name, email } = {}) {
+  assertType("SettingsModal", "open", open, "boolean");
+  assertType("SettingsModal", "onClose", onClose, "function");
+  assertRef("SettingsModal", "triggerRef", triggerRef);
+  assertAnimation("SettingsModal", "animation", animation);
+  assertType("SettingsModal", "name", name, "string");
+  assertType("SettingsModal", "email", email, "string");
   return true;
 }
 function verifyTypesGradientProfile({ name, email, showControls, verifiedLabel } = {}) {
@@ -4139,646 +4150,15 @@ function Media({ children }) {
 }
 
 // src/optionsModal/optionsModal.jsx
-import { useRef as useRef11, useState as useState10 } from "react";
-import { twMerge as twMerge12 } from "tailwind-merge";
-import { jsx as jsx27, jsxs as jsxs18 } from "react/jsx-runtime";
-var ROW_BASE = "mott-state-layer flex w-full items-center gap-[var(--gap-group)] rounded-[var(--radius-default)] border-0 bg-transparent px-5 py-3.5 text-left cursor-pointer whitespace-nowrap mott-label-large mott-trim transition-[color] duration-[var(--duration-instant)]";
-var ROW_TONE = {
-  default: "text-[var(--md-sys-color-on-surface)]",
-  danger: "text-[var(--md-sys-color-error)]"
-};
-var APPEARANCE_ANIMATION = new AnchoredAnimation({ anchor: "panel", align: "edge" });
-var ICON_TONE = {
-  default: "text-[var(--md-sys-color-on-surface-variant)]",
-  danger: "text-[var(--md-sys-color-error)]"
-};
-var appearanceItem = (overrides = {}) => ({
-  id: "appearance",
-  kind: "appearance",
-  icon: "palette",
-  label: "Apariencia",
-  // no cierra el menu: la modal del tema se apoya ENCIMA de el, que es el punto
-  closeOnSelect: false,
-  ...overrides
-});
-var feedbackItem = (overrides = {}) => ({
-  id: "feedback",
-  icon: "feedback",
-  label: "Dar Feedback",
-  ...overrides
-});
-var logoutItem = (overrides = {}) => ({
-  id: "logout",
-  icon: "logout",
-  label: "Cerrar Sesi\xF3n",
-  tone: "danger",
-  ...overrides
-});
-var attachRef = (node, store, key, forwarded) => {
-  if (key !== null) store.current[key] = node;
-  if (typeof forwarded === "function") forwarded(node);
-  else if (forwarded) forwarded.current = node;
-};
-function OptionsModal({
-  open,
-  onClose,
-  onCloseComplete,
-  triggerRef,
-  items = [],
-  title = "Opciones",
-  animation = anchoredAnimation,
-  className,
-  style
-}) {
-  verifyTypesOptionsModal({ open, onClose, onCloseComplete, triggerRef, items, title, animation });
-  const [appearanceOpen, setAppearanceOpen] = useState10(false);
-  const rowRefs = useRef11({});
-  const appearanceRef = useRef11(null);
-  const handleSelect = (item, event) => {
-    var _a;
-    if (item.kind === "appearance") setAppearanceOpen(true);
-    (_a = item.onClick) == null ? void 0 : _a.call(item, event);
-    if (item.closeOnSelect !== false && item.kind !== "appearance") onClose == null ? void 0 : onClose();
-  };
-  return /* @__PURE__ */ jsxs18(
-    CustomModal,
-    {
-      open,
-      onClose,
-      onCloseComplete,
-      triggerRef,
-      animation,
-      className: twMerge12("w-[18rem] rounded-[32px]", className),
-      style,
-      children: [
-        /* @__PURE__ */ jsxs18("div", { className: "flex flex-col gap-[var(--gap-page)]", role: "menu", children: [
-          title && /* @__PURE__ */ jsx27(
-            "h2",
-            {
-              className: "mott-headline-medium mott-title-emphasis px-5",
-              style: { color: "var(--md-sys-color-on-surface)" },
-              children: title
-            }
-          ),
-          /* @__PURE__ */ jsx27("div", { className: "flex flex-col gap-[var(--gap-tight)]", children: items.map((item, i) => {
-            if (item == null ? void 0 : item.separator) {
-              return /* @__PURE__ */ jsx27(
-                "hr",
-                {
-                  className: "my-[var(--gap-tight)] border-0 h-px bg-[var(--md-sys-color-outline-variant)]"
-                },
-                item.id ?? `sep-${i}`
-              );
-            }
-            return /* @__PURE__ */ jsxs18(
-              "button",
-              {
-                ref: (node) => {
-                  attachRef(node, rowRefs, item.id ?? i, item.buttonRef);
-                  if (item.kind === "appearance") appearanceRef.current = node;
-                },
-                type: "button",
-                role: "menuitem",
-                onClick: (event) => handleSelect(item, event),
-                className: twMerge12(ROW_BASE, ROW_TONE[item.tone] ?? ROW_TONE.default),
-                ...pressHandlers(),
-                children: [
-                  item.icon && /* @__PURE__ */ jsx27("span", { className: twMerge12("flex", ICON_TONE[item.tone] ?? ICON_TONE.default), children: typeof item.icon === "string" ? /* @__PURE__ */ jsx27(Icon, { name: item.icon }) : item.icon }),
-                  /* @__PURE__ */ jsx27("span", { children: item.label })
-                ]
-              },
-              item.id ?? i
-            );
-          }) })
-        ] }),
-        /* @__PURE__ */ jsx27(
-          ThemeModal,
-          {
-            open: appearanceOpen,
-            onClose: () => setAppearanceOpen(false),
-            triggerRef: appearanceRef,
-            animation: APPEARANCE_ANIMATION
-          }
-        )
-      ]
-    }
-  );
-}
-
-// src/loading/loading.jsx
-import { useMemo as useMemo5, useRef as useRef12 } from "react";
-import { useGSAP as useGSAP6 } from "@gsap/react";
-import gsap10 from "gsap";
-
-// src/loading/shapeMorph.js
-var TAU2 = Math.PI * 2;
-var CENTRE = 50;
-var SAMPLES = 120;
-var WALK = 720;
-var START = -Math.PI / 2;
-var round2 = (n) => Math.round(n * 100) / 100;
-var SVG_NS = "http://www.w3.org/2000/svg";
-function walk(d) {
-  const svg = document.createElementNS(SVG_NS, "svg");
-  svg.setAttribute("aria-hidden", "true");
-  svg.style.cssText = "position:absolute;width:0;height:0;overflow:hidden;pointer-events:none";
-  const path = document.createElementNS(SVG_NS, "path");
-  path.setAttribute("d", d);
-  svg.appendChild(path);
-  document.body.appendChild(svg);
-  const total = path.getTotalLength();
-  const points = [];
-  for (let i = 0; i < WALK; i += 1) {
-    const { x, y } = path.getPointAtLength(total * i / WALK);
-    points.push([Math.atan2(y - CENTRE, x - CENTRE), Math.hypot(x - CENTRE, y - CENTRE)]);
-  }
-  svg.remove();
-  return points;
-}
-function radiiFrom(points) {
-  const unwrapped = [];
-  let previous2 = points[0][0];
-  for (const [angle, radius] of points) {
-    let a = angle;
-    while (a - previous2 > Math.PI) a -= TAU2;
-    while (previous2 - a > Math.PI) a += TAU2;
-    unwrapped.push([a, radius]);
-    previous2 = a;
-  }
-  if (unwrapped[unwrapped.length - 1][0] < unwrapped[0][0]) unwrapped.reverse();
-  const first = unwrapped[0][0];
-  const inside = (angle) => {
-    let a = angle;
-    while (a < first) a += TAU2;
-    while (a >= first + TAU2) a -= TAU2;
-    return a;
-  };
-  const radii = new Float64Array(SAMPLES);
-  for (let i = 0; i < SAMPLES; i += 1) {
-    const target = inside(START + TAU2 * i / SAMPLES);
-    let lo = 0;
-    let hi = unwrapped.length - 1;
-    while (hi - lo > 1) {
-      const mid = lo + hi >> 1;
-      if (unwrapped[mid][0] <= target) lo = mid;
-      else hi = mid;
-    }
-    const [a0, r0] = unwrapped[lo];
-    const [a1, r1] = unwrapped[hi];
-    const span = a1 - a0;
-    radii[i] = span === 0 ? r0 : r0 + (r1 - r0) * (target - a0) / span;
-  }
-  return radii;
-}
-var measured = /* @__PURE__ */ new Map();
-function radiiOf({ name, points } = {}) {
-  if (typeof document === "undefined") return null;
-  const key = `${name}|${points ?? ""}`;
-  if (measured.has(key)) return measured.get(key);
-  const d = shapePath(name, { points });
-  if (!d) return null;
-  const radii = radiiFrom(walk(d));
-  measured.set(key, radii);
-  return radii;
-}
-function morphPath(from, to, t) {
-  if (!from || !to) return null;
-  const points = new Array(SAMPLES);
-  for (let i = 0; i < SAMPLES; i += 1) {
-    const radius = from[i] + (to[i] - from[i]) * t;
-    const angle = START + TAU2 * i / SAMPLES;
-    points[i] = `${round2(CENTRE + Math.cos(angle) * radius)} ${round2(CENTRE + Math.sin(angle) * radius)}`;
-  }
-  return `M ${points[0]} L ${points.slice(1).join(" L ")} Z`;
-}
-
-// src/loading/loading.jsx
-import { jsx as jsx28 } from "react/jsx-runtime";
-var SIZE_TOKEN4 = {
-  sm: "var(--control-size-sm)",
-  md: "var(--control-size-md)",
-  lg: "var(--control-size-lg)"
-};
-var LOADER_SHAPES = [
-  { name: "cookie", points: 20 },
-  { name: "triangle" },
-  { name: "diamond" }
-];
-var MORPH2 = 0.6;
-var HOLD = 0.25;
-var SPIN = 6;
-var SPIN_STILL = 12;
-function Loading({
-  size = "sm",
-  color = "primary",
-  shapes = LOADER_SHAPES,
-  label = "Cargando",
-  className,
-  style,
-  ...props
-}) {
-  var _a, _b;
-  verifyTypesLoading({ size, color, shapes, label });
-  const svgRef = useRef12(null);
-  const pathRef = useRef12(null);
-  const box = SIZE_TOKEN4[size] ?? size;
-  const fill = ACCENTS[color] ?? color;
-  const cycle = useMemo5(
-    () => shapes.map((shape) => `${shape.name}|${shape.points ?? ""}`).join(","),
-    [shapes]
-  );
-  const initial = shapePath((_a = shapes[0]) == null ? void 0 : _a.name, { points: (_b = shapes[0]) == null ? void 0 : _b.points }) ?? "";
-  useGSAP6(() => {
-    const svg = svgRef.current;
-    const path = pathRef.current;
-    if (!svg || !path) return;
-    const still = prefersReducedMotion();
-    gsap10.to(svg, {
-      rotate: 360,
-      duration: still ? SPIN_STILL : SPIN,
-      repeat: -1,
-      ease: "none"
-    });
-    if (still) return;
-    const radii = shapes.map(radiiOf);
-    if (radii.some((entry) => !entry)) return;
-    const timeline = gsap10.timeline({ repeat: -1 });
-    radii.forEach((from, index) => {
-      const to = radii[(index + 1) % radii.length];
-      const state = { t: 0 };
-      timeline.to(state, {
-        t: 1,
-        duration: MORPH2,
-        /*`EASE.inOut` es la unica del vocabulario que arranca y acaba practicamente parada y
-          reparte el viaje por igual - la que motion.js describe para mirar algo
-          transformarse. Una curva de cabeza rapida dejaria el morph hecho en el primer
-          cuarto y dos tercios del tiempo sin ensenar nada.*/
-        ease: EASE.inOut,
-        onUpdate: () => path.setAttribute("d", morphPath(from, to, state.t))
-      }, `+=${HOLD}`);
-    });
-  }, { dependencies: [cycle] });
-  return /* @__PURE__ */ jsx28(
-    "svg",
-    {
-      ref: svgRef,
-      viewBox: "0 0 100 100",
-      role: "status",
-      "aria-label": label,
-      className,
-      style: {
-        width: box,
-        height: box,
-        display: "block",
-        // El color va por `currentColor` para que el consumidor pueda pisarlo desde CSS sin
-        // tener que saber que dentro hay un <path>.
-        color: fill,
-        ...style
-      },
-      ...props,
-      children: /* @__PURE__ */ jsx28("path", { ref: pathRef, d: initial, fill: "currentColor" })
-    }
-  );
-}
-
-// src/navbar/navbar.jsx
-import { useRef as useRef13, useState as useState11 } from "react";
-import { useGSAP as useGSAP7 } from "@gsap/react";
-import gsap11 from "gsap";
+import { useRef as useRef12, useState as useState12 } from "react";
 import { twMerge as twMerge13 } from "tailwind-merge";
-import { Fragment as Fragment5, jsx as jsx29, jsxs as jsxs19 } from "react/jsx-runtime";
-var DESKTOP_ALIGN = {
-  center: "justify-center",
-  // Sin padding propio: el respiro por arriba lo pone ya el `p-[var(--gap-block)]` del <nav>, y
-  // sumarle otro dejaria los iconos al doble de distancia del borde que del lado izquierdo.
-  top: "justify-start"
-};
-var ITEM_BASE = "mott-state-layer mott-morph inline-flex items-center justify-center gap-2 border-0 cursor-pointer p-0 mott-label-large mott-trim [--mott-morph-bg:var(--md-sys-color-surface-container)] text-[var(--md-sys-color-on-surface-variant)] transition-[color] duration-[var(--duration-morph)] ease-[var(--ease-morph)]";
-var ITEM_SELECTED = "[--mott-morph-bg:var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)]";
-var attachRef2 = (node, store, i, forwarded) => {
-  if (i === null) store.current = node;
-  else store.current[i] = node;
-  if (typeof forwarded === "function") forwarded(node);
-  else if (forwarded) forwarded.current = node;
-};
-function NavItems({ items, selectedItem, onSelect, vertical }) {
-  const itemRefs = useRef13([]);
-  const containerRef = useRef13(null);
-  const prevSelectedRef = useRef13(selectedItem);
-  const prevCountRef = useRef13(null);
-  useGSAP7(() => {
-    itemRefs.current.length = items.length;
-    const shapeOf = (i) => selectionShape(i === selectedItem);
-    const settleOnly = prevCountRef.current !== items.length;
-    prevCountRef.current = items.length;
-    if (settleOnly) {
-      itemRefs.current.forEach((el, i) => {
-        if (el) gsap11.set(el, shapeOf(i));
-      });
-      prevSelectedRef.current = selectedItem;
-      return;
-    }
-    const changed = /* @__PURE__ */ new Set([prevSelectedRef.current, selectedItem]);
-    prevSelectedRef.current = selectedItem;
-    changed.forEach((i) => {
-      const el = itemRefs.current[i];
-      if (el) morphSelection(el, i === selectedItem);
-    });
-  }, { dependencies: [selectedItem, items.length], scope: containerRef });
-  return /* @__PURE__ */ jsx29("div", { ref: containerRef, className: twMerge13("inline-flex gap-[var(--gap-group)]", vertical && "flex-col"), children: items.map((item, i) => {
-    const iconOnly = !item.label;
-    return /* @__PURE__ */ jsxs19(
-      "button",
-      {
-        ref: (el) => attachRef2(el, itemRefs, i, item.buttonRef),
-        type: "button",
-        onClick: () => onSelect(i),
-        "aria-pressed": selectedItem === i,
-        className: twMerge13(ITEM_BASE, selectedItem === i && ITEM_SELECTED),
-        ...pressHandlers(),
-        style: {
-          height: "var(--control-size-md)",
-          ...iconOnly ? { width: "var(--control-size-md)" } : { padding: "0 20px" }
-        },
-        children: [
-          item.icon && (typeof item.icon === "string" ? /* @__PURE__ */ jsx29(Icon, { name: item.icon }) : item.icon),
-          item.label && /* @__PURE__ */ jsx29("span", { children: item.label })
-        ]
-      },
-      item.id ?? i
-    );
-  }) });
-}
-function LogoButton({ logo }) {
-  const ref = useRef13(null);
-  const didMountRef = useRef13(false);
-  useGSAP7(() => {
-    if (!ref.current) return;
-    const shape = selectionShape(!!logo.active);
-    if (!didMountRef.current) {
-      didMountRef.current = true;
-      gsap11.set(ref.current, shape);
-      return;
-    }
-    morphSelection(ref.current, !!logo.active);
-  }, { dependencies: [logo.active] });
-  return /* @__PURE__ */ jsx29(
-    "button",
-    {
-      ref: (el) => attachRef2(el, ref, null, logo.buttonRef),
-      type: "button",
-      onClick: logo.onClick,
-      "aria-pressed": !!logo.active,
-      "aria-label": logo.label ?? "Inicio",
-      className: twMerge13(ITEM_BASE, logo.active && ITEM_SELECTED),
-      ...pressHandlers(),
-      style: {
-        width: "var(--control-size-md)",
-        height: "var(--control-size-md)"
-      },
-      children: typeof logo.icon === "string" ? /* @__PURE__ */ jsx29(Icon, { name: logo.icon }) : logo.icon
-    }
-  );
-}
-function AccountButton({ account, buttonRef }) {
-  const ref = useRef13(null);
-  const didMountRef = useRef13(false);
-  const [broken, setBroken] = useState11(false);
-  useGSAP7(() => {
-    if (!ref.current) return;
-    const shape = selectionShape(!!account.active);
-    if (!didMountRef.current) {
-      didMountRef.current = true;
-      gsap11.set(ref.current, shape);
-      return;
-    }
-    morphSelection(ref.current, !!account.active);
-  }, { dependencies: [account.active] });
-  const photo = { width: "100%", height: "100%", objectFit: "cover", borderRadius: "inherit", userSelect: "none" };
-  return /* @__PURE__ */ jsx29(
-    "button",
-    {
-      ref: (el) => attachRef2(el, ref, null, buttonRef),
-      type: "button",
-      onClick: account.onClick,
-      "aria-pressed": !!account.active,
-      "aria-label": account.alt ?? "Tu cuenta",
-      className: twMerge13(ITEM_BASE, account.active && ITEM_SELECTED),
-      ...pressHandlers(),
-      style: { width: "var(--control-size-md)", height: "var(--control-size-md)" },
-      children: account.src && !broken ? /* @__PURE__ */ jsx29(
-        "img",
-        {
-          src: account.src,
-          alt: "",
-          draggable: false,
-          onError: () => setBroken(true),
-          style: photo
-        }
-      ) : /* @__PURE__ */ jsx29(
-        Avatar,
-        {
-          seed: account.seed ?? account.alt ?? "usuario",
-          size: "100%",
-          alt: "",
-          style: photo
-        }
-      )
-    }
-  );
-}
-function Navbar({
-  items = [],
-  selected,
-  defaultSelected = null,
-  onChange,
-  logo,
-  account,
-  align = "top",
-  className,
-  style
-}) {
-  verifyTypesNavbar({ items, logo, account, selected, defaultSelected, onChange, align });
-  const [internalSelected, setInternalSelected] = useState11(defaultSelected);
-  const isControlled = selected !== void 0;
-  const selectedItem = isControlled ? selected : internalSelected;
-  const handleSelect = (i) => {
-    if (!isControlled) setInternalSelected(i);
-    onChange == null ? void 0 : onChange(i, items[i]);
-  };
-  const [accountOpen, setAccountOpen] = useState11(false);
-  const accountRef = useRef13(null);
-  const captureAccount = (node) => {
-    if (node && node.offsetWidth > 0) accountRef.current = node;
-  };
-  const accountProps = account && {
-    ...account,
-    onClick: () => {
-      var _a;
-      if (account.options) setAccountOpen(true);
-      (_a = account.onClick) == null ? void 0 : _a.call(account);
-    }
-  };
-  return /* @__PURE__ */ jsxs19(Fragment5, { children: [
-    /* @__PURE__ */ jsxs19(
-      "nav",
-      {
-        className: twMerge13(
-          "hidden md:flex sticky top-[var(--gap-block)] h-[calc(100dvh_-_var(--gap-block)_*_2)] w-fit shrink-0 flex-col items-center my-[var(--gap-block)] mx-[var(--gap-section)] p-[var(--gap-block)] gap-[var(--gap-group)]",
-          DESKTOP_ALIGN[align] ?? DESKTOP_ALIGN.center,
-          className
-        ),
-        style,
-        children: [
-          logo && /* @__PURE__ */ jsx29(LogoButton, { logo }),
-          /* @__PURE__ */ jsx29(NavItems, { items, selectedItem, onSelect: handleSelect, vertical: true }),
-          accountProps && /* @__PURE__ */ jsx29("div", { className: "mt-auto mb-4", children: /* @__PURE__ */ jsx29(AccountButton, { account: accountProps, buttonRef: captureAccount }) })
-        ]
-      }
-    ),
-    /* @__PURE__ */ jsx29(
-      "nav",
-      {
-        className: twMerge13(
-          "flex md:hidden fixed bottom-4 left-1/2 z-[var(--z-nav)] -translate-x-1/2 items-center gap-3",
-          className
-        ),
-        style,
-        children: /* @__PURE__ */ jsxs19(
-          "div",
-          {
-            className: "flex items-center gap-1 rounded-[var(--radius-full)] bg-[var(--md-sys-color-surface)] p-1",
-            style: { boxShadow: "var(--shadow-floating)" },
-            children: [
-              /* @__PURE__ */ jsx29(NavItems, { items, selectedItem, onSelect: handleSelect, vertical: false }),
-              accountProps && /* @__PURE__ */ jsx29(AccountButton, { account: accountProps, buttonRef: captureAccount })
-            ]
-          }
-        )
-      }
-    ),
-    (account == null ? void 0 : account.options) && /* @__PURE__ */ jsx29(
-      OptionsModal,
-      {
-        open: accountOpen,
-        onClose: () => setAccountOpen(false),
-        triggerRef: accountRef,
-        items: account.options,
-        title: account.optionsTitle
-      }
-    )
-  ] });
-}
 
-// src/dragScroll/dragScroll.jsx
-import { useCallback as useCallback5, useEffect as useEffect7, useLayoutEffect as useLayoutEffect2, useRef as useRef14, useState as useState12 } from "react";
-import { twMerge as twMerge14 } from "tailwind-merge";
-import gsap12 from "gsap";
-import { Draggable as Draggable2 } from "gsap/Draggable";
-import { InertiaPlugin } from "gsap/InertiaPlugin";
-import { jsx as jsx30 } from "react/jsx-runtime";
-gsap12.registerPlugin(Draggable2, InertiaPlugin);
-var DRAG_TYPE = { y: "scrollTop", x: "scrollLeft", both: "scroll" };
-var EDGE_RESISTANCE = 0.85;
-function useDragScroll(ref, { axis = "y", inertia = true, disabled = false } = {}) {
-  useEffect7(() => {
-    if (disabled || !ref.current) return;
-    if (typeof window !== "undefined" && !window.matchMedia("(pointer: fine)").matches) return;
-    const el = ref.current;
-    let draggable = null;
-    const overflows = () => axis === "x" ? el.scrollWidth > el.clientWidth : axis === "both" ? el.scrollWidth > el.clientWidth || el.scrollHeight > el.clientHeight : el.scrollHeight > el.clientHeight;
-    const sync = () => {
-      if (overflows() && !draggable) {
-        [draggable] = Draggable2.create(el, {
-          type: DRAG_TYPE[axis] ?? DRAG_TYPE.y,
-          inertia,
-          edgeResistance: EDGE_RESISTANCE,
-          minimumMovement: 3,
-          dragClickables: true,
-          cursor: "grab",
-          activeCursor: "grabbing"
-        });
-      } else if (!overflows() && draggable) {
-        draggable.kill();
-        draggable = null;
-        el.style.cursor = "";
-      }
-    };
-    sync();
-    const observer = new ResizeObserver(sync);
-    observer.observe(el);
-    if (el.firstElementChild) observer.observe(el.firstElementChild);
-    return () => {
-      observer.disconnect();
-      draggable == null ? void 0 : draggable.kill();
-      el.style.cursor = "";
-    };
-  }, [ref, axis, inertia, disabled]);
-}
-function useEdgeFade(ref, axis, size) {
-  const [edges, setEdges] = useState12([0, 0]);
-  const measure = useCallback5(() => {
-    const el = ref.current;
-    if (!el) return;
-    const horizontal = axis === "x";
-    const pos = horizontal ? el.scrollLeft : el.scrollTop;
-    const total = horizontal ? el.scrollWidth : el.scrollHeight;
-    const visible = horizontal ? el.clientWidth : el.clientHeight;
-    const remaining = total - visible - pos;
-    setEdges([Math.min(pos, size), Math.min(Math.max(remaining, 0), size)]);
-  }, [ref, axis, size]);
-  useLayoutEffect2(() => {
-    const el = ref.current;
-    if (!el) return;
-    measure();
-    el.addEventListener("scroll", measure, { passive: true });
-    const observer = new ResizeObserver(measure);
-    observer.observe(el);
-    if (el.firstElementChild) observer.observe(el.firstElementChild);
-    return () => {
-      el.removeEventListener("scroll", measure);
-      observer.disconnect();
-    };
-  }, [ref, measure]);
-  return edges;
-}
-function DragScroll({
-  children,
-  axis = "y",
-  inertia = true,
-  disabled = false,
-  fade = true,
-  fadeSize,
-  className,
-  style,
-  ...props
-}) {
-  verifyTypesDragScroll({ axis, inertia, disabled, fade, fadeSize });
-  const scrollRef = useRef14(null);
-  useDragScroll(scrollRef, { axis, inertia, disabled });
-  const size = fadeSize ?? 32;
-  const [fadeStart, fadeEnd] = useEdgeFade(scrollRef, axis, fade ? size : 0);
-  const horizontal = axis === "x";
-  return /* @__PURE__ */ jsx30(
-    "div",
-    {
-      ref: scrollRef,
-      className: twMerge14(fade && (horizontal ? "mott-fade-x" : "mott-fade-y"), className),
-      style: {
-        overflowX: horizontal || axis === "both" ? "auto" : "hidden",
-        overflowY: horizontal ? "hidden" : "auto",
-        "--mott-fade-start": `${fadeStart}px`,
-        "--mott-fade-end": `${fadeEnd}px`,
-        ...style
-      },
-      ...props,
-      children
-    }
-  );
-}
+// src/settingsModal/settingsModal.jsx
+import { useState as useState11 } from "react";
+import { twMerge as twMerge12 } from "tailwind-merge";
 
 // src/GeneratorGradientProfile/GeneratorGradientProfile.jsx
-import { useCallback as useCallback6, useEffect as useEffect8, useMemo as useMemo6, useRef as useRef15, useState as useState13 } from "react";
+import { useCallback as useCallback5, useEffect as useEffect7, useMemo as useMemo5, useRef as useRef11, useState as useState10 } from "react";
 
 // src/GeneratorGradientProfile/gradientCanvas.js
 var CARD_W = 440;
@@ -4873,13 +4253,13 @@ function drawCard(ctx, { name, email, ramp, verifiedLabel }) {
   roundRectPath(ctx, 0, 0, W, H, RADIUS);
   ctx.clip();
   drawDither(ctx, W, H, ramp);
-  const scrim = ctx.createLinearGradient(0, H * 0.5, 0, H);
+  const scrim = ctx.createLinearGradient(0, H * 0.15, 0, H);
   scrim.addColorStop(0, "rgba(8,9,7,0)");
-  scrim.addColorStop(1, "rgba(8,9,7,0.72)");
+  scrim.addColorStop(1, "rgba(8,9,7,0.82)");
   ctx.fillStyle = scrim;
-  ctx.fillRect(0, H * 0.5, W, H * 0.5);
+  ctx.fillRect(0, H * 0.15, W, H * 0.85);
   const textX = 28;
-  let ty = H - 168;
+  let ty = H / 2 - 48;
   ctx.textBaseline = "alphabetic";
   ctx.fillStyle = "rgba(255,255,255,0.6)";
   ctx.font = "600 14px system-ui, sans-serif";
@@ -4954,7 +4334,7 @@ function buildGradientStops(seedHex, mode, recipe = GRADIENT_RECIPE) {
 }
 
 // src/GeneratorGradientProfile/GeneratorGradientProfile.jsx
-import { jsx as jsx31, jsxs as jsxs20 } from "react/jsx-runtime";
+import { jsx as jsx27, jsxs as jsxs18 } from "react/jsx-runtime";
 function GeneratorGradientProfile({
   name = "",
   email = "",
@@ -4964,16 +4344,16 @@ function GeneratorGradientProfile({
 }) {
   verifyTypesGradientProfile({ name, email, showControls, verifiedLabel });
   const { colorSeedHex, resolvedMode } = useTheme();
-  const canvasRef = useRef15(null);
-  const [nameValue, setNameValue] = useState13(name);
-  const [emailValue, setEmailValue] = useState13(email);
-  useEffect8(() => setNameValue(name), [name]);
-  useEffect8(() => setEmailValue(email), [email]);
-  const ramp = useMemo6(
+  const canvasRef = useRef11(null);
+  const [nameValue, setNameValue] = useState10(name);
+  const [emailValue, setEmailValue] = useState10(email);
+  useEffect7(() => setNameValue(name), [name]);
+  useEffect7(() => setEmailValue(email), [email]);
+  const ramp = useMemo5(
     () => buildGradientStops(colorSeedHex, resolvedMode),
     [colorSeedHex, resolvedMode]
   );
-  const render2 = useCallback6(() => {
+  const render2 = useCallback5(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
@@ -4983,25 +4363,25 @@ function GeneratorGradientProfile({
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     drawCard(ctx, { name: nameValue, email: emailValue, ramp, verifiedLabel });
   }, [nameValue, emailValue, ramp, verifiedLabel]);
-  useEffect8(() => {
+  useEffect7(() => {
     render2();
   }, [render2]);
-  return /* @__PURE__ */ jsxs20(
+  return /* @__PURE__ */ jsxs18(
     "div",
     {
       className: ["flex w-full flex-col items-center gap-[var(--gap-page)] md:flex-row md:items-start md:justify-center", className].filter(Boolean).join(" "),
       children: [
-        showControls && /* @__PURE__ */ jsxs20("div", { className: "flex w-full max-w-xs flex-col gap-[var(--gap-page)]", children: [
-          /* @__PURE__ */ jsxs20("div", { className: "flex flex-col gap-[var(--gap-section)]", children: [
-            /* @__PURE__ */ jsx31(Text, { variant: "title-medium", as: "h2", children: "Tarjeta de perfil" }),
-            /* @__PURE__ */ jsx31(Text, { variant: "body-small", tone: "muted", children: "El degradado se genera a partir del acento del tema." })
+        showControls && /* @__PURE__ */ jsxs18("div", { className: "flex w-full max-w-xs flex-col gap-[var(--gap-page)]", children: [
+          /* @__PURE__ */ jsxs18("div", { className: "flex flex-col gap-[var(--gap-section)]", children: [
+            /* @__PURE__ */ jsx27(Text, { variant: "title-medium", as: "h2", children: "Tarjeta de perfil" }),
+            /* @__PURE__ */ jsx27(Text, { variant: "body-small", tone: "muted", children: "El degradado se genera a partir del acento del tema." })
           ] }),
-          /* @__PURE__ */ jsxs20("div", { className: "flex flex-col gap-[var(--gap-group)]", children: [
-            /* @__PURE__ */ jsx31(Input, { label: "Nombre", value: nameValue, onChange: setNameValue }),
-            /* @__PURE__ */ jsx31(Input, { label: "Correo", type: "email", value: emailValue, onChange: setEmailValue })
+          /* @__PURE__ */ jsxs18("div", { className: "flex flex-col gap-[var(--gap-group)]", children: [
+            /* @__PURE__ */ jsx27(Input, { label: "Nombre", value: nameValue, onChange: setNameValue }),
+            /* @__PURE__ */ jsx27(Input, { label: "Correo", type: "email", value: emailValue, onChange: setEmailValue })
           ] })
         ] }),
-        /* @__PURE__ */ jsx31("div", { className: "w-full max-w-[300px]", children: /* @__PURE__ */ jsx31(
+        /* @__PURE__ */ jsx27("div", { className: "w-full max-w-[300px]", children: /* @__PURE__ */ jsx27(
           "canvas",
           {
             ref: canvasRef,
@@ -5010,6 +4390,721 @@ function GeneratorGradientProfile({
           }
         ) })
       ]
+    }
+  );
+}
+
+// src/settingsModal/settingsModal.jsx
+import { jsx as jsx28, jsxs as jsxs19 } from "react/jsx-runtime";
+var SECTIONS = [{ id: "account", icon: "person", label: "Cuenta" }];
+var NAV_ROW = "mott-state-layer flex w-full items-center gap-[var(--gap-group)] rounded-[var(--radius-default)] border-0 bg-transparent px-4 py-2.5 text-left cursor-pointer whitespace-nowrap mott-label-large mott-trim text-[var(--md-sys-color-on-surface-variant)] transition-[background-color,color] duration-[var(--duration-instant)]";
+var NAV_ROW_SELECTED = "bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)]";
+function AccountPanel({ name, email }) {
+  return /* @__PURE__ */ jsx28("div", { className: "flex w-full max-w-[440px] items-center justify-center", children: /* @__PURE__ */ jsx28(GeneratorGradientProfile, { name, email, showControls: false }) });
+}
+function SettingsModal({
+  open,
+  onClose,
+  triggerRef,
+  animation,
+  name = "",
+  email = "",
+  className,
+  style
+}) {
+  verifyTypesSettingsModal({ open, onClose, triggerRef, animation, name, email });
+  const [activeSection, setActiveSection] = useState11(SECTIONS[0].id);
+  return /* @__PURE__ */ jsx28(
+    CustomModal,
+    {
+      open,
+      onClose,
+      triggerRef,
+      animation,
+      className: twMerge12("w-[760px]", className),
+      style,
+      children: /* @__PURE__ */ jsxs19("div", { className: "flex gap-[var(--gap-block)]", children: [
+        /* @__PURE__ */ jsx28("nav", { className: "flex w-44 shrink-0 flex-col gap-[var(--gap-tight)]", role: "tablist", children: SECTIONS.map((section) => /* @__PURE__ */ jsxs19(
+          "button",
+          {
+            type: "button",
+            role: "tab",
+            "aria-selected": activeSection === section.id,
+            onClick: () => setActiveSection(section.id),
+            className: twMerge12(NAV_ROW, activeSection === section.id && NAV_ROW_SELECTED),
+            ...pressHandlers(),
+            children: [
+              /* @__PURE__ */ jsx28(Icon, { name: section.icon }),
+              /* @__PURE__ */ jsx28("span", { children: section.label })
+            ]
+          },
+          section.id
+        )) }),
+        /* @__PURE__ */ jsx28("div", { className: "flex flex-1 items-center justify-center", children: activeSection === "account" && /* @__PURE__ */ jsx28(AccountPanel, { name, email }) })
+      ] })
+    }
+  );
+}
+
+// src/optionsModal/optionsModal.jsx
+import { jsx as jsx29, jsxs as jsxs20 } from "react/jsx-runtime";
+var ROW_BASE = "mott-state-layer flex w-full items-center gap-[var(--gap-group)] rounded-[var(--radius-default)] border-0 bg-transparent px-5 py-3.5 text-left cursor-pointer whitespace-nowrap mott-label-large mott-trim transition-[color] duration-[var(--duration-instant)]";
+var ROW_TONE = {
+  default: "text-[var(--md-sys-color-on-surface)]",
+  danger: "text-[var(--md-sys-color-error)]"
+};
+var APPEARANCE_ANIMATION = new AnchoredAnimation({ anchor: "panel", align: "edge" });
+var ICON_TONE = {
+  default: "text-[var(--md-sys-color-on-surface-variant)]",
+  danger: "text-[var(--md-sys-color-error)]"
+};
+var appearanceItem = (overrides = {}) => ({
+  id: "appearance",
+  kind: "appearance",
+  icon: "palette",
+  label: "Apariencia",
+  // no cierra el menu: la modal del tema se apoya ENCIMA de el, que es el punto
+  closeOnSelect: false,
+  ...overrides
+});
+var feedbackItem = (overrides = {}) => ({
+  id: "feedback",
+  icon: "feedback",
+  label: "Dar Feedback",
+  ...overrides
+});
+var logoutItem = (overrides = {}) => ({
+  id: "logout",
+  icon: "logout",
+  label: "Cerrar Sesi\xF3n",
+  tone: "danger",
+  ...overrides
+});
+var settingsItem = (overrides = {}) => ({
+  id: "settings",
+  kind: "settings",
+  icon: "settings",
+  label: "Configuraci\xF3n",
+  // mismo trato que 'appearance': la modal de configuracion se apoya encima del menu, no lo cierra
+  closeOnSelect: false,
+  ...overrides
+});
+var attachRef = (node, store, key, forwarded) => {
+  if (key !== null) store.current[key] = node;
+  if (typeof forwarded === "function") forwarded(node);
+  else if (forwarded) forwarded.current = node;
+};
+function OptionsModal({
+  open,
+  onClose,
+  onCloseComplete,
+  triggerRef,
+  items = [],
+  title = "Opciones",
+  animation = anchoredAnimation,
+  name = "",
+  email = "",
+  className,
+  style
+}) {
+  verifyTypesOptionsModal({ open, onClose, onCloseComplete, triggerRef, items, title, animation, name, email });
+  const [appearanceOpen, setAppearanceOpen] = useState12(false);
+  const [settingsOpen, setSettingsOpen] = useState12(false);
+  const rowRefs = useRef12({});
+  const appearanceRef = useRef12(null);
+  const settingsRef = useRef12(null);
+  const handleSelect = (item, event) => {
+    var _a;
+    if (item.kind === "appearance") setAppearanceOpen(true);
+    if (item.kind === "settings") setSettingsOpen(true);
+    (_a = item.onClick) == null ? void 0 : _a.call(item, event);
+    if (item.closeOnSelect !== false && item.kind !== "appearance" && item.kind !== "settings") onClose == null ? void 0 : onClose();
+  };
+  return /* @__PURE__ */ jsxs20(
+    CustomModal,
+    {
+      open,
+      onClose,
+      onCloseComplete,
+      triggerRef,
+      animation,
+      className: twMerge13("w-[18rem] rounded-[32px]", className),
+      style,
+      children: [
+        /* @__PURE__ */ jsxs20("div", { className: "flex flex-col gap-[var(--gap-page)]", role: "menu", children: [
+          title && /* @__PURE__ */ jsx29(
+            "h2",
+            {
+              className: "mott-headline-medium mott-title-emphasis px-5",
+              style: { color: "var(--md-sys-color-on-surface)" },
+              children: title
+            }
+          ),
+          /* @__PURE__ */ jsx29("div", { className: "flex flex-col gap-[var(--gap-tight)]", children: items.map((item, i) => {
+            if (item == null ? void 0 : item.separator) {
+              return /* @__PURE__ */ jsx29(
+                "hr",
+                {
+                  className: "my-[var(--gap-tight)] border-0 h-px bg-[var(--md-sys-color-outline-variant)]"
+                },
+                item.id ?? `sep-${i}`
+              );
+            }
+            return /* @__PURE__ */ jsxs20(
+              "button",
+              {
+                ref: (node) => {
+                  attachRef(node, rowRefs, item.id ?? i, item.buttonRef);
+                  if (item.kind === "appearance") appearanceRef.current = node;
+                  if (item.kind === "settings") settingsRef.current = node;
+                },
+                type: "button",
+                role: "menuitem",
+                onClick: (event) => handleSelect(item, event),
+                className: twMerge13(ROW_BASE, ROW_TONE[item.tone] ?? ROW_TONE.default),
+                ...pressHandlers(),
+                children: [
+                  item.icon && /* @__PURE__ */ jsx29("span", { className: twMerge13("flex", ICON_TONE[item.tone] ?? ICON_TONE.default), children: typeof item.icon === "string" ? /* @__PURE__ */ jsx29(Icon, { name: item.icon }) : item.icon }),
+                  /* @__PURE__ */ jsx29("span", { children: item.label })
+                ]
+              },
+              item.id ?? i
+            );
+          }) })
+        ] }),
+        /* @__PURE__ */ jsx29(
+          ThemeModal,
+          {
+            open: appearanceOpen,
+            onClose: () => setAppearanceOpen(false),
+            triggerRef: appearanceRef,
+            animation: APPEARANCE_ANIMATION
+          }
+        ),
+        /* @__PURE__ */ jsx29(
+          SettingsModal,
+          {
+            open: settingsOpen,
+            onClose: () => setSettingsOpen(false),
+            triggerRef: settingsRef,
+            animation: morphAnimation,
+            name,
+            email
+          }
+        )
+      ]
+    }
+  );
+}
+
+// src/loading/loading.jsx
+import { useMemo as useMemo6, useRef as useRef13 } from "react";
+import { useGSAP as useGSAP6 } from "@gsap/react";
+import gsap10 from "gsap";
+
+// src/loading/shapeMorph.js
+var TAU2 = Math.PI * 2;
+var CENTRE = 50;
+var SAMPLES = 120;
+var WALK = 720;
+var START = -Math.PI / 2;
+var round2 = (n) => Math.round(n * 100) / 100;
+var SVG_NS = "http://www.w3.org/2000/svg";
+function walk(d) {
+  const svg = document.createElementNS(SVG_NS, "svg");
+  svg.setAttribute("aria-hidden", "true");
+  svg.style.cssText = "position:absolute;width:0;height:0;overflow:hidden;pointer-events:none";
+  const path = document.createElementNS(SVG_NS, "path");
+  path.setAttribute("d", d);
+  svg.appendChild(path);
+  document.body.appendChild(svg);
+  const total = path.getTotalLength();
+  const points = [];
+  for (let i = 0; i < WALK; i += 1) {
+    const { x, y } = path.getPointAtLength(total * i / WALK);
+    points.push([Math.atan2(y - CENTRE, x - CENTRE), Math.hypot(x - CENTRE, y - CENTRE)]);
+  }
+  svg.remove();
+  return points;
+}
+function radiiFrom(points) {
+  const unwrapped = [];
+  let previous2 = points[0][0];
+  for (const [angle, radius] of points) {
+    let a = angle;
+    while (a - previous2 > Math.PI) a -= TAU2;
+    while (previous2 - a > Math.PI) a += TAU2;
+    unwrapped.push([a, radius]);
+    previous2 = a;
+  }
+  if (unwrapped[unwrapped.length - 1][0] < unwrapped[0][0]) unwrapped.reverse();
+  const first = unwrapped[0][0];
+  const inside = (angle) => {
+    let a = angle;
+    while (a < first) a += TAU2;
+    while (a >= first + TAU2) a -= TAU2;
+    return a;
+  };
+  const radii = new Float64Array(SAMPLES);
+  for (let i = 0; i < SAMPLES; i += 1) {
+    const target = inside(START + TAU2 * i / SAMPLES);
+    let lo = 0;
+    let hi = unwrapped.length - 1;
+    while (hi - lo > 1) {
+      const mid = lo + hi >> 1;
+      if (unwrapped[mid][0] <= target) lo = mid;
+      else hi = mid;
+    }
+    const [a0, r0] = unwrapped[lo];
+    const [a1, r1] = unwrapped[hi];
+    const span = a1 - a0;
+    radii[i] = span === 0 ? r0 : r0 + (r1 - r0) * (target - a0) / span;
+  }
+  return radii;
+}
+var measured = /* @__PURE__ */ new Map();
+function radiiOf({ name, points } = {}) {
+  if (typeof document === "undefined") return null;
+  const key = `${name}|${points ?? ""}`;
+  if (measured.has(key)) return measured.get(key);
+  const d = shapePath(name, { points });
+  if (!d) return null;
+  const radii = radiiFrom(walk(d));
+  measured.set(key, radii);
+  return radii;
+}
+function morphPath(from, to, t) {
+  if (!from || !to) return null;
+  const points = new Array(SAMPLES);
+  for (let i = 0; i < SAMPLES; i += 1) {
+    const radius = from[i] + (to[i] - from[i]) * t;
+    const angle = START + TAU2 * i / SAMPLES;
+    points[i] = `${round2(CENTRE + Math.cos(angle) * radius)} ${round2(CENTRE + Math.sin(angle) * radius)}`;
+  }
+  return `M ${points[0]} L ${points.slice(1).join(" L ")} Z`;
+}
+
+// src/loading/loading.jsx
+import { jsx as jsx30 } from "react/jsx-runtime";
+var SIZE_TOKEN4 = {
+  sm: "var(--control-size-sm)",
+  md: "var(--control-size-md)",
+  lg: "var(--control-size-lg)"
+};
+var LOADER_SHAPES = [
+  { name: "cookie", points: 20 },
+  { name: "triangle" },
+  { name: "diamond" }
+];
+var MORPH2 = 0.6;
+var HOLD = 0.25;
+var SPIN = 6;
+var SPIN_STILL = 12;
+function Loading({
+  size = "sm",
+  color = "primary",
+  shapes = LOADER_SHAPES,
+  label = "Cargando",
+  className,
+  style,
+  ...props
+}) {
+  var _a, _b;
+  verifyTypesLoading({ size, color, shapes, label });
+  const svgRef = useRef13(null);
+  const pathRef = useRef13(null);
+  const box = SIZE_TOKEN4[size] ?? size;
+  const fill = ACCENTS[color] ?? color;
+  const cycle = useMemo6(
+    () => shapes.map((shape) => `${shape.name}|${shape.points ?? ""}`).join(","),
+    [shapes]
+  );
+  const initial = shapePath((_a = shapes[0]) == null ? void 0 : _a.name, { points: (_b = shapes[0]) == null ? void 0 : _b.points }) ?? "";
+  useGSAP6(() => {
+    const svg = svgRef.current;
+    const path = pathRef.current;
+    if (!svg || !path) return;
+    const still = prefersReducedMotion();
+    gsap10.to(svg, {
+      rotate: 360,
+      duration: still ? SPIN_STILL : SPIN,
+      repeat: -1,
+      ease: "none"
+    });
+    if (still) return;
+    const radii = shapes.map(radiiOf);
+    if (radii.some((entry) => !entry)) return;
+    const timeline = gsap10.timeline({ repeat: -1 });
+    radii.forEach((from, index) => {
+      const to = radii[(index + 1) % radii.length];
+      const state = { t: 0 };
+      timeline.to(state, {
+        t: 1,
+        duration: MORPH2,
+        /*`EASE.inOut` es la unica del vocabulario que arranca y acaba practicamente parada y
+          reparte el viaje por igual - la que motion.js describe para mirar algo
+          transformarse. Una curva de cabeza rapida dejaria el morph hecho en el primer
+          cuarto y dos tercios del tiempo sin ensenar nada.*/
+        ease: EASE.inOut,
+        onUpdate: () => path.setAttribute("d", morphPath(from, to, state.t))
+      }, `+=${HOLD}`);
+    });
+  }, { dependencies: [cycle] });
+  return /* @__PURE__ */ jsx30(
+    "svg",
+    {
+      ref: svgRef,
+      viewBox: "0 0 100 100",
+      role: "status",
+      "aria-label": label,
+      className,
+      style: {
+        width: box,
+        height: box,
+        display: "block",
+        // El color va por `currentColor` para que el consumidor pueda pisarlo desde CSS sin
+        // tener que saber que dentro hay un <path>.
+        color: fill,
+        ...style
+      },
+      ...props,
+      children: /* @__PURE__ */ jsx30("path", { ref: pathRef, d: initial, fill: "currentColor" })
+    }
+  );
+}
+
+// src/navbar/navbar.jsx
+import { useRef as useRef14, useState as useState13 } from "react";
+import { useGSAP as useGSAP7 } from "@gsap/react";
+import gsap11 from "gsap";
+import { twMerge as twMerge14 } from "tailwind-merge";
+import { Fragment as Fragment5, jsx as jsx31, jsxs as jsxs21 } from "react/jsx-runtime";
+var DESKTOP_ALIGN = {
+  center: "justify-center",
+  // Sin padding propio: el respiro por arriba lo pone ya el `p-[var(--gap-block)]` del <nav>, y
+  // sumarle otro dejaria los iconos al doble de distancia del borde que del lado izquierdo.
+  top: "justify-start"
+};
+var ITEM_BASE = "mott-state-layer mott-morph inline-flex items-center justify-center gap-2 border-0 cursor-pointer p-0 mott-label-large mott-trim [--mott-morph-bg:var(--md-sys-color-surface-container)] text-[var(--md-sys-color-on-surface-variant)] transition-[color] duration-[var(--duration-morph)] ease-[var(--ease-morph)]";
+var ITEM_SELECTED = "[--mott-morph-bg:var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)]";
+var attachRef2 = (node, store, i, forwarded) => {
+  if (i === null) store.current = node;
+  else store.current[i] = node;
+  if (typeof forwarded === "function") forwarded(node);
+  else if (forwarded) forwarded.current = node;
+};
+function NavItems({ items, selectedItem, onSelect, vertical }) {
+  const itemRefs = useRef14([]);
+  const containerRef = useRef14(null);
+  const prevSelectedRef = useRef14(selectedItem);
+  const prevCountRef = useRef14(null);
+  useGSAP7(() => {
+    itemRefs.current.length = items.length;
+    const shapeOf = (i) => selectionShape(i === selectedItem);
+    const settleOnly = prevCountRef.current !== items.length;
+    prevCountRef.current = items.length;
+    if (settleOnly) {
+      itemRefs.current.forEach((el, i) => {
+        if (el) gsap11.set(el, shapeOf(i));
+      });
+      prevSelectedRef.current = selectedItem;
+      return;
+    }
+    const changed = /* @__PURE__ */ new Set([prevSelectedRef.current, selectedItem]);
+    prevSelectedRef.current = selectedItem;
+    changed.forEach((i) => {
+      const el = itemRefs.current[i];
+      if (el) morphSelection(el, i === selectedItem);
+    });
+  }, { dependencies: [selectedItem, items.length], scope: containerRef });
+  return /* @__PURE__ */ jsx31("div", { ref: containerRef, className: twMerge14("inline-flex gap-[var(--gap-group)]", vertical && "flex-col"), children: items.map((item, i) => {
+    const iconOnly = !item.label;
+    return /* @__PURE__ */ jsxs21(
+      "button",
+      {
+        ref: (el) => attachRef2(el, itemRefs, i, item.buttonRef),
+        type: "button",
+        onClick: () => onSelect(i),
+        "aria-pressed": selectedItem === i,
+        className: twMerge14(ITEM_BASE, selectedItem === i && ITEM_SELECTED),
+        ...pressHandlers(),
+        style: {
+          height: "var(--control-size-md)",
+          ...iconOnly ? { width: "var(--control-size-md)" } : { padding: "0 20px" }
+        },
+        children: [
+          item.icon && (typeof item.icon === "string" ? /* @__PURE__ */ jsx31(Icon, { name: item.icon }) : item.icon),
+          item.label && /* @__PURE__ */ jsx31("span", { children: item.label })
+        ]
+      },
+      item.id ?? i
+    );
+  }) });
+}
+function LogoButton({ logo }) {
+  const ref = useRef14(null);
+  const didMountRef = useRef14(false);
+  useGSAP7(() => {
+    if (!ref.current) return;
+    const shape = selectionShape(!!logo.active);
+    if (!didMountRef.current) {
+      didMountRef.current = true;
+      gsap11.set(ref.current, shape);
+      return;
+    }
+    morphSelection(ref.current, !!logo.active);
+  }, { dependencies: [logo.active] });
+  return /* @__PURE__ */ jsx31(
+    "button",
+    {
+      ref: (el) => attachRef2(el, ref, null, logo.buttonRef),
+      type: "button",
+      onClick: logo.onClick,
+      "aria-pressed": !!logo.active,
+      "aria-label": logo.label ?? "Inicio",
+      className: twMerge14(ITEM_BASE, logo.active && ITEM_SELECTED),
+      ...pressHandlers(),
+      style: {
+        width: "var(--control-size-md)",
+        height: "var(--control-size-md)"
+      },
+      children: typeof logo.icon === "string" ? /* @__PURE__ */ jsx31(Icon, { name: logo.icon }) : logo.icon
+    }
+  );
+}
+function AccountButton({ account, buttonRef }) {
+  const ref = useRef14(null);
+  const didMountRef = useRef14(false);
+  const [broken, setBroken] = useState13(false);
+  useGSAP7(() => {
+    if (!ref.current) return;
+    const shape = selectionShape(!!account.active);
+    if (!didMountRef.current) {
+      didMountRef.current = true;
+      gsap11.set(ref.current, shape);
+      return;
+    }
+    morphSelection(ref.current, !!account.active);
+  }, { dependencies: [account.active] });
+  const photo = { width: "100%", height: "100%", objectFit: "cover", borderRadius: "inherit", userSelect: "none" };
+  return /* @__PURE__ */ jsx31(
+    "button",
+    {
+      ref: (el) => attachRef2(el, ref, null, buttonRef),
+      type: "button",
+      onClick: account.onClick,
+      "aria-pressed": !!account.active,
+      "aria-label": account.alt ?? "Tu cuenta",
+      className: twMerge14(ITEM_BASE, account.active && ITEM_SELECTED),
+      ...pressHandlers(),
+      style: { width: "var(--control-size-md)", height: "var(--control-size-md)" },
+      children: account.src && !broken ? /* @__PURE__ */ jsx31(
+        "img",
+        {
+          src: account.src,
+          alt: "",
+          draggable: false,
+          onError: () => setBroken(true),
+          style: photo
+        }
+      ) : /* @__PURE__ */ jsx31(
+        Avatar,
+        {
+          seed: account.seed ?? account.alt ?? "usuario",
+          size: "100%",
+          alt: "",
+          style: photo
+        }
+      )
+    }
+  );
+}
+function Navbar({
+  items = [],
+  selected,
+  defaultSelected = null,
+  onChange,
+  logo,
+  account,
+  align = "top",
+  className,
+  style
+}) {
+  verifyTypesNavbar({ items, logo, account, selected, defaultSelected, onChange, align });
+  const [internalSelected, setInternalSelected] = useState13(defaultSelected);
+  const isControlled = selected !== void 0;
+  const selectedItem = isControlled ? selected : internalSelected;
+  const handleSelect = (i) => {
+    if (!isControlled) setInternalSelected(i);
+    onChange == null ? void 0 : onChange(i, items[i]);
+  };
+  const [accountOpen, setAccountOpen] = useState13(false);
+  const accountRef = useRef14(null);
+  const captureAccount = (node) => {
+    if (node && node.offsetWidth > 0) accountRef.current = node;
+  };
+  const accountProps = account && {
+    ...account,
+    onClick: () => {
+      var _a;
+      if (account.options) setAccountOpen(true);
+      (_a = account.onClick) == null ? void 0 : _a.call(account);
+    }
+  };
+  return /* @__PURE__ */ jsxs21(Fragment5, { children: [
+    /* @__PURE__ */ jsxs21(
+      "nav",
+      {
+        className: twMerge14(
+          "hidden md:flex sticky top-[var(--gap-block)] h-[calc(100dvh_-_var(--gap-block)_*_2)] w-fit shrink-0 flex-col items-center my-[var(--gap-block)] mx-[var(--gap-section)] p-[var(--gap-block)] gap-[var(--gap-group)]",
+          DESKTOP_ALIGN[align] ?? DESKTOP_ALIGN.center,
+          className
+        ),
+        style,
+        children: [
+          logo && /* @__PURE__ */ jsx31(LogoButton, { logo }),
+          /* @__PURE__ */ jsx31(NavItems, { items, selectedItem, onSelect: handleSelect, vertical: true }),
+          accountProps && /* @__PURE__ */ jsx31("div", { className: "mt-auto flex -mb-[9px]", children: /* @__PURE__ */ jsx31(AccountButton, { account: accountProps, buttonRef: captureAccount }) })
+        ]
+      }
+    ),
+    /* @__PURE__ */ jsx31(
+      "nav",
+      {
+        className: twMerge14(
+          "flex md:hidden fixed bottom-4 left-1/2 z-[var(--z-nav)] -translate-x-1/2 items-center gap-3",
+          className
+        ),
+        style,
+        children: /* @__PURE__ */ jsxs21(
+          "div",
+          {
+            className: "flex items-center gap-1 rounded-[var(--radius-full)] bg-[var(--md-sys-color-surface)] p-1",
+            style: { boxShadow: "var(--shadow-floating)" },
+            children: [
+              /* @__PURE__ */ jsx31(NavItems, { items, selectedItem, onSelect: handleSelect, vertical: false }),
+              accountProps && /* @__PURE__ */ jsx31(AccountButton, { account: accountProps, buttonRef: captureAccount })
+            ]
+          }
+        )
+      }
+    ),
+    (account == null ? void 0 : account.options) && /* @__PURE__ */ jsx31(
+      OptionsModal,
+      {
+        open: accountOpen,
+        onClose: () => setAccountOpen(false),
+        triggerRef: accountRef,
+        items: account.options,
+        title: account.optionsTitle
+      }
+    )
+  ] });
+}
+
+// src/dragScroll/dragScroll.jsx
+import { useCallback as useCallback6, useEffect as useEffect8, useLayoutEffect as useLayoutEffect2, useRef as useRef15, useState as useState14 } from "react";
+import { twMerge as twMerge15 } from "tailwind-merge";
+import gsap12 from "gsap";
+import { Draggable as Draggable2 } from "gsap/Draggable";
+import { InertiaPlugin } from "gsap/InertiaPlugin";
+import { jsx as jsx32 } from "react/jsx-runtime";
+gsap12.registerPlugin(Draggable2, InertiaPlugin);
+var DRAG_TYPE = { y: "scrollTop", x: "scrollLeft", both: "scroll" };
+var EDGE_RESISTANCE = 0.85;
+function useDragScroll(ref, { axis = "y", inertia = true, disabled = false } = {}) {
+  useEffect8(() => {
+    if (disabled || !ref.current) return;
+    if (typeof window !== "undefined" && !window.matchMedia("(pointer: fine)").matches) return;
+    const el = ref.current;
+    let draggable = null;
+    const overflows = () => axis === "x" ? el.scrollWidth > el.clientWidth : axis === "both" ? el.scrollWidth > el.clientWidth || el.scrollHeight > el.clientHeight : el.scrollHeight > el.clientHeight;
+    const sync = () => {
+      if (overflows() && !draggable) {
+        [draggable] = Draggable2.create(el, {
+          type: DRAG_TYPE[axis] ?? DRAG_TYPE.y,
+          inertia,
+          edgeResistance: EDGE_RESISTANCE,
+          minimumMovement: 3,
+          dragClickables: true,
+          cursor: "grab",
+          activeCursor: "grabbing"
+        });
+      } else if (!overflows() && draggable) {
+        draggable.kill();
+        draggable = null;
+        el.style.cursor = "";
+      }
+    };
+    sync();
+    const observer = new ResizeObserver(sync);
+    observer.observe(el);
+    if (el.firstElementChild) observer.observe(el.firstElementChild);
+    return () => {
+      observer.disconnect();
+      draggable == null ? void 0 : draggable.kill();
+      el.style.cursor = "";
+    };
+  }, [ref, axis, inertia, disabled]);
+}
+function useEdgeFade(ref, axis, size) {
+  const [edges, setEdges] = useState14([0, 0]);
+  const measure = useCallback6(() => {
+    const el = ref.current;
+    if (!el) return;
+    const horizontal = axis === "x";
+    const pos = horizontal ? el.scrollLeft : el.scrollTop;
+    const total = horizontal ? el.scrollWidth : el.scrollHeight;
+    const visible = horizontal ? el.clientWidth : el.clientHeight;
+    const remaining = total - visible - pos;
+    setEdges([Math.min(pos, size), Math.min(Math.max(remaining, 0), size)]);
+  }, [ref, axis, size]);
+  useLayoutEffect2(() => {
+    const el = ref.current;
+    if (!el) return;
+    measure();
+    el.addEventListener("scroll", measure, { passive: true });
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    if (el.firstElementChild) observer.observe(el.firstElementChild);
+    return () => {
+      el.removeEventListener("scroll", measure);
+      observer.disconnect();
+    };
+  }, [ref, measure]);
+  return edges;
+}
+function DragScroll({
+  children,
+  axis = "y",
+  inertia = true,
+  disabled = false,
+  fade = true,
+  fadeSize,
+  className,
+  style,
+  ...props
+}) {
+  verifyTypesDragScroll({ axis, inertia, disabled, fade, fadeSize });
+  const scrollRef = useRef15(null);
+  useDragScroll(scrollRef, { axis, inertia, disabled });
+  const size = fadeSize ?? 32;
+  const [fadeStart, fadeEnd] = useEdgeFade(scrollRef, axis, fade ? size : 0);
+  const horizontal = axis === "x";
+  return /* @__PURE__ */ jsx32(
+    "div",
+    {
+      ref: scrollRef,
+      className: twMerge15(fade && (horizontal ? "mott-fade-x" : "mott-fade-y"), className),
+      style: {
+        overflowX: horizontal || axis === "both" ? "auto" : "hidden",
+        overflowY: horizontal ? "hidden" : "auto",
+        "--mott-fade-start": `${fadeStart}px`,
+        "--mott-fade-end": `${fadeEnd}px`,
+        ...style
+      },
+      ...props,
+      children
     }
   );
 }
@@ -5046,6 +5141,7 @@ export {
   SHAPE_NAMES,
   Search,
   Select,
+  SettingsModal,
   shapes_default as Shape,
   TYPESCALE_ROLES,
   Text,
@@ -5063,6 +5159,7 @@ export {
   morphTo,
   prefersReducedMotion,
   pressHandlers,
+  settingsItem,
   squircleRadius,
   useDragScroll,
   useTheme,

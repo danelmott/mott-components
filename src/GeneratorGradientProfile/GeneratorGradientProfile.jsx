@@ -84,7 +84,7 @@ export default function GeneratorGradientProfile({
                 </div>
             )}
 
-            <div className="w-full max-w-[300px]">
+            <div className="w-full">
                 <canvas
                     ref={canvasRef}
                     aria-label={`Tarjeta de perfil de ${nameValue || 'usuario'}`}

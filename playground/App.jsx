@@ -20,13 +20,12 @@ import { SHAPE_NAMES } from '../src/shapes/shapePaths.js';
 import DragScroll from '../src/dragScroll/dragScroll.jsx';
 import { useTheme } from '../src/theme/themeContext.jsx';
 import ThemeModal from '../src/themeModal/themeModal.jsx';
-import GeneratorGradientProfile from '../src/GeneratorGradientProfile/GeneratorGradientProfile.jsx';
 import LoginModal from '../src/authModals/loginModal.jsx';
 import RegisterModal from '../src/authModals/registerModal.jsx';
 import OtpModal from '../src/authModals/otpModal.jsx';
 import RecoverPasswordModal from '../src/authModals/recoverPasswordModal.jsx';
 import OnboardingModal from '../src/onBoardingModal/onboardingModal.jsx';
-import OptionsModal, { appearanceItem, feedbackItem, logoutItem } from '../src/optionsModal/optionsModal.jsx';
+import OptionsModal, { appearanceItem, feedbackItem, logoutItem, settingsItem } from '../src/optionsModal/optionsModal.jsx';
 
 function Section({ title, wide, children }) {
   return (
@@ -212,8 +211,10 @@ function OptionsDemo() {
         open={open}
         onClose={() => setOpen(false)}
         triggerRef={avatarRef}
+        name="Danel Mantilla Palomino"
+        email="mantillapalominodanel@gmail.com"
         items={[
-          { icon: 'settings', label: 'Configuración', onClick: () => setLast('Configuración') },
+          settingsItem(),
           { icon: 'refresh', label: 'Recargar App', onClick: () => setLast('Recargar App') },
           appearanceItem(),
           feedbackItem({ onClick: () => setLast('Dar Feedback') }),
@@ -481,7 +482,7 @@ export default function App() {
             seed: 'danel',
             alt: 'Danel',
             options: [
-              { icon: 'settings', label: 'Configuración' },
+              settingsItem(),
               { icon: 'refresh', label: 'Recargar App' },
               appearanceItem(),
               feedbackItem({}),
@@ -531,16 +532,6 @@ export default function App() {
                 <ThemeDemo />
               </Section>
 
-              <Section title="GeneratorGradientProfile — degradado desde el acento" wide>
-                <Text variant="body-medium" tone="muted">
-                  El degradado se genera con el seed del tema: cambia el swatch en «Apariencia» y la
-                  tarjeta se recolorea.
-                </Text>
-                <GeneratorGradientProfile
-                  name="Danel Mantilla Palomino"
-                  email="mantillapalominodanel@gmail.com"
-                />
-              </Section>
 
               <Section title="DragScroll — sin barra, se arrastra" wide>
                 <Text variant="body-medium" tone="muted">

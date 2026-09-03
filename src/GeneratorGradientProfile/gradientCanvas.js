@@ -145,14 +145,18 @@ export function drawCard(ctx, { name, email, ramp, verifiedLabel }) {
 
     drawDither(ctx, W, H, ramp);
 
-    const scrim = ctx.createLinearGradient(0, H * 0.5, 0, H);
+    // Arranca mucho antes que el bloque de texto (que ahora vive centrado, no pegado al fondo) para
+    // que el scrim ya este dando contraste cuando el texto empieza, y sigue oscureciendo hasta el
+    // badge del footer, que se queda donde siempre.
+    const scrim = ctx.createLinearGradient(0, H * 0.15, 0, H);
     scrim.addColorStop(0, 'rgba(8,9,7,0)');
-    scrim.addColorStop(1, 'rgba(8,9,7,0.72)');
+    scrim.addColorStop(1, 'rgba(8,9,7,0.82)');
     ctx.fillStyle = scrim;
-    ctx.fillRect(0, H * 0.5, W, H * 0.5);
+    ctx.fillRect(0, H * 0.15, W, H * 0.85);
 
     const textX = 28;
-    let ty = H - 168;
+    // Centrado vertical del bloque de 4 lineas (label+valor x2): el badge de abajo no se mueve.
+    let ty = H / 2 - 48;
 
     ctx.textBaseline = 'alphabetic';
     ctx.fillStyle = 'rgba(255,255,255,0.6)';
