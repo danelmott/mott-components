@@ -18,8 +18,12 @@ const MODES = [
 
 
 
-export default function ThemeModal({ open, onClose, triggerRef, title = 'Apariencia' }) {
-    verifyTypesThemeModal({ open, onClose, triggerRef, title });
+/*`animation` es un pasamanos hacia CustomModal, y existe por OptionsModal: abierta desde una fila
+  de menu, esta modal tiene que apoyarse SOBRE la fila (`anchoredAnimation`) en vez de viajar al
+  centro. Sin la prop se comporta igual que siempre - CustomModal elige `morphAnimation` cuando hay
+  `triggerRef` - asi que no cambia nada para quien ya la usaba.*/
+export default function ThemeModal({ open, onClose, triggerRef, title = 'Apariencia', animation }) {
+    verifyTypesThemeModal({ open, onClose, triggerRef, title, animation });
 
     const { colorSeedHex, variant, setColorSeedHex, mode, setMode, THEMES_AVAILABLE } = useTheme();
 
@@ -30,7 +34,7 @@ export default function ThemeModal({ open, onClose, triggerRef, title = 'Aparien
     const modeIndex = MODES.findIndex((m) => m.value === mode);
 
     return (
-        <CustomModal open={open} onClose={onClose} triggerRef={triggerRef} className="w-[360px]">
+        <CustomModal open={open} onClose={onClose} triggerRef={triggerRef} animation={animation} className="w-[360px]">
             <div className="flex flex-col gap-[var(--gap-page)]">
                 <div className="flex items-center gap-[var(--gap-group)]">
                     <Icon name="palette" size="lg" style={{ color: 'var(--md-sys-color-primary)' }} />

@@ -10,7 +10,6 @@ import { useToast } from '../src/toast/toastContext.jsx';
 import Select from '../src/select/select.jsx';
 import Search from '../src/search/search.jsx';
 import Loading from '../src/loading/loading.jsx';
-import Dropdown from '../src/dropdown/dropdown.jsx';
 import CustomModal from '../src/customModal/customModal.jsx';
 import { anchoredAnimation } from '../src/animations/modalAnimation.js';
 import Navbar from '../src/navbar/navbar.jsx';
@@ -27,6 +26,7 @@ import RegisterModal from '../src/authModals/registerModal.jsx';
 import OtpModal from '../src/authModals/otpModal.jsx';
 import RecoverPasswordModal from '../src/authModals/recoverPasswordModal.jsx';
 import OnboardingModal from '../src/onBoardingModal/onboardingModal.jsx';
+import OptionsModal, { appearanceItem, feedbackItem, logoutItem } from '../src/optionsModal/optionsModal.jsx';
 
 function Section({ title, wide, children }) {
   return (
@@ -178,6 +178,49 @@ function ThemeDemo() {
       </Row>
 
       <ThemeModal open={open} onClose={() => setOpen(false)} triggerRef={triggerRef} />
+    </>
+  );
+}
+
+/*El menu de la cuenta. Vive en su propio componente por el mismo motivo que las demas demos con
+  estado: el trigger necesita un ref y el abierto/cerrado un useState, y meterlos en App() los mezcla
+  con los de las otras veinte secciones.*/
+function OptionsDemo() {
+  const [open, setOpen] = useState(false);
+  const [last, setLast] = useState('(nada elegido todavía)');
+  const avatarRef = useRef(null);
+
+  return (
+    <>
+      <Row>
+        {/*El trigger es el boton, no el Avatar: `triggerRef` quiere el nodo del que sale el morph, y
+           el panel tiene que apoyarse sobre toda la pastilla, no sobre la imagen.*/}
+        <button
+          ref={avatarRef}
+          type="button"
+          onClick={() => setOpen(true)}
+          className="mott-state-layer flex cursor-pointer items-center gap-[var(--gap-group)] rounded-[var(--radius-full)] border-0 bg-[var(--md-sys-color-surface-container)] p-1 pr-4"
+        >
+          <Avatar seed="danel" shape="cookie" size="40px" />
+          <span className="mott-label-large" style={{ color: 'var(--md-sys-color-on-surface)' }}>Danel</span>
+        </button>
+
+        <Text variant="body-small" tone="muted">{last}</Text>
+      </Row>
+
+      <OptionsModal
+        open={open}
+        onClose={() => setOpen(false)}
+        triggerRef={avatarRef}
+        items={[
+          { icon: 'settings', label: 'Configuración', onClick: () => setLast('Configuración') },
+          { icon: 'refresh', label: 'Recargar App', onClick: () => setLast('Recargar App') },
+          appearanceItem(),
+          feedbackItem({ onClick: () => setLast('Dar Feedback') }),
+          { icon: 'favorite', label: 'Buy me a coffee', onClick: () => setLast('Buy me a coffee') },
+          logoutItem({ onClick: () => setLast('Cerrar Sesión') }),
+        ]}
+      />
     </>
   );
 }
@@ -363,12 +406,10 @@ export default function App() {
   const toggleToast = (variant) => setToasts((t) => ({ ...t, [variant]: !t[variant] }));
   const [country, setCountry] = useState(null);
   const [searchLog, setSearchLog] = useState('(nada buscado todavía)');
-  const [dropdownOpen, setDropdownOpen] = useState(false);
   const [customModalOpen, setCustomModalOpen] = useState(false);
   const [autoModalOpen, setAutoModalOpen] = useState(false);
   const [accountModalOpen, setAccountModalOpen] = useState(false);
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
-  const dropdownTriggerRef = useRef(null);
   const customModalTriggerRef = useRef(null);
   const accountTriggerRef = useRef(null);
   const deleteTriggerRef = useRef(null);
@@ -433,6 +474,21 @@ export default function App() {
             { icon: 'person' },
             { icon: 'settings', buttonRef: setGearTrigger },
           ]}
+          /*La cuenta, anclada al fondo del rail. Sin `src` cae al avatar sembrado, que es lo que ve
+            un usuario que todavía no subió foto. Como trae `options`, el nav monta el menú él mismo
+            y lo abre desde esta foto: acá no hay estado ni ref que cablear.*/
+          account={{
+            seed: 'danel',
+            alt: 'Danel',
+            options: [
+              { icon: 'settings', label: 'Configuración' },
+              { icon: 'refresh', label: 'Recargar App' },
+              appearanceItem(),
+              feedbackItem({}),
+              { icon: 'favorite', label: 'Buy me a coffee' },
+              logoutItem({}),
+            ],
+          }}
         />
         {/* `minWidth: 0` so the multicol block below can actually shrink inside the flex item instead
            of forcing the row wider than the viewport - a flex item's default min-width is `auto`,
@@ -706,24 +762,15 @@ export default function App() {
                 </Row>
               </Section>
 
-              <Section title="Dropdown — sin backdrop">
-                <div style={{ position: 'relative', display: 'inline-block' }}>
-                  <Button ref={dropdownTriggerRef} variant="default" onClick={() => setDropdownOpen((o) => !o)}>
-                    Abrir dropdown
-                  </Button>
-                  <Dropdown
-                    open={dropdownOpen}
-                    onClose={() => setDropdownOpen(false)}
-                    triggerRef={dropdownTriggerRef}
-                    className="absolute top-full left-0 mt-1 w-[220px]"
-                  >
-                    <div style={{ padding: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
-                      <span style={{ font: 'var(--md-sys-typescale-body-medium)', letterSpacing: 'var(--md-sys-typescale-body-medium-tracking)', color: 'var(--md-sys-color-on-surface)', padding: '0.5rem' }}>Opción 1</span>
-                      <span style={{ font: 'var(--md-sys-typescale-body-medium)', letterSpacing: 'var(--md-sys-typescale-body-medium-tracking)', color: 'var(--md-sys-color-on-surface)', padding: '0.5rem' }}>Opción 2</span>
-                      <span style={{ font: 'var(--md-sys-typescale-body-medium)', letterSpacing: 'var(--md-sys-typescale-body-medium-tracking)', color: 'var(--md-sys-color-on-surface)', padding: '0.5rem' }}>Opción 3</span>
-                    </div>
-                  </Dropdown>
-                </div>
+              <Section title="OptionsModal — el menú de la cuenta">
+                <Text variant="body-medium" tone="muted">
+                  El panel se despliega <strong>desde</strong> el propio botón y queda apoyado encima.
+                  Todo el contenido sale de <code>items</code>, y <strong>Apariencia</strong> no cierra
+                  el menú: abre el <code>ThemeModal</code> por encima y anclado a su propia fila, con el
+                  menú atenuado debajo. Escape cierra solo la de arriba. Eso es la pila de modales del
+                  repo, no cableado de esta demo.
+                </Text>
+                <OptionsDemo />
               </Section>
 
               <Section title="OnboardingModal">

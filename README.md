@@ -242,8 +242,8 @@ soft step of the neutral family and `ghost` has no surface to soften, so on thos
 | `Textarea` | labelled multiline field |
 | `Select` | custom dropdown over an `options` array |
 | `Search` | debounced search field with `onSearch` |
-| `Dropdown` | anchored panel, no backdrop; closes on Escape or an outside click |
 | `CustomModal` | native `<dialog>` with pluggable open/close animations |
+| `OptionsModal` | the account menu: rows from `items`, on the modal stack; the Appearance row opens `ThemeModal` on top of it, anchored to that row |
 | `LoginModal` / `RegisterModal` / `OtpModal` | ready-made auth modals: controlled fields, Google button, close button and switch line |
 | `RecoverPasswordModal` | password recovery in two steps — the code, then the new password — in one panel |
 | `Icon` | Material Symbols Rounded with `fill`, `weight`, `grade`, `opticalSize` |
@@ -554,6 +554,32 @@ to the rail's own margin and pushes it out of place, and a heading left outside 
 heading that does not respect the rail's column. `min-w-0` is there so wide content inside the
 `<main>` shrinks instead of forcing the row wider than the viewport.
 
+**The account button goes in `account`, pinned to the bottom of the rail.** It renders the user's
+photo at full size; with no `src`, or when the URL breaks, it falls back to the `Avatar` seeded from
+`seed` — a user with no picture still gets a face that is recognisably theirs. Give it `options` and
+the rail mounts `OptionsModal` itself and opens it from the photo, with no state or refs to wire:
+
+```jsx
+<Navbar
+  items={items}
+  logo={logo}
+  account={{
+    src: user.photoUrl,          // optional
+    seed: user.id,               // the fallback when there is no photo
+    alt: user.name,
+    options: [
+      { icon: 'settings', label: 'Settings', onClick: goToSettings },
+      appearanceItem(),
+      logoutItem({ onClick: signOut }),
+    ],
+  }}
+/>
+```
+
+Without `options` the button just calls your `onClick` and you mount the menu yourself, wherever you
+want. On mobile the photo joins the end of the bottom bar: there is no rail to pin it to there, and
+without it the account would have no way in on a phone.
+
 It still stays pinned in view while the page scrolls — `sticky` plus a full-viewport-tall box gives it
 the same "always visible" feel `fixed` had, just without sitting on top of anything. That is also why
 the scroll lock behind every modal (`src/utils/scrollLock.js`) only ever touches the `<html>` element:
@@ -565,6 +591,59 @@ write your own scroll lock, lock the `<html>`, not the `<body>`.**
 
 The mobile bar is the opposite of the rail on purpose: a bottom bar is expected to float over the last
 bit of content, so it keeps its own `fixed` position and an elevated z-index.
+
+---
+
+### OptionsModal
+
+```jsx
+import OptionsModal, { appearanceItem, feedbackItem, logoutItem } from '@danelmott/mott-design-components';
+
+const [open, setOpen] = useState(false);
+const avatarRef = useRef(null);
+
+<button ref={avatarRef} onClick={() => setOpen(true)}>
+  <Avatar seed={user.id} shape="cookie" size="40px" />
+</button>
+
+<OptionsModal
+  open={open}
+  onClose={() => setOpen(false)}
+  triggerRef={avatarRef}
+  items={[
+    { icon: 'settings', label: 'Settings', onClick: goToSettings },
+    appearanceItem(),
+    feedbackItem({ onClick: openFeedback }),
+    logoutItem({ onClick: signOut }),
+  ]}
+/>
+```
+
+**Nothing is fixed: `items` defines the whole menu, in whatever order you want.** The order of an
+account menu changes from app to app, so the three entries that do repeat everywhere are offered as
+factories — `appearanceItem()`, `feedbackItem({ onClick })` and `logoutItem({ onClick })` — which
+return an ordinary item and accept overrides (`label`, `icon`, `tone`) so you can translate or
+recolour one without losing the rest. All three are called the same way, so there is no rule to
+remember about which one takes parentheses.
+
+An item is `{ icon, label, onClick }` plus the optional parts: `tone: 'danger'` paints it with the
+error role, `closeOnSelect: false` leaves the menu open after the click, `buttonRef` hands you the
+row's node in case you want to anchor **your** modal to it, and `{ separator: true }` draws a rule
+instead of a row. `icon` takes a Material Symbol name or a node, exactly as in `Navbar`.
+
+**Appearance does not close the menu: it opens `ThemeModal` on top of it, anchored to its own row**,
+with the menu dimmed underneath. You do not wire that up — it is the repo's modal stack
+([`src/modalStack/README.md`](./src/modalStack/README.md), in Spanish): the `ThemeModal` is declared
+inside this menu's JSX, so the native `<dialog>` handles the ordering, makes Escape close only the
+top one and makes the lower one's backdrop unreachable, while the stack switches off the lower veil
+so two scrims never compound.
+
+That is also why it is a modal rather than a hand-rolled floating panel. An `absolute`ly positioned
+div has no portal, no veil and no seat in the stack: a child modal opened over it would be painted
+above it, because the top layer sits in front of any `z-index` in the document.
+
+The panel unfolds from the trigger with `anchoredAnimation`. Pass `animation` to change that —
+`morphAnimation` makes it travel to the centre of the screen instead.
 
 ---
 

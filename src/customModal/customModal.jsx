@@ -97,8 +97,16 @@ export default function CustomModal({ open, onClose, onCloseComplete, children, 
         gsap.to(overlay, { opacity: to, duration: DURATION.fast, ease: EASE.standard });
     }, [isTop, open]);
 
+    /*`stopPropagation` y no solo `preventDefault`. El navegador manda `cancel` UNICAMENTE al <dialog>
+      de arriba, que es de donde sale la promesa de que Escape cierra solo esa (modalStack/README.md).
+      Pero una modal hija se declara dentro del JSX de la madre, y React propaga sus eventos
+      sinteticos por el arbol de React aunque el portal las haya dejado hermanas en el DOM: sin
+      cortarlo aca, el `cancel` de la hija tambien despertaba el `onCancel` de la madre y un Escape
+      cerraba las dos de golpe. El `preventDefault` es otra cosa y sigue haciendo falta: impide que el
+      navegador cierre el <dialog> por su cuenta, sin darle tiempo a la animacion de salida.*/
     const handleCancel = (event) => {
         event.preventDefault();
+        event.stopPropagation();
         onClose?.();
     };
 

@@ -114,9 +114,19 @@ const clamp01 = (v) => Math.min(1, Math.max(0, v));
 // how long the ghost fade lasts, measured in geometric progress rather than in time
 const GHOST_FADE_SPAN = 0.2;
 
-// Clones the trigger's children into a fixed box over the trigger. It hangs off the `dialog` and not
-// the panel, so it stays put instead of travelling with the modal. `inner` is scaled because the ghost
-// is sized to the measured rect, which need not match the trigger's layout width.
+/*Clones the trigger's children into a fixed box over the trigger. It hangs off the `dialog` and not
+  the panel, so it stays put instead of travelling with the modal. `inner` is scaled because the ghost
+  is sized to the measured rect, which need not match the trigger's layout width.
+
+  The LAYOUT is copied from the trigger, not assumed. This box used to centre its contents outright,
+  which was invisibly correct for as long as every anchored panel hung off a 56px icon-only control -
+  the nav items, the logo - whose content really is centred with no padding. It is wrong the moment
+  the trigger is a wide, left-aligned, padded control such as a menu row: the ghost drew the icon and
+  the label in the middle of the row while the row itself has them at its left edge, so the closing
+  panel handed back a copy that sat somewhere the original never was. Reading `justify-content`,
+  `align-items`, `flex-direction`, `gap` and `padding` off the trigger reproduces both cases without
+  either one being a special case - the icon-only controls report `center` and no padding, which is
+  exactly what was hardcoded here before.*/
 function createTriggerGhost(dialog, trigger, originRect) {
     removeTriggerGhost(dialog); 
     const cs = getComputedStyle(trigger);
@@ -129,8 +139,14 @@ function createTriggerGhost(dialog, trigger, originRect) {
         width: `${originRect.width}px`,
         height: `${originRect.height}px`,
         display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
+        boxSizing: 'border-box',
+        padding: cs.padding,
+        /*El radio del trigger viaja con la copia. No es para pintar nada - el ghost no tiene fondo -
+          sino porque lo clonado puede heredarlo: la foto de una cuenta se recorta con
+          `border-radius: inherit` para seguir al morph del boton, y dentro de un ghost sin radio ese
+          `inherit` resolvia a 0 y la copia salia CUADRADA. Un circulo que se vuelve cuadrado al
+          pulsarlo es exactamente lo que no puede pasar.*/
+        borderRadius: cs.borderRadius,
         pointerEvents: 'none',
         color: cs.color,
         fontFamily: cs.fontFamily,
@@ -140,21 +156,36 @@ function createTriggerGhost(dialog, trigger, originRect) {
         letterSpacing: cs.letterSpacing,
     });
 
-    const inner = document.createElement('div');
-    /*El contenido del ghost se dibuja a la escala a la que lo dibuja el trigger, que es su propio
-      transform. No sale de originRect/offsetWidth: ese cociente ahora incluye lo que el pill de un
-      control `mott-morph` se sale de su caja, y eso es pintura del control, no escala de lo que
-      lleva dentro - un item del nav elegido escalaria aqui un icono que en el nav no esta escalado.*/
+    /*El ghost se dibuja a la escala a la que se dibuja el trigger, que es su propio transform - un
+      control a medio pulsar esta encogido y su copia tiene que estarlo igual. No sale de
+      originRect/offsetWidth: ese cociente incluye lo que el pill de un control `mott-morph` se sale de
+      su caja, y eso es pintura del control, no escala de lo que lleva dentro.
+
+      Y la escala va en la CAJA del ghost, no en su contenido. Puesta en el contenido, un contenido
+      alineado a la izquierda se encoge hacia su propio centro y se corre hacia dentro - visible como
+      un salto del icono y la etiqueta justo al abrir. El trigger no hace eso: escala su caja entera
+      desde el centro y lo de dentro va montado. Aca igual.*/
     const scale = Number(gsap.getProperty(trigger, 'scaleX')) || 1;
+
+    const inner = document.createElement('div');
     Object.assign(inner.style, {
         display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        transform: `scale(${scale})`,
+        // `flex: 1` para llenar la caja de contenido del ghost, pero SIN `min-width: 0`: con el, los
+        // hijos clonados pueden encogerse por debajo de su tamano natural y la etiqueta se corre
+        // hacia el icono, que es exactamente lo que el ghost no puede hacer - el trigger no encoge
+        // los suyos, asi que la copia tampoco.
+        flex: '1',
+        flexDirection: cs.flexDirection,
+        alignItems: cs.alignItems,
+        justifyContent: cs.justifyContent,
+        gap: cs.gap,
+        // y tambien aca: `inherit` en un clon resuelve contra ESTE, que es su padre directo
+        borderRadius: cs.borderRadius,
     });
     trigger.childNodes.forEach((node) => inner.appendChild(node.cloneNode(true)));
     ghost.appendChild(inner);
     dialog.appendChild(ghost);
+    if (scale !== 1) gsap.set(ghost, { scale });
     return ghost;
 }
 
@@ -485,7 +516,7 @@ export class MorphAnimation extends ModalAnimation {
 // from the trigger and settles on top of it. Quicker beats, and it fades the ghost back in on close
 // because the trigger stays hidden underneath the whole time.
 export class AnchoredAnimation extends MorphAnimation {
-    constructor({ cover = 6, ...options } = {}) {
+    constructor({ cover = 6, align = 'corner', anchor = 'trigger', ...options } = {}) {
         super({
             openDuration: DURATION.slow,
             closeDuration: DURATION.slow,
@@ -510,17 +541,77 @@ export class AnchoredAnimation extends MorphAnimation {
             ...options,
         });
         this.cover = cover;
+        this.align = align;
+        this.anchor = anchor;
     }
     
-    // Sits the panel `cover` px above and left of the trigger so it overlaps it, clamped to the viewport.
+    /*Contra que caja se coloca el panel. El morph SIEMPRE sale del trigger - de eso se encarga
+      `measure()` - y esto decide solo donde aterriza.
+    
+      `anchor: 'panel'` lo coloca contra el panel de la modal en la que vive el trigger, no contra el
+      trigger. Es lo que necesita una modal que se abre desde una fila de un menu: colocada contra la
+      fila, un panel mas ancho que el menu le sobresale por la izquierda y los dos bordes quedan
+      descuadrados; contra el panel del menu, comparten borde y se leen como uno encima del otro.
+      El `lastElementChild` del <dialog> es ese panel - el primer hijo es el velo (ver customModal.jsx).*/
+    anchorRect(trigger) {
+        if (this.anchor !== 'panel') return trigger.getBoundingClientRect();
+        const host = trigger.closest?.('dialog')?.lastElementChild;
+        return (host ?? trigger).getBoundingClientRect();
+    }
+    
+    /*Sits the panel `cover` px above and left of the trigger so it overlaps it, clamped to the viewport.
+    
+      On the vertical axis it also FLIPS. Clamping alone was enough while every anchored panel hung off
+      something near the top of the page, but a trigger at the bottom of the screen - a nav rail's
+      account button, say - does not fit downwards, and the clamp would simply shove the panel up until
+      its bottom edge hit the margin. The result reads wrong: the panel is no longer attached to
+      anything, and the part of it that ends up below the button looks like a mistake rather than the
+      deliberate `cover` overlap.
+    
+      So when the panel does not fit growing down, it is anchored by the OTHER end - its bottom edge
+      `cover` px past the trigger's bottom - and grows upwards instead. Mirrored, not improvised: the
+      overlap over the trigger is the same in both directions. The clamp stays as the last resort for a
+      panel too tall to fit either way.*/
     computeAnchoredPosition(triggerRect, panelRect) {
         const margin = 8;
         const fit = (value, size, viewport) =>
             Math.max(margin, Math.min(value, viewport - size - margin));
         
+        /*`align: 'center'` centra el panel SOBRE el trigger en vez de colgarlo de su esquina. Sigue
+          siendo una posicion relativa - sale del boton y vuelve a el, con su fantasma y todo - pero
+          aterriza tapando lo que rodea al trigger en lugar de dejarlo asomando por un lado. Es lo que
+          quiere una modal que se abre desde una fila de un menu: al terminar tapa el menu entero, y no
+          hay que elegir entre verlo a medias o mandar el panel al centro de la pantalla, que ya no
+          tendria nada que ver con el boton que lo abrio.*/
+        if (this.align === 'center') {
+            return {
+                left: fit(triggerRect.left + (triggerRect.width - panelRect.width) / 2, panelRect.width, window.innerWidth),
+                top: fit(triggerRect.top + (triggerRect.height - panelRect.height) / 2, panelRect.height, window.innerHeight),
+            };
+        }
+        
+        /*`edge`: misma esquina superior izquierda que la caja de referencia, sin desplazamiento. Los
+          dos bordes de arriba y los dos de la izquierda coinciden, y lo que sobre de tamano crece
+          hacia abajo y hacia la derecha. Centrado en vertical se veia peor de lo que parece: con dos
+          paneles de alto distinto dejaba una franja del de abajo asomando ARRIBA y otra abajo, y esa
+          franja superior se lee como un hueco, no como una capa. Compartiendo esquina no hay hueco
+          que explicar - se lee como una hoja puesta encima de la otra.*/
+        if (this.align === 'edge') {
+            return {
+                left: fit(triggerRect.left, panelRect.width, window.innerWidth),
+                top: fit(triggerRect.top, panelRect.height, window.innerHeight),
+            };
+        }
+        
+        const downwards = triggerRect.top - this.cover;
+        const fitsDownwards = downwards + panelRect.height <= window.innerHeight - margin;
+        const top = fitsDownwards
+            ? downwards
+            : triggerRect.bottom + this.cover - panelRect.height;
+        
         return {
             left: fit(triggerRect.left - this.cover, panelRect.width, window.innerWidth),
-            top: fit(triggerRect.top - this.cover, panelRect.height, window.innerHeight),
+            top: fit(top, panelRect.height, window.innerHeight),
         };
     }
     
@@ -530,7 +621,7 @@ export class AnchoredAnimation extends MorphAnimation {
           measured one layout and animated a different one - the panel jumped a frame on open.*/
         gsap.set(panel, { position: 'fixed', margin: 0 });
         const { left, top } = this.computeAnchoredPosition(
-            trigger.getBoundingClientRect(),
+            this.anchorRect(trigger),
             panel.getBoundingClientRect(),
         );
         gsap.set(panel, { left, top });

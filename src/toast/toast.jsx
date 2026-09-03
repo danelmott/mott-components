@@ -228,7 +228,7 @@ export default function Toast({
             style={{
                 padding: 'var(--pad-stat)',
                 // same neutral surface for all four variants: the variant shows in the icon, not in
-                // the panel. `surface-container-high` is the step Dropdown and the Select panel also
+                // the panel. `surface-container-high` is the step the Select panel and the modals also
                 // use, so everything that floats above the page sits at the same elevation.
                 backgroundColor: 'var(--md-sys-color-surface-container-high)',
                 boxShadow: 'var(--shadow-floating)',

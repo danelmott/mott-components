@@ -4,6 +4,8 @@ import { useGSAP } from '@gsap/react';
 import gsap from 'gsap';
 import { twMerge } from 'tailwind-merge';
 import Icon from '../icon/icon.jsx';
+import Avatar from '../avatars/avatars.jsx';
+import OptionsModal from '../optionsModal/optionsModal.jsx';
 import { morphSelection, selectionShape, pressHandlers } from '../animations/motion.js';
 import { verifyTypesNavbar } from '../utils/verifyTypes.js';
 
@@ -152,17 +154,84 @@ function LogoButton({ logo }) {
 }
 
 
+/*El boton de la cuenta: la foto del usuario, anclada abajo del rail. Comparte caja, morph y pulsado
+  con el logo y con los items - es un control mas de la misma columna, no un adorno - y lo unico
+  distinto es lo que lleva dentro y donde se sienta.
+
+  La foto es dinamica en los dos sentidos que importan: si hay `src` se pinta la foto, y si no la hay
+  - o si la URL se rompe, que es lo normal con fotos de perfil de terceros - cae al `Avatar` sembrado.
+  Ese fallback no es decorativo: un usuario sin foto sigue teniendo una cara que es reconociblemente
+  suya, dibujada del `seed` y sin guardar nada en ningun lado.
+
+  La foto ocupa el boton entero, y se recorta con `border-radius: inherit`. Eso no es un atajo: el
+  radio que hereda es el de `mott-morph`, que es `calc(var(--mott-morph-r) * 1%)` y lo anima GSAP con
+  la seleccion - o sea que la foto morfea de circulo a squircle EN EL MISMO recalculo que el control,
+  sin un segundo tween que sincronizar. Y sin `overflow: hidden`, que habria sido lo obvio y habria
+  recortado tambien el ::before del pill, que crece por fuera de la caja justamente para desbordarla.*/
+function AccountButton({ account, buttonRef }) {
+    const ref = useRef(null);
+    const didMountRef = useRef(false);
+    const [broken, setBroken] = useState(false);
+
+    useGSAP(() => {
+        if (!ref.current) return;
+        const shape = selectionShape(!!account.active);
+        if (!didMountRef.current) {
+            didMountRef.current = true;
+            gsap.set(ref.current, shape);
+            return;
+        }
+        morphSelection(ref.current, !!account.active);
+    }, { dependencies: [account.active] });
+
+    const photo = { width: '100%', height: '100%', objectFit: 'cover', borderRadius: 'inherit', userSelect: 'none' };
+
+    return (
+        <button
+            ref={(el) => attachRef(el, ref, null, buttonRef)}
+            type="button"
+            onClick={account.onClick}
+            aria-pressed={!!account.active}
+            aria-label={account.alt ?? 'Tu cuenta'}
+            className={twMerge(ITEM_BASE, account.active && ITEM_SELECTED)}
+            {...pressHandlers()}
+            style={{ width: 'var(--control-size-md)', height: 'var(--control-size-md)' }}
+        >
+            {account.src && !broken
+                ? (
+                    <img
+                        src={account.src}
+                        alt=""
+                        draggable={false}
+                        onError={() => setBroken(true)}
+                        style={photo}
+                    />
+                )
+                : (
+                    <Avatar
+                        seed={account.seed ?? account.alt ?? 'usuario'}
+                        size="100%"
+                        alt=""
+                        style={photo}
+                    />
+                )}
+        </button>
+    );
+}
+
+
 export default function Navbar({
     items = [],
     selected,
     defaultSelected = null,
     onChange,
     logo,
+    account,
     align = 'top',
     className,
     style,
 }) {
-    verifyTypesNavbar({ items, logo, selected, defaultSelected, onChange, align });
+    verifyTypesNavbar({ items, logo, account, selected, defaultSelected, onChange, align });
     const [internalSelected, setInternalSelected] = useState(defaultSelected);
     const isControlled = selected !== undefined;
     const selectedItem = isControlled ? selected : internalSelected;
@@ -171,6 +240,27 @@ export default function Navbar({
     const handleSelect = (i) => {
         if (!isControlled) setInternalSelected(i);
         onChange?.(i, items[i]);
+    };
+
+    /*Si la cuenta trae `options`, el nav monta el menu el mismo y lo abre desde la foto. Es la misma
+      decision que toma OptionsModal con la modal de apariencia: lo caro de esto nunca fue la lista,
+      fue anclarla al boton correcto, y eso lo sabe el nav y no quien lo usa. Sin `options`, el boton
+      se limita a llamar a `onClick` y el menu lo pone quien quiera, donde quiera.
+
+      El ref se escribe UNA sola vez y solo desde la copia visible: el nav se pinta dos veces - rail de
+      desktop y barra de mobile - y la escondida mide 0, asi que el menu saldria de una caja vacia si
+      ganara ella.*/
+    const [accountOpen, setAccountOpen] = useState(false);
+    const accountRef = useRef(null);
+    const captureAccount = (node) => {
+        if (node && node.offsetWidth > 0) accountRef.current = node;
+    };
+    const accountProps = account && {
+        ...account,
+        onClick: () => {
+            if (account.options) setAccountOpen(true);
+            account.onClick?.();
+        },
     };
 
     return (
@@ -251,6 +341,27 @@ export default function Navbar({
             >
                 {logo && <LogoButton logo={logo} />}
                 <NavItems items={items} selectedItem={selectedItem} onSelect={handleSelect} vertical />
+                {/*`mt-auto` y no un `justify-end`: el margen automatico se come el hueco que sobra y
+                   empuja SOLO a este boton al fondo, asi que el `align` de arriba (`center` o `top`)
+                   sigue mandando sobre el logo y los items. Con `justify-*` habria que elegir entre
+                   una cosa o la otra.
+
+                   `flex` en el contenedor, y no es cosmetico: los items son `inline-flex`, o sea de
+                   nivel de linea, y una caja de linea arrastra el hueco del descendente de la fuente
+                   debajo del boton. Esos 6px fantasma median de mas en este contenedor (62 de alto
+                   para un boton de 56) y empujaban a la cuenta hacia arriba sin que nada en el codigo
+                   dijera por que. En un contenedor flex el boton pasa a ser bloque y la caja lo mide
+                   exacto.
+
+                   Y el margen negativo de abajo es deliberado: el hueco bajo la cuenta queda en 7px
+                   contra los 16 que el padding del rail deja sobre el logo. No es simetria - es que
+                   la cuenta cierra la columna, y pegada asi al fondo se lee como el final del rail
+                   en vez de como un item mas que quedo suelto.*/}
+                {accountProps && (
+                    <div className="mt-auto flex -mb-[9px]">
+                        <AccountButton account={accountProps} buttonRef={captureAccount} />
+                    </div>
+                )}
             </nav>
 
             {/* Mobile: floating pill with the icons, inset from the edges - no logo, it does not fit a small bottom bar */}
@@ -266,8 +377,21 @@ export default function Navbar({
                     style={{ boxShadow: 'var(--shadow-floating)' }}
                 >
                     <NavItems items={items} selectedItem={selectedItem} onSelect={handleSelect} vertical={false} />
+                    {/*Tambien en mobile, y al final de la fila: aca no hay rail donde anclarla, y sin
+                       este boton la cuenta se quedaria sin puerta de entrada en el telefono.*/}
+                    {accountProps && <AccountButton account={accountProps} buttonRef={captureAccount} />}
                 </div>
             </nav>
+
+            {account?.options && (
+                <OptionsModal
+                    open={accountOpen}
+                    onClose={() => setAccountOpen(false)}
+                    triggerRef={accountRef}
+                    items={account.options}
+                    title={account.optionsTitle}
+                />
+            )}
         </>
     );
 }

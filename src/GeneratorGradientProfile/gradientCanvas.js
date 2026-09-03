@@ -111,6 +111,23 @@ function drawDither(ctx, w, h, ramp) {
     }
 }
 
+/*Recorte con puntos suspensivos, medido contra la fuente que YA está puesta en el contexto - por eso
+  recibe el ctx y no un ancho de caracter estimado: el nombre y el correo se pintan a 800 26px, y a
+  ese peso una "m" y una "i" no miden ni parecido, así que cortar por cantidad de letras dejaría unos
+  textos cortos y otros desbordados.
+
+  Los puntos entran en la medida, no se pegan después: agregarlos a un texto que ya llenaba el ancho
+  vuelve a desbordar justo lo que mide el "…". */
+function ellipsize(ctx, text, maxWidth) {
+    if (ctx.measureText(text).width <= maxWidth) return text;
+
+    let cut = text;
+    while (cut.length > 0 && ctx.measureText(cut.trimEnd() + '…').width > maxWidth) {
+        cut = cut.slice(0, -1);
+    }
+    return cut.trimEnd() + '…';
+}
+
 /*The card: artwork, a scrim over the bottom half, and the identity block.
 
   The text is white and the scrim is a fixed near-black on purpose. It sits on the ARTWORK, not on a
@@ -145,13 +162,9 @@ export function drawCard(ctx, { name, email, ramp, verifiedLabel }) {
     ty += 32;
     ctx.fillStyle = '#ffffff';
     ctx.font = '800 26px system-ui, sans-serif';
-    let emailText = email || ' ';
+    // el mismo ancho útil para los dos campos: el bloque de identidad es una columna, no dos anchos
     const maxWidth = W - textX - 32;
-    while (ctx.measureText(emailText).width > maxWidth && emailText.length > 1) {
-        emailText = emailText.slice(0, -1);
-    }
-    if (emailText !== (email || ' ')) emailText = emailText.trim() + '…';
-    ctx.fillText(emailText, textX, ty);
+    ctx.fillText(ellipsize(ctx, email || ' ', maxWidth), textX, ty);
 
     ty += 32;
     ctx.fillStyle = 'rgba(255,255,255,0.6)';
@@ -161,7 +174,7 @@ export function drawCard(ctx, { name, email, ramp, verifiedLabel }) {
     ty += 32;
     ctx.fillStyle = '#ffffff';
     ctx.font = '800 26px system-ui, sans-serif';
-    ctx.fillText(name || ' ', textX, ty);
+    ctx.fillText(ellipsize(ctx, name || ' ', maxWidth), textX, ty);
 
     const footerY = H - 34;
     ctx.beginPath();

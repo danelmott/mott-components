@@ -244,8 +244,8 @@ suave de la familia neutra y `ghost` no tiene superficie que suavizar, así que 
 | `Textarea` | campo multilínea con label |
 | `Select` | dropdown propio sobre un array de `options` |
 | `Search` | campo de búsqueda con debounce y `onSearch` |
-| `Dropdown` | panel anclado, sin backdrop; cierra con Escape o un clic afuera |
 | `CustomModal` | `<dialog>` nativo con animaciones de apertura y cierre intercambiables |
+| `OptionsModal` | el menú de la cuenta: las filas salen de `items` y viven en la pila de modales; la de Apariencia abre el `ThemeModal` encima, anclado a esa fila |
 | `LoginModal` / `RegisterModal` / `OtpModal` | modales de auth ya armadas: campos controlados, botón de Google, botón de cerrar y línea de switch |
 | `RecoverPasswordModal` | recuperar contraseña en dos pasos — el código, después la contraseña nueva — en un solo panel |
 | `Icon` | Material Symbols Rounded con `fill`, `weight`, `grade`, `opticalSize` |
@@ -543,11 +543,89 @@ despega el rail del borde, y un título fuera del `<main>` es un título que no 
 rail. El `min-w-0` está para que el contenido ancho del `<main>` se achique en vez de forzar la fila
 más ancha que el viewport.
 
+**El botón de la cuenta va en `account`, anclado al fondo del rail.** Renderiza la foto del usuario a
+caja completa; si no hay `src`, o si la URL se rompe, cae al `Avatar` sembrado del `seed` — un usuario
+sin foto sigue teniendo una cara que es suya. Y si le pasás `options`, el nav monta el `OptionsModal`
+él mismo y lo abre desde la foto, sin que cablees estado ni refs:
+
+```jsx
+<Navbar
+  items={items}
+  logo={logo}
+  account={{
+    src: user.photoUrl,          // opcional
+    seed: user.id,               // el respaldo cuando no hay foto
+    alt: user.name,
+    options: [
+      { icon: 'settings', label: 'Configuración', onClick: irAAjustes },
+      appearanceItem(),
+      logoutItem({ onClick: cerrarSesion }),
+    ],
+  }}
+/>
+```
+
+Sin `options` el botón se limita a llamar a tu `onClick` y el menú lo ponés vos, donde quieras. En
+mobile la foto se suma al final de la barra inferior: ahí no hay rail donde anclarla, y sin ella la
+cuenta se quedaría sin puerta de entrada en el teléfono.
+
 Igual se queda fijo en pantalla mientras la página scrollea — `sticky` más una caja de la altura
 completa del viewport le da la misma sensación de "siempre visible" que tenía con `fixed`, solo que
 sin sentarse encima de nada. La barra de mobile es lo opuesto a propósito: se espera que una barra
 inferior flote sobre el último tramo de contenido, así que conserva su propio `fixed` y un z-index
 elevado.
+
+---
+
+### OptionsModal
+
+```jsx
+import OptionsModal, { appearanceItem, feedbackItem, logoutItem } from '@danelmott/mott-design-components';
+
+const [open, setOpen] = useState(false);
+const avatarRef = useRef(null);
+
+<button ref={avatarRef} onClick={() => setOpen(true)}>
+  <Avatar seed={user.id} shape="cookie" size="40px" />
+</button>
+
+<OptionsModal
+  open={open}
+  onClose={() => setOpen(false)}
+  triggerRef={avatarRef}
+  items={[
+    { icon: 'settings', label: 'Configuración', onClick: irAAjustes },
+    appearanceItem(),
+    feedbackItem({ onClick: abrirFeedback }),
+    logoutItem({ onClick: cerrarSesion }),
+  ]}
+/>
+```
+
+**No hay filas fijas: `items` define todo el menú, en el orden que quieras.** El orden de un menú de
+cuenta cambia por app, así que las tres que sí se repiten en todas se ofrecen como factorías —
+`appearanceItem()`, `feedbackItem({ onClick })` y `logoutItem({ onClick })` — que devuelven un item
+normal y aceptan overrides (`label`, `icon`, `tone`) para traducirlas o recolorearlas sin perder el
+resto. Las tres se llaman igual, así que no hay que recordar cuál se invoca y cuál no.
+
+Un item es `{ icon, label, onClick }` más lo opcional: `tone: 'danger'` lo pinta con el rol de error,
+`closeOnSelect: false` deja el menú abierto después del clic, `buttonRef` te devuelve el nodo de la
+fila por si querés anclarle **tu** modal, y `{ separator: true }` pinta una línea en vez de una fila.
+El `icon` acepta un nombre de Material Symbol o un nodo, igual que en `Navbar`.
+
+**Apariencia no cierra el menú: abre el `ThemeModal` encima y anclado a su propia fila**, con el menú
+atenuado debajo. Eso no lo cableás vos — es la pila de modales del repo
+([`src/modalStack/README.md`](./src/modalStack/README.md)): el `ThemeModal` se declara dentro del JSX
+de este menú, así que el `<dialog>` nativo se encarga del orden, de que Escape cierre solo el de
+arriba y de que el fondo del de abajo sea inalcanzable, y la pila apaga el velo del de abajo para que
+no se sumen dos scrims.
+
+Y por eso es una modal y no un panel flotante armado a mano. Un div posicionado con `absolute` no
+tiene portal, ni velo, ni asiento en la pila: una modal hija abierta sobre él quedaría pintada por
+encima suyo, porque el top layer va por delante de cualquier `z-index` del documento.
+
+El panel se despliega desde el trigger con `anchoredAnimation`. Se puede pasar `animation` para
+cambiarlo — `morphAnimation` lo hace viajar al centro de la pantalla.
 
 ---
 

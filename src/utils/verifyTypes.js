@@ -76,6 +76,15 @@ function assertNode(component, prop, value) {
     fail(component, `\`${prop}\` must be text or a React node, received ${typeof value}.`);
 }
 
+// duck typing instead of `instanceof ModalAnimation`: importing modalAnimation.js here would drag
+// GSAP into this otherwise pure module
+function assertAnimation(component, prop, value) {
+    if (value === undefined || value === null) return;
+    if (typeof value?.open !== 'function' || typeof value?.close !== 'function') {
+        fail(component, `\`${prop}\` must be a ModalAnimation (with \`open\` and \`close\` methods). See src/animations/modalAnimation.js.`);
+    }
+}
+
 function assertPlainObject(component, prop, value) {
     if (value === undefined || value === null) return;
     if (typeof value !== 'object' || Array.isArray(value)) {
@@ -88,6 +97,7 @@ function assertPlainObject(component, prop, value) {
 const CONTROL_SIZES = ['sm', 'md', 'lg'];
 const BUTTON_TYPES = ['button', 'submit', 'reset'];
 const TOAST_VARIANTS = ['info', 'success', 'warning', 'danger'];
+const OPTION_TONES = ['default', 'danger'];
 const INPUT_TYPES = ['text', 'number', 'password'];
 
 export function verifyTypesInput({ label, placeholder, type } = {}) {
@@ -250,25 +260,12 @@ export function verifyTypesLoading({ size, color, shapes, label } = {}) {
     return true;
 }
 
-export function verifyTypesDropdown({ open, onClose, triggerRef } = {}) {
-    assertType('Dropdown', 'open', open, 'boolean');
-    assertType('Dropdown', 'onClose', onClose, 'function');
-    assertRef('Dropdown', 'triggerRef', triggerRef);
-    return true;
-}
-
 export function verifyTypesCustomModal({ open, onClose, onCloseComplete, triggerRef, animation } = {}) {
     assertType('CustomModal', 'open', open, 'boolean');
     assertType('CustomModal', 'onClose', onClose, 'function');
     assertType('CustomModal', 'onCloseComplete', onCloseComplete, 'function');
     assertRef('CustomModal', 'triggerRef', triggerRef);
-    // duck typing instead of `instanceof ModalAnimation`: importing modalAnimation.js here would drag
-    // GSAP into this otherwise pure module
-    if (animation !== undefined && animation !== null) {
-        if (typeof animation?.open !== 'function' || typeof animation?.close !== 'function') {
-            fail('CustomModal', '`animation` must be a ModalAnimation (with `open` and `close` methods). See src/animations/modalAnimation.js.');
-        }
-    }
+    assertAnimation('CustomModal', 'animation', animation);
     return true;
 }
 
@@ -356,7 +353,7 @@ export function verifyTypesRecoverPasswordModal({
     return true;
 }
 
-export function verifyTypesNavbar({ items, logo, selected, defaultSelected, onChange, align } = {}) {
+export function verifyTypesNavbar({ items, logo, account, selected, defaultSelected, onChange, align } = {}) {
     assertArrayOf('Navbar', 'items', items, (item, path) => {
         assertPlainObject('Navbar', path, item);
         if (!item) return;
@@ -372,6 +369,22 @@ export function verifyTypesNavbar({ items, logo, selected, defaultSelected, onCh
         assertType('Navbar', 'logo.onClick', logo.onClick, 'function');
         assertType('Navbar', 'logo.active', logo.active, 'boolean');
         assertRef('Navbar', 'logo.buttonRef', logo.buttonRef);
+    }
+    /*La cuenta: la foto va al fondo del rail y `options`, si esta, hace que el nav monte el menu el
+      mismo. `src` y `seed` son los dos caminos a la misma imagen - la foto de verdad y el dibujo
+      sembrado al que se cae sin ella - asi que ninguno es obligatorio, pero sin ninguno de los dos el
+      avatar sale del `alt`, y sin `alt` de una constante: siempre hay algo que dibujar.*/
+    if (account !== undefined && account !== null) {
+        assertPlainObject('Navbar', 'account', account);
+        assertType('Navbar', 'account.src', account.src, 'string');
+        assertType('Navbar', 'account.seed', account.seed, 'string');
+        assertType('Navbar', 'account.alt', account.alt, 'string');
+        assertType('Navbar', 'account.onClick', account.onClick, 'function');
+        assertType('Navbar', 'account.active', account.active, 'boolean');
+        assertType('Navbar', 'account.optionsTitle', account.optionsTitle, 'string');
+        assertRef('Navbar', 'account.buttonRef', account.buttonRef);
+        // las filas del menu las valida OptionsModal cuando lo monta; aca solo se comprueba la forma
+        verifyTypesOptionsModal({ items: account.options, title: account.optionsTitle });
     }
     assertType('Navbar', 'selected', selected, 'number');
     assertType('Navbar', 'defaultSelected', defaultSelected, 'number');
@@ -457,11 +470,44 @@ export function verifyTypesThemeVariant(component, prop, value) {
     return false;
 }
 
-export function verifyTypesThemeModal({ open, onClose, triggerRef, title } = {}) {
+export function verifyTypesThemeModal({ open, onClose, triggerRef, title, animation } = {}) {
     assertType('ThemeModal', 'open', open, 'boolean');
     assertType('ThemeModal', 'onClose', onClose, 'function');
     assertType('ThemeModal', 'title', title, 'string');
     assertRef('ThemeModal', 'triggerRef', triggerRef);
+    assertAnimation('ThemeModal', 'animation', animation);
+    return true;
+}
+
+/*El contrato de OptionsModal, que es tambien su documentacion: el README no tabula props y manda a
+  leer este archivo. Un `item` es o un separador o una fila, y la fila valida como la de Navbar - el
+  mismo `icon` que acepta nombre o nodo, y el mismo `buttonRef` hacia afuera.*/
+export function verifyTypesOptionsModal({ open, onClose, onCloseComplete, triggerRef, items, title, animation } = {}) {
+    assertType('OptionsModal', 'open', open, 'boolean');
+    assertType('OptionsModal', 'onClose', onClose, 'function');
+    assertType('OptionsModal', 'onCloseComplete', onCloseComplete, 'function');
+    assertRef('OptionsModal', 'triggerRef', triggerRef);
+    assertType('OptionsModal', 'title', title, 'string');
+    assertAnimation('OptionsModal', 'animation', animation);
+
+    if (Array.isArray(items) && items.length === 0) {
+        warn('OptionsModal', '`items` is empty: the menu renders with no rows.');
+    }
+    assertArrayOf('OptionsModal', 'items', items, (item, path) => {
+        assertPlainObject('OptionsModal', path, item);
+        if (!item) return;
+        // un separador no lleva nada mas, y validarlo como fila pediria un label que no tiene
+        if (item.separator) {
+            assertType('OptionsModal', `${path}.separator`, item.separator, 'boolean');
+            return;
+        }
+        assertIconLike('OptionsModal', `${path}.icon`, item.icon);
+        assertType('OptionsModal', `${path}.label`, item.label, 'string');
+        assertType('OptionsModal', `${path}.onClick`, item.onClick, 'function');
+        assertType('OptionsModal', `${path}.closeOnSelect`, item.closeOnSelect, 'boolean');
+        assertOneOf('OptionsModal', `${path}.tone`, item.tone, OPTION_TONES, 'default');
+        assertRef('OptionsModal', `${path}.buttonRef`, item.buttonRef);
+    });
     return true;
 }
 
