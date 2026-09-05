@@ -17,6 +17,7 @@ export { default as RecoverPasswordModal } from './src/authModals/recoverPasswor
 export { default as OnboardingModal } from './src/onBoardingModal/onboardingModal.jsx';
 export { default as OptionsModal, appearanceItem, feedbackItem, logoutItem, settingsItem } from './src/optionsModal/optionsModal.jsx';
 export { default as SettingsModal } from './src/settingsModal/settingsModal.jsx';
+export { default as ModalCloseSection } from './src/modalCloseSection/modalCLoseSection.jsx';
 export { default as Icon } from './src/icon/icon.jsx';
 export { default as GoogleIcon } from './src/icon/googleIcon.jsx';
 export { default as Loading, LOADER_SHAPES } from './src/loading/loading.jsx';

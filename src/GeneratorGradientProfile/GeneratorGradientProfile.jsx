@@ -1,42 +1,26 @@
 'use client';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import Input from '../input/input.jsx';
-import Text from '../text/text.jsx';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useTheme } from '../theme/themeContext.jsx';
 import { verifyTypesGradientProfile } from '../utils/verifyTypes.js';
 import { CARD_H, CARD_W, drawCard } from './gradientCanvas.js';
 import { buildGradientStops } from './gradientPalette.js';
 
-/*Profile card whose artwork is generated from the theme's own accent.
-
-  Requires a `<ThemeProvider>` above it, like `ThemeModal` does: it reads `colorSeedHex` and
-  `resolvedMode` and rebuilds the ramp whenever either changes, so switching swatch in the theme
-  modal recolours the card with no extra wiring on the consumer's side.
-
-  There is deliberately nothing to choose here beyond the identity text. The wave and the colour
-  recipe are both fixed - the accent is the only thing that moves the artwork.*/
+// La tarjeta es solo lectura: pinta la identidad que le llega por props. El nombre y el correo son
+// datos de la cuenta, no algo que se edite desde aqui, asi que no hay estado local ni formulario.
 export default function GeneratorGradientProfile({
     name = '',
     email = '',
-    showControls = true,
-    verifiedLabel = 'Correo verificado',
+    size = 300,
+    fill = false,
     className,
 }) {
-    verifyTypesGradientProfile({ name, email, showControls, verifiedLabel });
+    verifyTypesGradientProfile({ name, email, size, fill });
 
     const { colorSeedHex, resolvedMode } = useTheme();
     const canvasRef = useRef(null);
 
-    // Controlled by the panel when it is shown; the props are the starting value. A consumer that
-    // hides the controls drives the card entirely through `name`/`email`.
-    const [nameValue, setNameValue] = useState(name);
-    const [emailValue, setEmailValue] = useState(email);
-
-    useEffect(() => setNameValue(name), [name]);
-    useEffect(() => setEmailValue(email), [email]);
-
     // The whole colour set for the card in one place: rebuilt only when the accent or the mode
-    // moves, not on every keystroke in the name field.
+    // moves, not on every render.
     const ramp = useMemo(
         () => buildGradientStops(colorSeedHex, resolvedMode),
         [colorSeedHex, resolvedMode]
@@ -45,16 +29,17 @@ export default function GeneratorGradientProfile({
     const render = useCallback(() => {
         const canvas = canvasRef.current;
         if (!canvas) return;
-
-        // capped at 2: past that the dither grid costs a lot of fill for pixels nobody can resolve
         const dpr = Math.min(window.devicePixelRatio || 1, 2);
-        canvas.width = CARD_W * dpr;
-        canvas.height = CARD_H * dpr;
+        const supersample = dpr * 2;
+        canvas.width = CARD_W * supersample;
+        canvas.height = CARD_H * supersample;
 
+        // `drawCard` sigue trabajando en el sistema de coordenadas 440x600 de siempre: la escala la
+        // absorbe la transform, no cada coordenada
         const ctx = canvas.getContext('2d');
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-        drawCard(ctx, { name: nameValue, email: emailValue, ramp, verifiedLabel });
-    }, [nameValue, emailValue, ramp, verifiedLabel]);
+        ctx.setTransform(supersample, 0, 0, supersample, 0, 0);
+        drawCard(ctx, { name, email, ramp });
+    }, [name, email, ramp]);
 
     useEffect(() => {
         render();
@@ -62,33 +47,23 @@ export default function GeneratorGradientProfile({
 
     return (
         <div
-            className={['flex w-full flex-col items-center gap-[var(--gap-page)] md:flex-row md:items-start md:justify-center', className]
+            className={[
+                'flex w-full flex-col items-center justify-center',
+                fill && 'h-full',
+                className,
+            ]
                 .filter(Boolean)
                 .join(' ')}
         >
-            {showControls && (
-                <div className="flex w-full max-w-xs flex-col gap-[var(--gap-page)]">
-                    <div className="flex flex-col gap-[var(--gap-section)]">
-                        <Text variant="title-medium" as="h2">
-                            Tarjeta de perfil
-                        </Text>
-                        <Text variant="body-small" tone="muted">
-                            El degradado se genera a partir del acento del tema.
-                        </Text>
-                    </div>
-
-                    <div className="flex flex-col gap-[var(--gap-group)]">
-                        <Input label="Nombre" value={nameValue} onChange={setNameValue} />
-                        <Input label="Correo" type="email" value={emailValue} onChange={setEmailValue} />
-                    </div>
-                </div>
-            )}
-
-            <div className="w-full">
+            <div className={fill ? 'h-full w-full' : 'w-full'} style={fill ? undefined : { maxWidth: size }}>
                 <canvas
                     ref={canvasRef}
-                    aria-label={`Tarjeta de perfil de ${nameValue || 'usuario'}`}
-                    className="block h-auto w-full rounded-[30px]"
+                    aria-label={`Tarjeta de perfil de ${name || 'usuario'}`}
+                    className={
+                        fill
+                            ? 'block h-full w-full rounded-[30px] object-contain'
+                            : 'block h-auto w-full rounded-[30px]'
+                    }
                 />
             </div>
         </div>

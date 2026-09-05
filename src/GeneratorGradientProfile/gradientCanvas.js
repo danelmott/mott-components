@@ -22,7 +22,12 @@ const BAYER8 = [
     [63, 31, 55, 23, 61, 29, 53, 21],
 ];
 
-const PIXEL = 5;   // side of one dithered "pixel"
+/*Lado de un "pixel" del dither, en los px logicos de la tarjeta. La mitad de lo que era (5): el
+  canvas ya no se rasteriza al tamano de la tarjeta y se estira, sino por encima de la resolucion de
+  pantalla (ver `SUPERSAMPLE` en GeneratorGradientProfile.jsx), asi que el grano se puede permitir
+  ser mas fino sin convertirse en una papilla al escalar. 440/2.5 y 600/2.5 dan celdas exactas: la
+  rejilla no cae a mitad de pixel y no hay costuras que tapar.*/
+const PIXEL = 2.5;
 const LEVELS = 5;  // steps per channel: fewer steps, more visible dithering
 const RADIUS = 30;
 
@@ -112,7 +117,7 @@ function drawDither(ctx, w, h, ramp) {
 }
 
 /*Recorte con puntos suspensivos, medido contra la fuente que YA está puesta en el contexto - por eso
-  recibe el ctx y no un ancho de caracter estimado: el nombre y el correo se pintan a 800 26px, y a
+  recibe el ctx y no un ancho de caracter estimado: el nombre y el correo se pintan a 900 40px, y a
   ese peso una "m" y una "i" no miden ni parecido, así que cortar por cantidad de letras dejaría unos
   textos cortos y otros desbordados.
 
@@ -128,13 +133,51 @@ function ellipsize(ctx, text, maxWidth) {
     return cut.trimEnd() + '…';
 }
 
+/*Baja el cuerpo de letra hasta que el texto quepa, y solo entonces se recorta. Al reves - recortar
+  siempre al mismo tamano - un correo normal se quedaba en la mitad y con puntos suspensivos, que es
+  peor que verlo un poco mas pequeno: el dato esta ahi para leerse. El suelo existe porque por debajo
+  de el la linea deja de leerse como el valor y empieza a competir con su propia etiqueta.
+
+  Deja la fuente PUESTA en el contexto: quien llama despues mide y pinta con la que quepa.*/
+function fitFont(ctx, text, maxWidth, { weight, from, to, step = 2 }) {
+    let size = from;
+    for (; size > to; size -= step) {
+        ctx.font = `${weight} ${size}px system-ui, sans-serif`;
+        if (ctx.measureText(text).width <= maxWidth) return size;
+    }
+    ctx.font = `${weight} ${size}px system-ui, sans-serif`;
+    return size;
+}
+
+/*Un correo se recorta por el MEDIO, no por el final. Cortando por el final lo primero que se pierde
+  es el dominio, que es justo la mitad que dice de que cuenta se trata - "mantillapalomin..." no
+  identifica nada, "mantilla...@gmail.com" si. Se come el nombre de usuario, que es la parte que
+  admite perder letras y seguir reconociendose.
+
+  Si ni el dominio solo cabe, no hay recorte por el medio que salve nada y se cae al de siempre.*/
+function ellipsizeEmail(ctx, text, maxWidth) {
+    if (ctx.measureText(text).width <= maxWidth) return text;
+
+    const at = text.lastIndexOf('@');
+    if (at <= 0 || ctx.measureText(`…${text.slice(at)}`).width > maxWidth) {
+        return ellipsize(ctx, text, maxWidth);
+    }
+
+    const domain = text.slice(at);
+    let local = text.slice(0, at);
+    while (local.length > 1 && ctx.measureText(`${local}…${domain}`).width > maxWidth) {
+        local = local.slice(0, -1);
+    }
+    return `${local}…${domain}`;
+}
+
 /*The card: artwork, a scrim over the bottom half, and the identity block.
 
   The text is white and the scrim is a fixed near-black on purpose. It sits on the ARTWORK, not on a
   theme surface, so `--md-sys-color-on-surface` would be the wrong answer - it would go dark the
   moment the app switches to light mode and vanish into a gradient that did not change with it. The
   scrim is what guarantees the contrast, whatever the accent.*/
-export function drawCard(ctx, { name, email, ramp, verifiedLabel }) {
+export function drawCard(ctx, { name, email, ramp }) {
     const W = CARD_W;
     const H = CARD_H;
 
@@ -148,37 +191,65 @@ export function drawCard(ctx, { name, email, ramp, verifiedLabel }) {
     // Arranca mucho antes que el bloque de texto (que ahora vive centrado, no pegado al fondo) para
     // que el scrim ya este dando contraste cuando el texto empieza, y sigue oscureciendo hasta el
     // badge del footer, que se queda donde siempre.
-    const scrim = ctx.createLinearGradient(0, H * 0.15, 0, H);
+    const scrim = ctx.createLinearGradient(0, H * 0.1, 0, H);
     scrim.addColorStop(0, 'rgba(8,9,7,0)');
-    scrim.addColorStop(1, 'rgba(8,9,7,0.82)');
+    scrim.addColorStop(1, 'rgba(8,9,7,0.88)');
     ctx.fillStyle = scrim;
-    ctx.fillRect(0, H * 0.15, W, H * 0.85);
+    ctx.fillRect(0, H * 0.1, W, H * 0.9);
 
     const textX = 28;
     // Centrado vertical del bloque de 4 lineas (label+valor x2): el badge de abajo no se mueve.
-    let ty = H / 2 - 48;
+    // El bloque crecio otra vez (18/40px) asi que el espaciado entre lineas crece con el, y el
+    // arranque sube la mitad de lo que crecio el bloque entero para seguir centrado.
+    let ty = H / 2 - 68;
+    const LINE = 44;
 
     ctx.textBaseline = 'alphabetic';
-    ctx.fillStyle = 'rgba(255,255,255,0.6)';
-    ctx.font = '600 14px system-ui, sans-serif';
-    ctx.fillText('Correo', textX, ty);
 
-    ty += 32;
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '800 26px system-ui, sans-serif';
+    /*`letterSpacing` va ANTES de cada `fillText` y, sobre todo, antes de `ellipsize`: `measureText`
+      ya cuenta el tracking, asi que si se pusiera despues el recorte mediria contra un ancho que no
+      es el que se termina pintando. Donde el motor no lo soporte, la asignacion se ignora sola.*/
+    const LABEL_FONT = '700 18px system-ui, sans-serif';
+    // el valor arranca en 40 y baja de dos en dos hasta 28 si hace falta (ver `fitFont`)
+    const VALUE_FIT = { weight: 900, from: 40, to: 28 };
+
     // el mismo ancho útil para los dos campos: el bloque de identidad es una columna, no dos anchos
     const maxWidth = W - textX - 32;
-    ctx.fillText(ellipsize(ctx, email || ' ', maxWidth), textX, ty);
+    const emailText = email || ' ';
+    const nameText = name || ' ';
 
-    ty += 32;
-    ctx.fillStyle = 'rgba(255,255,255,0.6)';
-    ctx.font = '600 14px system-ui, sans-serif';
+    /*Un solo cuerpo de letra para los dos valores. Ajustando cada uno por su cuenta el nombre - casi
+      siempre mas corto - se quedaba en 40px mientras el correo bajaba a 28, y el bloque se leia como
+      dos jerarquias distintas cuando es una sola: la identidad. Manda el que menos aguanta.*/
+    ctx.letterSpacing = '0.01em'; // el tracking del valor, puesto antes de medir (ver nota arriba)
+    const VALUE_SIZE = Math.min(
+        fitFont(ctx, emailText, maxWidth, VALUE_FIT),
+        fitFont(ctx, nameText, maxWidth, VALUE_FIT)
+    );
+    const VALUE_FONT = `${VALUE_FIT.weight} ${VALUE_SIZE}px system-ui, sans-serif`;
+
+    ctx.fillStyle = 'rgba(255,255,255,0.72)';
+    ctx.font = LABEL_FONT;
+    ctx.letterSpacing = '0.04em';
+    ctx.fillText('Correo', textX, ty);
+
+    ty += LINE;
+    ctx.fillStyle = '#ffffff';
+    ctx.letterSpacing = '0.01em';
+    ctx.font = VALUE_FONT;
+    ctx.fillText(ellipsizeEmail(ctx, emailText, maxWidth), textX, ty);
+
+    ty += LINE;
+    ctx.fillStyle = 'rgba(255,255,255,0.72)';
+    ctx.font = LABEL_FONT;
+    ctx.letterSpacing = '0.04em';
     ctx.fillText('Nombre', textX, ty);
 
-    ty += 32;
+    ty += LINE;
     ctx.fillStyle = '#ffffff';
-    ctx.font = '800 26px system-ui, sans-serif';
-    ctx.fillText(ellipsize(ctx, name || ' ', maxWidth), textX, ty);
+    ctx.letterSpacing = '0.01em';
+    ctx.font = VALUE_FONT;
+    ctx.fillText(ellipsize(ctx, nameText, maxWidth), textX, ty);
 
     const footerY = H - 34;
     ctx.beginPath();
@@ -193,9 +264,10 @@ export function drawCard(ctx, { name, email, ramp, verifiedLabel }) {
     ctx.lineTo(textX + 17, footerY - 5);
     ctx.stroke();
 
-    ctx.fillStyle = 'rgba(255,255,255,0.85)';
-    ctx.font = '700 14px system-ui, sans-serif';
-    ctx.fillText(verifiedLabel, textX + 30, footerY + 5);
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    ctx.font = '700 18px system-ui, sans-serif';
+    ctx.letterSpacing = '0.02em';
+    ctx.fillText('Correo verificado', textX + 30, footerY + 6);
 
     ctx.restore();
 }

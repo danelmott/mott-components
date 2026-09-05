@@ -1009,11 +1009,19 @@ function verifyTypesSettingsModal({ open, onClose, triggerRef, animation, name, 
   assertType("SettingsModal", "email", email, "string");
   return true;
 }
-function verifyTypesGradientProfile({ name, email, showControls, verifiedLabel } = {}) {
+function verifyTypesModalCloseSection({ open, onClose, triggerRef, animation, onCloseSession } = {}) {
+  assertType("ModalCloseSection", "open", open, "boolean");
+  assertType("ModalCloseSection", "onClose", onClose, "function");
+  assertRef("ModalCloseSection", "triggerRef", triggerRef);
+  assertAnimation("ModalCloseSection", "animation", animation);
+  assertType("ModalCloseSection", "onCloseSession", onCloseSession, "function");
+  return true;
+}
+function verifyTypesGradientProfile({ name, email, size, fill } = {}) {
   assertType("GeneratorGradientProfile", "name", name, "string");
   assertType("GeneratorGradientProfile", "email", email, "string");
-  assertType("GeneratorGradientProfile", "showControls", showControls, "boolean");
-  assertType("GeneratorGradientProfile", "verifiedLabel", verifiedLabel, "string");
+  assertType("GeneratorGradientProfile", "size", size, "number");
+  assertType("GeneratorGradientProfile", "fill", fill, "boolean");
   return true;
 }
 function verifyTypesOnboardingModal({ open, onClose, triggerRef, icon, onComplete } = {}) {
@@ -2152,7 +2160,7 @@ var MorphAnimation = class extends ModalAnimation {
   }
 };
 var AnchoredAnimation = class extends MorphAnimation {
-  constructor({ cover = 6, align = "corner", anchor = "trigger", ...options } = {}) {
+  constructor({ cover = 6, gap = 12, align = "corner", anchor = "trigger", ...options } = {}) {
     super({
       openDuration: DURATION.slow,
       closeDuration: DURATION.slow,
@@ -2175,6 +2183,7 @@ var AnchoredAnimation = class extends MorphAnimation {
       ...options
     });
     this.cover = cover;
+    this.gap = gap;
     this.align = align;
     this.anchor = anchor;
   }
@@ -2205,26 +2214,46 @@ var AnchoredAnimation = class extends MorphAnimation {
     `cover` px past the trigger's bottom - and grows upwards instead. Mirrored, not improvised: the
     overlap over the trigger is the same in both directions. The clamp stays as the last resort for a
     panel too tall to fit either way.*/
-  computeAnchoredPosition(triggerRect, panelRect) {
+  computeAnchoredPosition(anchorRect, panelRect, triggerRect = anchorRect) {
     const margin = 8;
     const fit2 = (value, size, viewport) => Math.max(margin, Math.min(value, viewport - size - margin));
     if (this.align === "center") {
       return {
-        left: fit2(triggerRect.left + (triggerRect.width - panelRect.width) / 2, panelRect.width, window.innerWidth),
-        top: fit2(triggerRect.top + (triggerRect.height - panelRect.height) / 2, panelRect.height, window.innerHeight)
+        left: fit2(anchorRect.left + (anchorRect.width - panelRect.width) / 2, panelRect.width, window.innerWidth),
+        top: fit2(anchorRect.top + (anchorRect.height - panelRect.height) / 2, panelRect.height, window.innerHeight)
       };
     }
     if (this.align === "edge") {
       return {
-        left: fit2(triggerRect.left, panelRect.width, window.innerWidth),
-        top: fit2(triggerRect.top, panelRect.height, window.innerHeight)
+        left: fit2(anchorRect.left, panelRect.width, window.innerWidth),
+        top: fit2(anchorRect.top, panelRect.height, window.innerHeight)
       };
     }
-    const downwards = triggerRect.top - this.cover;
+    if (this.align === "side") {
+      const toTheRight = anchorRect.right + this.gap;
+      const fitsRight = toTheRight + panelRect.width <= window.innerWidth - margin;
+      return {
+        left: fit2(
+          fitsRight ? toTheRight : anchorRect.left - this.gap - panelRect.width,
+          panelRect.width,
+          window.innerWidth
+        ),
+        top: fit2(anchorRect.top, panelRect.height, window.innerHeight)
+      };
+    }
+    if (this.align === "row") {
+      const over = triggerRect.top + (triggerRect.height - panelRect.height) / 2;
+      const withinAnchor = panelRect.height <= anchorRect.height ? Math.max(anchorRect.top, Math.min(over, anchorRect.bottom - panelRect.height)) : over;
+      return {
+        left: fit2(anchorRect.left, panelRect.width, window.innerWidth),
+        top: fit2(withinAnchor, panelRect.height, window.innerHeight)
+      };
+    }
+    const downwards = anchorRect.top - this.cover;
     const fitsDownwards = downwards + panelRect.height <= window.innerHeight - margin;
-    const top = fitsDownwards ? downwards : triggerRect.bottom + this.cover - panelRect.height;
+    const top = fitsDownwards ? downwards : anchorRect.bottom + this.cover - panelRect.height;
     return {
-      left: fit2(triggerRect.left - this.cover, panelRect.width, window.innerWidth),
+      left: fit2(anchorRect.left - this.cover, panelRect.width, window.innerWidth),
       top: fit2(top, panelRect.height, window.innerHeight)
     };
   }
@@ -2232,7 +2261,8 @@ var AnchoredAnimation = class extends MorphAnimation {
     gsap4.set(panel, { position: "fixed", margin: 0 });
     const { left, top } = this.computeAnchoredPosition(
       this.anchorRect(trigger),
-      panel.getBoundingClientRect()
+      panel.getBoundingClientRect(),
+      trigger.getBoundingClientRect()
     );
     gsap4.set(panel, { left, top });
   }
@@ -4150,15 +4180,15 @@ function Media({ children }) {
 }
 
 // src/optionsModal/optionsModal.jsx
-import { useRef as useRef12, useState as useState12 } from "react";
+import { useRef as useRef12, useState as useState11 } from "react";
 import { twMerge as twMerge13 } from "tailwind-merge";
 
 // src/settingsModal/settingsModal.jsx
-import { useState as useState11 } from "react";
+import { useState as useState10 } from "react";
 import { twMerge as twMerge12 } from "tailwind-merge";
 
 // src/GeneratorGradientProfile/GeneratorGradientProfile.jsx
-import { useCallback as useCallback5, useEffect as useEffect7, useMemo as useMemo5, useRef as useRef11, useState as useState10 } from "react";
+import { useCallback as useCallback5, useEffect as useEffect7, useMemo as useMemo5, useRef as useRef11 } from "react";
 
 // src/GeneratorGradientProfile/gradientCanvas.js
 var CARD_W = 440;
@@ -4173,7 +4203,7 @@ var BAYER8 = [
   [15, 47, 7, 39, 13, 45, 5, 37],
   [63, 31, 55, 23, 61, 29, 53, 21]
 ];
-var PIXEL = 5;
+var PIXEL = 2.5;
 var LEVELS = 5;
 var RADIUS = 30;
 function roundRectPath(ctx, x, y, w, h, r) {
@@ -4245,7 +4275,29 @@ function ellipsize(ctx, text2, maxWidth) {
   }
   return cut.trimEnd() + "\u2026";
 }
-function drawCard(ctx, { name, email, ramp, verifiedLabel }) {
+function fitFont(ctx, text2, maxWidth, { weight, from, to, step = 2 }) {
+  let size = from;
+  for (; size > to; size -= step) {
+    ctx.font = `${weight} ${size}px system-ui, sans-serif`;
+    if (ctx.measureText(text2).width <= maxWidth) return size;
+  }
+  ctx.font = `${weight} ${size}px system-ui, sans-serif`;
+  return size;
+}
+function ellipsizeEmail(ctx, text2, maxWidth) {
+  if (ctx.measureText(text2).width <= maxWidth) return text2;
+  const at = text2.lastIndexOf("@");
+  if (at <= 0 || ctx.measureText(`\u2026${text2.slice(at)}`).width > maxWidth) {
+    return ellipsize(ctx, text2, maxWidth);
+  }
+  const domain = text2.slice(at);
+  let local = text2.slice(0, at);
+  while (local.length > 1 && ctx.measureText(`${local}\u2026${domain}`).width > maxWidth) {
+    local = local.slice(0, -1);
+  }
+  return `${local}\u2026${domain}`;
+}
+function drawCard(ctx, { name, email, ramp }) {
   const W = CARD_W;
   const H = CARD_H;
   ctx.clearRect(0, 0, W, H);
@@ -4253,30 +4305,45 @@ function drawCard(ctx, { name, email, ramp, verifiedLabel }) {
   roundRectPath(ctx, 0, 0, W, H, RADIUS);
   ctx.clip();
   drawDither(ctx, W, H, ramp);
-  const scrim = ctx.createLinearGradient(0, H * 0.15, 0, H);
+  const scrim = ctx.createLinearGradient(0, H * 0.1, 0, H);
   scrim.addColorStop(0, "rgba(8,9,7,0)");
-  scrim.addColorStop(1, "rgba(8,9,7,0.82)");
+  scrim.addColorStop(1, "rgba(8,9,7,0.88)");
   ctx.fillStyle = scrim;
-  ctx.fillRect(0, H * 0.15, W, H * 0.85);
+  ctx.fillRect(0, H * 0.1, W, H * 0.9);
   const textX = 28;
-  let ty = H / 2 - 48;
+  let ty = H / 2 - 68;
+  const LINE = 44;
   ctx.textBaseline = "alphabetic";
-  ctx.fillStyle = "rgba(255,255,255,0.6)";
-  ctx.font = "600 14px system-ui, sans-serif";
-  ctx.fillText("Correo", textX, ty);
-  ty += 32;
-  ctx.fillStyle = "#ffffff";
-  ctx.font = "800 26px system-ui, sans-serif";
+  const LABEL_FONT = "700 18px system-ui, sans-serif";
+  const VALUE_FIT = { weight: 900, from: 40, to: 28 };
   const maxWidth = W - textX - 32;
-  ctx.fillText(ellipsize(ctx, email || " ", maxWidth), textX, ty);
-  ty += 32;
-  ctx.fillStyle = "rgba(255,255,255,0.6)";
-  ctx.font = "600 14px system-ui, sans-serif";
-  ctx.fillText("Nombre", textX, ty);
-  ty += 32;
+  const emailText = email || " ";
+  const nameText = name || " ";
+  ctx.letterSpacing = "0.01em";
+  const VALUE_SIZE = Math.min(
+    fitFont(ctx, emailText, maxWidth, VALUE_FIT),
+    fitFont(ctx, nameText, maxWidth, VALUE_FIT)
+  );
+  const VALUE_FONT = `${VALUE_FIT.weight} ${VALUE_SIZE}px system-ui, sans-serif`;
+  ctx.fillStyle = "rgba(255,255,255,0.72)";
+  ctx.font = LABEL_FONT;
+  ctx.letterSpacing = "0.04em";
+  ctx.fillText("Correo", textX, ty);
+  ty += LINE;
   ctx.fillStyle = "#ffffff";
-  ctx.font = "800 26px system-ui, sans-serif";
-  ctx.fillText(ellipsize(ctx, name || " ", maxWidth), textX, ty);
+  ctx.letterSpacing = "0.01em";
+  ctx.font = VALUE_FONT;
+  ctx.fillText(ellipsizeEmail(ctx, emailText, maxWidth), textX, ty);
+  ty += LINE;
+  ctx.fillStyle = "rgba(255,255,255,0.72)";
+  ctx.font = LABEL_FONT;
+  ctx.letterSpacing = "0.04em";
+  ctx.fillText("Nombre", textX, ty);
+  ty += LINE;
+  ctx.fillStyle = "#ffffff";
+  ctx.letterSpacing = "0.01em";
+  ctx.font = VALUE_FONT;
+  ctx.fillText(ellipsize(ctx, nameText, maxWidth), textX, ty);
   const footerY = H - 34;
   ctx.beginPath();
   ctx.arc(textX + 11, footerY, 12, 0, Math.PI * 2);
@@ -4289,9 +4356,10 @@ function drawCard(ctx, { name, email, ramp, verifiedLabel }) {
   ctx.lineTo(textX + 9, footerY + 4);
   ctx.lineTo(textX + 17, footerY - 5);
   ctx.stroke();
-  ctx.fillStyle = "rgba(255,255,255,0.85)";
-  ctx.font = "700 14px system-ui, sans-serif";
-  ctx.fillText(verifiedLabel, textX + 30, footerY + 5);
+  ctx.fillStyle = "rgba(255,255,255,0.9)";
+  ctx.font = "700 18px system-ui, sans-serif";
+  ctx.letterSpacing = "0.02em";
+  ctx.fillText("Correo verificado", textX + 30, footerY + 6);
   ctx.restore();
 }
 
@@ -4334,21 +4402,17 @@ function buildGradientStops(seedHex, mode, recipe = GRADIENT_RECIPE) {
 }
 
 // src/GeneratorGradientProfile/GeneratorGradientProfile.jsx
-import { jsx as jsx27, jsxs as jsxs18 } from "react/jsx-runtime";
+import { jsx as jsx27 } from "react/jsx-runtime";
 function GeneratorGradientProfile({
   name = "",
   email = "",
-  showControls = true,
-  verifiedLabel = "Correo verificado",
+  size = 300,
+  fill = false,
   className
 }) {
-  verifyTypesGradientProfile({ name, email, showControls, verifiedLabel });
+  verifyTypesGradientProfile({ name, email, size, fill });
   const { colorSeedHex, resolvedMode } = useTheme();
   const canvasRef = useRef11(null);
-  const [nameValue, setNameValue] = useState10(name);
-  const [emailValue, setEmailValue] = useState10(email);
-  useEffect7(() => setNameValue(name), [name]);
-  useEffect7(() => setEmailValue(email), [email]);
   const ramp = useMemo5(
     () => buildGradientStops(colorSeedHex, resolvedMode),
     [colorSeedHex, resolvedMode]
@@ -4357,50 +4421,83 @@ function GeneratorGradientProfile({
     const canvas = canvasRef.current;
     if (!canvas) return;
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    canvas.width = CARD_W * dpr;
-    canvas.height = CARD_H * dpr;
+    const supersample = dpr * 2;
+    canvas.width = CARD_W * supersample;
+    canvas.height = CARD_H * supersample;
     const ctx = canvas.getContext("2d");
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    drawCard(ctx, { name: nameValue, email: emailValue, ramp, verifiedLabel });
-  }, [nameValue, emailValue, ramp, verifiedLabel]);
+    ctx.setTransform(supersample, 0, 0, supersample, 0, 0);
+    drawCard(ctx, { name, email, ramp });
+  }, [name, email, ramp]);
   useEffect7(() => {
     render2();
   }, [render2]);
-  return /* @__PURE__ */ jsxs18(
+  return /* @__PURE__ */ jsx27(
     "div",
     {
-      className: ["flex w-full flex-col items-center gap-[var(--gap-page)] md:flex-row md:items-start md:justify-center", className].filter(Boolean).join(" "),
-      children: [
-        showControls && /* @__PURE__ */ jsxs18("div", { className: "flex w-full max-w-xs flex-col gap-[var(--gap-page)]", children: [
-          /* @__PURE__ */ jsxs18("div", { className: "flex flex-col gap-[var(--gap-section)]", children: [
-            /* @__PURE__ */ jsx27(Text, { variant: "title-medium", as: "h2", children: "Tarjeta de perfil" }),
-            /* @__PURE__ */ jsx27(Text, { variant: "body-small", tone: "muted", children: "El degradado se genera a partir del acento del tema." })
-          ] }),
-          /* @__PURE__ */ jsxs18("div", { className: "flex flex-col gap-[var(--gap-group)]", children: [
-            /* @__PURE__ */ jsx27(Input, { label: "Nombre", value: nameValue, onChange: setNameValue }),
-            /* @__PURE__ */ jsx27(Input, { label: "Correo", type: "email", value: emailValue, onChange: setEmailValue })
-          ] })
-        ] }),
-        /* @__PURE__ */ jsx27("div", { className: "w-full max-w-[300px]", children: /* @__PURE__ */ jsx27(
-          "canvas",
-          {
-            ref: canvasRef,
-            "aria-label": `Tarjeta de perfil de ${nameValue || "usuario"}`,
-            className: "block h-auto w-full rounded-[30px]"
-          }
-        ) })
-      ]
+      className: [
+        "flex w-full flex-col items-center justify-center",
+        fill && "h-full",
+        className
+      ].filter(Boolean).join(" "),
+      children: /* @__PURE__ */ jsx27("div", { className: fill ? "h-full w-full" : "w-full", style: fill ? void 0 : { maxWidth: size }, children: /* @__PURE__ */ jsx27(
+        "canvas",
+        {
+          ref: canvasRef,
+          "aria-label": `Tarjeta de perfil de ${name || "usuario"}`,
+          className: fill ? "block h-full w-full rounded-[30px] object-contain" : "block h-auto w-full rounded-[30px]"
+        }
+      ) })
     }
   );
 }
 
 // src/settingsModal/settingsModal.jsx
-import { jsx as jsx28, jsxs as jsxs19 } from "react/jsx-runtime";
-var SECTIONS = [{ id: "account", icon: "person", label: "Cuenta" }];
-var NAV_ROW = "mott-state-layer flex w-full items-center gap-[var(--gap-group)] rounded-[var(--radius-default)] border-0 bg-transparent px-4 py-2.5 text-left cursor-pointer whitespace-nowrap mott-label-large mott-trim text-[var(--md-sys-color-on-surface-variant)] transition-[background-color,color] duration-[var(--duration-instant)]";
+import { jsx as jsx28, jsxs as jsxs18 } from "react/jsx-runtime";
+var SECTIONS = [
+  { id: "account", icon: "person", label: "Cuenta" },
+  { id: "reset_password", icon: "lock_reset", label: "Cambiar contrase\xF1a" }
+];
+var NAV_ROW = "mott-state-layer flex w-full min-w-0 items-center gap-3 rounded-[var(--radius-default)] border-0 bg-transparent px-4 py-3 text-left cursor-pointer mott-label-large mott-trim text-[var(--md-sys-color-on-surface-variant)] transition-[background-color,color] duration-[var(--duration-instant)]";
 var NAV_ROW_SELECTED = "bg-[var(--md-sys-color-secondary-container)] text-[var(--md-sys-color-on-secondary-container)]";
+var NAV_ICON_TONE = {
+  default: "",
+  selected: "text-[var(--md-sys-color-on-secondary-container)]"
+};
 function AccountPanel({ name, email }) {
-  return /* @__PURE__ */ jsx28("div", { className: "flex w-full max-w-[440px] items-center justify-center", children: /* @__PURE__ */ jsx28(GeneratorGradientProfile, { name, email, showControls: false }) });
+  return /* @__PURE__ */ jsx28("div", { className: "h-full w-full", children: /* @__PURE__ */ jsx28(GeneratorGradientProfile, { name, email, fill: true }) });
+}
+function ResetPassword({ email }) {
+  return (
+    // `max-w-sm` y no el ancho del panel: una columna de texto que cruza los 500px del area deja
+    // de leerse de corrido. El centrado lo pone el contenedor de la derecha, aqui solo la caja.
+    /* @__PURE__ */ jsxs18("div", { className: "flex h-full w-full max-w-sm flex-col items-center justify-center gap-[var(--gap-page)] text-center", children: [
+      /* @__PURE__ */ jsxs18("div", { className: "flex flex-col items-center gap-[var(--gap-block)]", children: [
+        /* @__PURE__ */ jsx28(
+          "span",
+          {
+            className: "flex h-16 w-16 items-center justify-center rounded-[var(--radius-full)]\n                               bg-[var(--md-sys-color-secondary-container)]\n                               text-[var(--md-sys-color-on-secondary-container)]",
+            "aria-hidden": "true",
+            children: /* @__PURE__ */ jsx28(Icon, { name: "lock_reset", size: "lg" })
+          }
+        ),
+        /* @__PURE__ */ jsx28("div", { className: "flex flex-col gap-[var(--gap-group)]", children: /* @__PURE__ */ jsx28(Text, { variant: "headline-small", as: "h3", children: "Cambia tu contrase\xF1a" }) })
+      ] }),
+      /* @__PURE__ */ jsxs18("div", { className: "flex w-full min-w-0 items-center gap-[var(--gap-section)] rounded-[var(--radius-lg)] bg-[var(--md-sys-color-surface-container-high)] px-4 py-3 text-left", children: [
+        /* @__PURE__ */ jsx28(
+          Icon,
+          {
+            name: "mail",
+            className: "shrink-0 text-[var(--md-sys-color-on-surface-variant)]"
+          }
+        ),
+        /* @__PURE__ */ jsxs18("div", { className: "flex min-w-0 flex-col", children: [
+          /* @__PURE__ */ jsx28(Text, { variant: "label-small", tone: "muted", children: "Enviaremos el c\xF3digo a" }),
+          /* @__PURE__ */ jsx28(Text, { variant: "body-medium", className: "truncate", children: email })
+        ] })
+      ] }),
+      /* @__PURE__ */ jsx28("div", { className: "flex w-full flex-col items-center gap-[var(--gap-section)]", children: /* @__PURE__ */ jsx28(button_default, { variant: "action", shape: "pill", fullWidth: true, children: "Verificar cuenta" }) })
+    ] })
+  );
 }
 function SettingsModal({
   open,
@@ -4413,7 +4510,9 @@ function SettingsModal({
   style
 }) {
   verifyTypesSettingsModal({ open, onClose, triggerRef, animation, name, email });
-  const [activeSection, setActiveSection] = useState11(SECTIONS[0].id);
+  const [activeSection, setActiveSection] = useState10(SECTIONS[0].id);
+  const displayName = name || "Usuario Test";
+  const displayEmail = email || "test@mottdesign.com";
   return /* @__PURE__ */ jsx28(
     CustomModal,
     {
@@ -4421,39 +4520,95 @@ function SettingsModal({
       onClose,
       triggerRef,
       animation,
-      className: twMerge12("w-[760px]", className),
+      className: twMerge12("w-[760px] h-[760px] p-0", className),
       style,
-      children: /* @__PURE__ */ jsxs19("div", { className: "flex gap-[var(--gap-block)]", children: [
-        /* @__PURE__ */ jsx28("nav", { className: "flex w-44 shrink-0 flex-col gap-[var(--gap-tight)]", role: "tablist", children: SECTIONS.map((section) => /* @__PURE__ */ jsxs19(
-          "button",
+      children: /* @__PURE__ */ jsxs18("div", { className: "flex h-full", children: [
+        /* @__PURE__ */ jsx28(
+          "aside",
           {
-            type: "button",
-            role: "tab",
-            "aria-selected": activeSection === section.id,
-            onClick: () => setActiveSection(section.id),
-            className: twMerge12(NAV_ROW, activeSection === section.id && NAV_ROW_SELECTED),
-            ...pressHandlers(),
-            children: [
-              /* @__PURE__ */ jsx28(Icon, { name: section.icon }),
-              /* @__PURE__ */ jsx28("span", { children: section.label })
-            ]
-          },
-          section.id
-        )) }),
-        /* @__PURE__ */ jsx28("div", { className: "flex flex-1 items-center justify-center", children: activeSection === "account" && /* @__PURE__ */ jsx28(AccountPanel, { name, email }) })
+            className: "flex z-10 w-56 shrink-0 flex-col gap-[var(--gap-tight)] rounded-l-[var(--radius-modal)] bg-[var(--md-sys-color-surface-container-low)] p-[var(--gap-section)]",
+            role: "tablist",
+            children: SECTIONS.map((section) => {
+              const selected = activeSection === section.id;
+              return /* @__PURE__ */ jsxs18(
+                "button",
+                {
+                  type: "button",
+                  role: "tab",
+                  "aria-selected": selected,
+                  onClick: () => setActiveSection(section.id),
+                  className: twMerge12(NAV_ROW, selected && NAV_ROW_SELECTED),
+                  ...pressHandlers(),
+                  children: [
+                    /* @__PURE__ */ jsx28(
+                      Icon,
+                      {
+                        name: section.icon,
+                        className: twMerge12("shrink-0", selected ? NAV_ICON_TONE.selected : NAV_ICON_TONE.default)
+                      }
+                    ),
+                    /* @__PURE__ */ jsx28("span", { className: "min-w-0 flex-1 truncate", children: section.label })
+                  ]
+                },
+                section.id
+              );
+            })
+          }
+        ),
+        /* @__PURE__ */ jsxs18("div", { className: "flex h-full flex-1 items-center justify-center p-[var(--pad-card)]", children: [
+          activeSection === "account" && /* @__PURE__ */ jsx28(AccountPanel, { name: displayName, email: displayEmail }),
+          activeSection == "reset_password" && /* @__PURE__ */ jsx28(ResetPassword, { email: displayEmail })
+        ] })
+      ] })
+    }
+  );
+}
+
+// src/modalCloseSection/modalCLoseSection.jsx
+import { jsx as jsx29, jsxs as jsxs19 } from "react/jsx-runtime";
+function ModalCloseSection({ open, onClose, triggerRef, animation, onCloseSession }) {
+  verifyTypesModalCloseSection({ open, onClose, triggerRef, animation, onCloseSession });
+  return /* @__PURE__ */ jsx29(
+    CustomModal,
+    {
+      open,
+      onClose,
+      triggerRef,
+      animation,
+      className: "w-[22rem]  rounded-[32px]",
+      children: /* @__PURE__ */ jsxs19("div", { className: "flex flex-col gap-[var(--gap-page)]", children: [
+        /* @__PURE__ */ jsxs19("div", { className: "flex flex-col gap-[var(--gap-section)]", children: [
+          /* @__PURE__ */ jsx29(Text, { variant: "headline-small", as: "h2", className: "mott-title-emphasis", children: "\xBFQuieres cerrar sesi\xF3n?" }),
+          /* @__PURE__ */ jsx29(Text, { variant: "body-medium", tone: "muted", children: "Esperemos que sea solo un hasta luego." })
+        ] }),
+        /* @__PURE__ */ jsxs19("div", { className: "flex justify-end gap-[var(--gap-group)]", children: [
+          /* @__PURE__ */ jsx29(button_default, { variant: "ghost", onClick: () => onClose == null ? void 0 : onClose(), children: "Cancelar" }),
+          /* @__PURE__ */ jsx29(
+            button_default,
+            {
+              variant: "danger",
+              onClick: () => {
+                onCloseSession == null ? void 0 : onCloseSession();
+                onClose == null ? void 0 : onClose();
+              },
+              children: "Cerrar sesi\xF3n"
+            }
+          )
+        ] })
       ] })
     }
   );
 }
 
 // src/optionsModal/optionsModal.jsx
-import { jsx as jsx29, jsxs as jsxs20 } from "react/jsx-runtime";
+import { jsx as jsx30, jsxs as jsxs20 } from "react/jsx-runtime";
 var ROW_BASE = "mott-state-layer flex w-full items-center gap-[var(--gap-group)] rounded-[var(--radius-default)] border-0 bg-transparent px-5 py-3.5 text-left cursor-pointer whitespace-nowrap mott-label-large mott-trim transition-[color] duration-[var(--duration-instant)]";
 var ROW_TONE = {
   default: "text-[var(--md-sys-color-on-surface)]",
   danger: "text-[var(--md-sys-color-error)]"
 };
-var APPEARANCE_ANIMATION = new AnchoredAnimation({ anchor: "panel", align: "edge" });
+var OVER_MENU_ANIMATION = new AnchoredAnimation({ anchor: "panel", align: "edge" });
+var OVER_ROW_ANIMATION = new AnchoredAnimation({ anchor: "panel", align: "row" });
 var ICON_TONE = {
   default: "text-[var(--md-sys-color-on-surface-variant)]",
   danger: "text-[var(--md-sys-color-error)]"
@@ -4475,9 +4630,12 @@ var feedbackItem = (overrides = {}) => ({
 });
 var logoutItem = (overrides = {}) => ({
   id: "logout",
+  kind: "logout",
   icon: "logout",
   label: "Cerrar Sesi\xF3n",
   tone: "danger",
+  // mismo trato que 'appearance'/'settings': la confirmacion se apoya ENCIMA del menu
+  closeOnSelect: false,
   ...overrides
 });
 var settingsItem = (overrides = {}) => ({
@@ -4508,17 +4666,20 @@ function OptionsModal({
   style
 }) {
   verifyTypesOptionsModal({ open, onClose, onCloseComplete, triggerRef, items, title, animation, name, email });
-  const [appearanceOpen, setAppearanceOpen] = useState12(false);
-  const [settingsOpen, setSettingsOpen] = useState12(false);
+  const [appearanceOpen, setAppearanceOpen] = useState11(false);
+  const [settingsOpen, setSettingsOpen] = useState11(false);
+  const [logoutOpen, setLogoutOpen] = useState11(false);
   const rowRefs = useRef12({});
   const appearanceRef = useRef12(null);
   const settingsRef = useRef12(null);
+  const logoutRef = useRef12(null);
   const handleSelect = (item, event) => {
     var _a;
     if (item.kind === "appearance") setAppearanceOpen(true);
     if (item.kind === "settings") setSettingsOpen(true);
+    if (item.kind === "logout") setLogoutOpen(true);
     (_a = item.onClick) == null ? void 0 : _a.call(item, event);
-    if (item.closeOnSelect !== false && item.kind !== "appearance" && item.kind !== "settings") onClose == null ? void 0 : onClose();
+    if (item.closeOnSelect !== false && item.kind !== "appearance" && item.kind !== "settings" && item.kind !== "logout") onClose == null ? void 0 : onClose();
   };
   return /* @__PURE__ */ jsxs20(
     CustomModal,
@@ -4532,7 +4693,7 @@ function OptionsModal({
       style,
       children: [
         /* @__PURE__ */ jsxs20("div", { className: "flex flex-col gap-[var(--gap-page)]", role: "menu", children: [
-          title && /* @__PURE__ */ jsx29(
+          title && /* @__PURE__ */ jsx30(
             "h2",
             {
               className: "mott-headline-medium mott-title-emphasis px-5",
@@ -4540,9 +4701,9 @@ function OptionsModal({
               children: title
             }
           ),
-          /* @__PURE__ */ jsx29("div", { className: "flex flex-col gap-[var(--gap-tight)]", children: items.map((item, i) => {
+          /* @__PURE__ */ jsx30("div", { className: "flex flex-col gap-[var(--gap-tight)]", children: items.map((item, i) => {
             if (item == null ? void 0 : item.separator) {
-              return /* @__PURE__ */ jsx29(
+              return /* @__PURE__ */ jsx30(
                 "hr",
                 {
                   className: "my-[var(--gap-tight)] border-0 h-px bg-[var(--md-sys-color-outline-variant)]"
@@ -4557,6 +4718,7 @@ function OptionsModal({
                   attachRef(node, rowRefs, item.id ?? i, item.buttonRef);
                   if (item.kind === "appearance") appearanceRef.current = node;
                   if (item.kind === "settings") settingsRef.current = node;
+                  if (item.kind === "logout") logoutRef.current = node;
                 },
                 type: "button",
                 role: "menuitem",
@@ -4564,24 +4726,24 @@ function OptionsModal({
                 className: twMerge13(ROW_BASE, ROW_TONE[item.tone] ?? ROW_TONE.default),
                 ...pressHandlers(),
                 children: [
-                  item.icon && /* @__PURE__ */ jsx29("span", { className: twMerge13("flex", ICON_TONE[item.tone] ?? ICON_TONE.default), children: typeof item.icon === "string" ? /* @__PURE__ */ jsx29(Icon, { name: item.icon }) : item.icon }),
-                  /* @__PURE__ */ jsx29("span", { children: item.label })
+                  item.icon && /* @__PURE__ */ jsx30("span", { className: twMerge13("flex", ICON_TONE[item.tone] ?? ICON_TONE.default), children: typeof item.icon === "string" ? /* @__PURE__ */ jsx30(Icon, { name: item.icon }) : item.icon }),
+                  /* @__PURE__ */ jsx30("span", { children: item.label })
                 ]
               },
               item.id ?? i
             );
           }) })
         ] }),
-        /* @__PURE__ */ jsx29(
+        /* @__PURE__ */ jsx30(
           ThemeModal,
           {
             open: appearanceOpen,
             onClose: () => setAppearanceOpen(false),
             triggerRef: appearanceRef,
-            animation: APPEARANCE_ANIMATION
+            animation: OVER_MENU_ANIMATION
           }
         ),
-        /* @__PURE__ */ jsx29(
+        /* @__PURE__ */ jsx30(
           SettingsModal,
           {
             open: settingsOpen,
@@ -4590,6 +4752,16 @@ function OptionsModal({
             animation: morphAnimation,
             name,
             email
+          }
+        ),
+        /* @__PURE__ */ jsx30(
+          ModalCloseSection,
+          {
+            open: logoutOpen,
+            onClose: () => setLogoutOpen(false),
+            triggerRef: logoutRef,
+            animation: OVER_ROW_ANIMATION,
+            onCloseSession: () => console.log("sesi\xF3n cerrada")
           }
         )
       ]
@@ -4685,7 +4857,7 @@ function morphPath(from, to, t) {
 }
 
 // src/loading/loading.jsx
-import { jsx as jsx30 } from "react/jsx-runtime";
+import { jsx as jsx31 } from "react/jsx-runtime";
 var SIZE_TOKEN4 = {
   sm: "var(--control-size-sm)",
   md: "var(--control-size-md)",
@@ -4750,7 +4922,7 @@ function Loading({
       }, `+=${HOLD}`);
     });
   }, { dependencies: [cycle] });
-  return /* @__PURE__ */ jsx30(
+  return /* @__PURE__ */ jsx31(
     "svg",
     {
       ref: svgRef,
@@ -4768,17 +4940,17 @@ function Loading({
         ...style
       },
       ...props,
-      children: /* @__PURE__ */ jsx30("path", { ref: pathRef, d: initial, fill: "currentColor" })
+      children: /* @__PURE__ */ jsx31("path", { ref: pathRef, d: initial, fill: "currentColor" })
     }
   );
 }
 
 // src/navbar/navbar.jsx
-import { useRef as useRef14, useState as useState13 } from "react";
+import { useRef as useRef14, useState as useState12 } from "react";
 import { useGSAP as useGSAP7 } from "@gsap/react";
 import gsap11 from "gsap";
 import { twMerge as twMerge14 } from "tailwind-merge";
-import { Fragment as Fragment5, jsx as jsx31, jsxs as jsxs21 } from "react/jsx-runtime";
+import { Fragment as Fragment5, jsx as jsx32, jsxs as jsxs21 } from "react/jsx-runtime";
 var DESKTOP_ALIGN = {
   center: "justify-center",
   // Sin padding propio: el respiro por arriba lo pone ya el `p-[var(--gap-block)]` del <nav>, y
@@ -4817,7 +4989,7 @@ function NavItems({ items, selectedItem, onSelect, vertical }) {
       if (el) morphSelection(el, i === selectedItem);
     });
   }, { dependencies: [selectedItem, items.length], scope: containerRef });
-  return /* @__PURE__ */ jsx31("div", { ref: containerRef, className: twMerge14("inline-flex gap-[var(--gap-group)]", vertical && "flex-col"), children: items.map((item, i) => {
+  return /* @__PURE__ */ jsx32("div", { ref: containerRef, className: twMerge14("inline-flex gap-[var(--gap-group)]", vertical && "flex-col"), children: items.map((item, i) => {
     const iconOnly = !item.label;
     return /* @__PURE__ */ jsxs21(
       "button",
@@ -4833,8 +5005,8 @@ function NavItems({ items, selectedItem, onSelect, vertical }) {
           ...iconOnly ? { width: "var(--control-size-md)" } : { padding: "0 20px" }
         },
         children: [
-          item.icon && (typeof item.icon === "string" ? /* @__PURE__ */ jsx31(Icon, { name: item.icon }) : item.icon),
-          item.label && /* @__PURE__ */ jsx31("span", { children: item.label })
+          item.icon && (typeof item.icon === "string" ? /* @__PURE__ */ jsx32(Icon, { name: item.icon }) : item.icon),
+          item.label && /* @__PURE__ */ jsx32("span", { children: item.label })
         ]
       },
       item.id ?? i
@@ -4854,7 +5026,7 @@ function LogoButton({ logo }) {
     }
     morphSelection(ref.current, !!logo.active);
   }, { dependencies: [logo.active] });
-  return /* @__PURE__ */ jsx31(
+  return /* @__PURE__ */ jsx32(
     "button",
     {
       ref: (el) => attachRef2(el, ref, null, logo.buttonRef),
@@ -4868,14 +5040,14 @@ function LogoButton({ logo }) {
         width: "var(--control-size-md)",
         height: "var(--control-size-md)"
       },
-      children: typeof logo.icon === "string" ? /* @__PURE__ */ jsx31(Icon, { name: logo.icon }) : logo.icon
+      children: typeof logo.icon === "string" ? /* @__PURE__ */ jsx32(Icon, { name: logo.icon }) : logo.icon
     }
   );
 }
 function AccountButton({ account, buttonRef }) {
   const ref = useRef14(null);
   const didMountRef = useRef14(false);
-  const [broken, setBroken] = useState13(false);
+  const [broken, setBroken] = useState12(false);
   useGSAP7(() => {
     if (!ref.current) return;
     const shape = selectionShape(!!account.active);
@@ -4887,7 +5059,7 @@ function AccountButton({ account, buttonRef }) {
     morphSelection(ref.current, !!account.active);
   }, { dependencies: [account.active] });
   const photo = { width: "100%", height: "100%", objectFit: "cover", borderRadius: "inherit", userSelect: "none" };
-  return /* @__PURE__ */ jsx31(
+  return /* @__PURE__ */ jsx32(
     "button",
     {
       ref: (el) => attachRef2(el, ref, null, buttonRef),
@@ -4898,7 +5070,7 @@ function AccountButton({ account, buttonRef }) {
       className: twMerge14(ITEM_BASE, account.active && ITEM_SELECTED),
       ...pressHandlers(),
       style: { width: "var(--control-size-md)", height: "var(--control-size-md)" },
-      children: account.src && !broken ? /* @__PURE__ */ jsx31(
+      children: account.src && !broken ? /* @__PURE__ */ jsx32(
         "img",
         {
           src: account.src,
@@ -4907,7 +5079,7 @@ function AccountButton({ account, buttonRef }) {
           onError: () => setBroken(true),
           style: photo
         }
-      ) : /* @__PURE__ */ jsx31(
+      ) : /* @__PURE__ */ jsx32(
         Avatar,
         {
           seed: account.seed ?? account.alt ?? "usuario",
@@ -4931,14 +5103,14 @@ function Navbar({
   style
 }) {
   verifyTypesNavbar({ items, logo, account, selected, defaultSelected, onChange, align });
-  const [internalSelected, setInternalSelected] = useState13(defaultSelected);
+  const [internalSelected, setInternalSelected] = useState12(defaultSelected);
   const isControlled = selected !== void 0;
   const selectedItem = isControlled ? selected : internalSelected;
   const handleSelect = (i) => {
     if (!isControlled) setInternalSelected(i);
     onChange == null ? void 0 : onChange(i, items[i]);
   };
-  const [accountOpen, setAccountOpen] = useState13(false);
+  const [accountOpen, setAccountOpen] = useState12(false);
   const accountRef = useRef14(null);
   const captureAccount = (node) => {
     if (node && node.offsetWidth > 0) accountRef.current = node;
@@ -4962,13 +5134,13 @@ function Navbar({
         ),
         style,
         children: [
-          logo && /* @__PURE__ */ jsx31(LogoButton, { logo }),
-          /* @__PURE__ */ jsx31(NavItems, { items, selectedItem, onSelect: handleSelect, vertical: true }),
-          accountProps && /* @__PURE__ */ jsx31("div", { className: "mt-auto flex -mb-[9px]", children: /* @__PURE__ */ jsx31(AccountButton, { account: accountProps, buttonRef: captureAccount }) })
+          logo && /* @__PURE__ */ jsx32(LogoButton, { logo }),
+          /* @__PURE__ */ jsx32(NavItems, { items, selectedItem, onSelect: handleSelect, vertical: true }),
+          accountProps && /* @__PURE__ */ jsx32("div", { className: "mt-auto flex -mb-[9px]", children: /* @__PURE__ */ jsx32(AccountButton, { account: accountProps, buttonRef: captureAccount }) })
         ]
       }
     ),
-    /* @__PURE__ */ jsx31(
+    /* @__PURE__ */ jsx32(
       "nav",
       {
         className: twMerge14(
@@ -4982,14 +5154,14 @@ function Navbar({
             className: "flex items-center gap-1 rounded-[var(--radius-full)] bg-[var(--md-sys-color-surface)] p-1",
             style: { boxShadow: "var(--shadow-floating)" },
             children: [
-              /* @__PURE__ */ jsx31(NavItems, { items, selectedItem, onSelect: handleSelect, vertical: false }),
-              accountProps && /* @__PURE__ */ jsx31(AccountButton, { account: accountProps, buttonRef: captureAccount })
+              /* @__PURE__ */ jsx32(NavItems, { items, selectedItem, onSelect: handleSelect, vertical: false }),
+              accountProps && /* @__PURE__ */ jsx32(AccountButton, { account: accountProps, buttonRef: captureAccount })
             ]
           }
         )
       }
     ),
-    (account == null ? void 0 : account.options) && /* @__PURE__ */ jsx31(
+    (account == null ? void 0 : account.options) && /* @__PURE__ */ jsx32(
       OptionsModal,
       {
         open: accountOpen,
@@ -5003,12 +5175,12 @@ function Navbar({
 }
 
 // src/dragScroll/dragScroll.jsx
-import { useCallback as useCallback6, useEffect as useEffect8, useLayoutEffect as useLayoutEffect2, useRef as useRef15, useState as useState14 } from "react";
+import { useCallback as useCallback6, useEffect as useEffect8, useLayoutEffect as useLayoutEffect2, useRef as useRef15, useState as useState13 } from "react";
 import { twMerge as twMerge15 } from "tailwind-merge";
 import gsap12 from "gsap";
 import { Draggable as Draggable2 } from "gsap/Draggable";
 import { InertiaPlugin } from "gsap/InertiaPlugin";
-import { jsx as jsx32 } from "react/jsx-runtime";
+import { jsx as jsx33 } from "react/jsx-runtime";
 gsap12.registerPlugin(Draggable2, InertiaPlugin);
 var DRAG_TYPE = { y: "scrollTop", x: "scrollLeft", both: "scroll" };
 var EDGE_RESISTANCE = 0.85;
@@ -5048,7 +5220,7 @@ function useDragScroll(ref, { axis = "y", inertia = true, disabled = false } = {
   }, [ref, axis, inertia, disabled]);
 }
 function useEdgeFade(ref, axis, size) {
-  const [edges, setEdges] = useState14([0, 0]);
+  const [edges, setEdges] = useState13([0, 0]);
   const measure = useCallback6(() => {
     const el = ref.current;
     if (!el) return;
@@ -5091,7 +5263,7 @@ function DragScroll({
   const size = fadeSize ?? 32;
   const [fadeStart, fadeEnd] = useEdgeFade(scrollRef, axis, fade ? size : 0);
   const horizontal = axis === "x";
-  return /* @__PURE__ */ jsx32(
+  return /* @__PURE__ */ jsx33(
     "div",
     {
       ref: scrollRef,
@@ -5130,6 +5302,7 @@ export {
   MORPH,
   MORPH_SCALE,
   ModalAnimation,
+  ModalCloseSection,
   MorphAnimation,
   Navbar,
   OnboardingModal,

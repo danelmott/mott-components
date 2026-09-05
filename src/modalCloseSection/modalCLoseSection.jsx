@@ -1,42 +1,52 @@
 'use client';
-import CustomModal from "../customModal/customModal";
-import { twMerge } from "tailwind-merge";
-import Icon from "../icon/icon";
-import { pressHandlers } from "../animations/motion";
+import CustomModal from '../customModal/customModal.jsx';
+import Button from '../buttons/button.jsx';
+import Text from '../text/text.jsx';
+import { verifyTypesModalCloseSection } from '../utils/verifyTypes.js';
 
+export default function ModalCloseSection({ open, onClose, triggerRef, animation, onCloseSession }) {
+    verifyTypesModalCloseSection({ open, onClose, triggerRef, animation, onCloseSession });
 
-export default function ModalCloseSection(open, onClose, animation, triggerRef, onCLoseSession) {
+    /*El radio es el mismo que el del menu de opciones a proposito: esta modal aterriza encima de el,
+      compartiendo su borde izquierdo (ver `OVER_ROW_ANIMATION` en optionsModal), y dos paneles
+      alineados con radios distintos se leen como un descuadre.*/
     return (
         <CustomModal
-         open={open}
-         onClose={onClose}
-         triggerRef={triggerRef}
-         className={twMerge('w-[360px]','h-[300px]')}
+            open={open}
+            onClose={onClose}
+            triggerRef={triggerRef}
+            animation={animation}
+            className="w-[22rem]  rounded-[32px]"
         >
-            <div className="flex  flex-col gap-[var(--gap-block)]">
-                <div className="f">
-                    <h2>
-                        ¿Quieres cerrar session?, esperemos solo sea un hasta luego.
-                    </h2>
+            {/*Dos grupos, no tres elementos sueltos: el titulo y su linea de apoyo son una sola cosa
+               y van juntos (`--gap-section`), y las acciones se separan del bloque de texto con el
+               salto grande. Con un unico gap para los tres, "Cerrar sesion" quedaba tan cerca de la
+               frase que se leia como parte de ella, y es el boton irreversible del panel.*/}
+            <div className="flex flex-col gap-[var(--gap-page)]">
+                <div className="flex flex-col gap-[var(--gap-section)]">
+                    <Text variant="headline-small" as="h2" className="mott-title-emphasis">
+                        ¿Quieres cerrar sesión?
+                    </Text>
+                    <Text variant="body-medium" tone="muted">
+                        Esperemos que sea solo un hasta luego.
+                    </Text>
                 </div>
 
-                {/*container buttons*/}
-                <div className="flex w-[full]">
-                  <button
-                  type="button"
-                   onClick={() => onClose()}
-                    {...pressHandlers()}
-                  >
-                    Cancelar
-                  </button>
-                  
-                  <button
-                    {...pressHandlers()}
-                  >
-                    Cerrar session
-                  </button>
+                <div className="flex justify-end gap-[var(--gap-group)]">
+                    <Button variant="ghost" onClick={() => onClose?.()}>
+                        Cancelar
+                    </Button>
+                    <Button
+                        variant="danger"
+                        onClick={() => {
+                            onCloseSession?.();
+                            onClose?.();
+                        }}
+                    >
+                        Cerrar sesión
+                    </Button>
                 </div>
             </div>
         </CustomModal>
-    )
+    );
 }

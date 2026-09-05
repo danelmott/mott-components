@@ -211,7 +211,7 @@ function OptionsDemo() {
         open={open}
         onClose={() => setOpen(false)}
         triggerRef={avatarRef}
-        name="Danel Mantilla Palomino"
+        name="danel"
         email="mantillapalominodanel@gmail.com"
         items={[
           settingsItem(),

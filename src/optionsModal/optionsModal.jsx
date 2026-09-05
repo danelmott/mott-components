@@ -20,7 +20,16 @@ const ROW_TONE = {
     danger: 'text-[var(--md-sys-color-error)]',
 };
 
-const APPEARANCE_ANIMATION = new AnchoredAnimation({ anchor: 'panel', align: 'edge' });
+/*Las dos modales que se abren desde una fila de este menu se colocan contra el PANEL del menu y no
+  contra la fila: colgadas de la fila, un panel mas ancho que el menu le sobresale por la izquierda y
+  los bordes quedan descuadrados.
+
+  Lo que cambia entre las dos es contra que borde se apoyan en vertical. Apariencia comparte la
+  esquina superior izquierda del menu, o sea que lo sustituye entero mientras dura. La confirmacion
+  de cerrar sesion se apoya sobre SU FILA - aparece donde estaba el cursor en vez de mandarte a
+  buscarla - y solo toma del menu la alineacion horizontal.*/
+const OVER_MENU_ANIMATION = new AnchoredAnimation({ anchor: 'panel', align: 'edge' });
+const OVER_ROW_ANIMATION = new AnchoredAnimation({ anchor: 'panel', align: 'row' });
 
 const ICON_TONE = {
     default: 'text-[var(--md-sys-color-on-surface-variant)]',
@@ -46,9 +55,12 @@ export const feedbackItem = (overrides = {}) => ({
 
 export const logoutItem = (overrides = {}) => ({
     id: 'logout',
+    kind: 'logout',
     icon: 'logout',
     label: 'Cerrar Sesión',
     tone: 'danger',
+    // mismo trato que 'appearance'/'settings': la confirmacion se apoya ENCIMA del menu
+    closeOnSelect: false,
     ...overrides,
 });
 
@@ -86,18 +98,24 @@ export default function OptionsModal({
 
     const [appearanceOpen, setAppearanceOpen] = useState(false);
     const [settingsOpen, setSettingsOpen] = useState(false);
-    const [logoutOpen, setLogoutOPen] = useState(false);
+    const [logoutOpen, setLogoutOpen] = useState(false);
 
     const rowRefs = useRef({});
     const appearanceRef = useRef(null);
     const settingsRef = useRef(null);
+    const logoutRef = useRef(null);
 
     const handleSelect = (item, event) => {
         if (item.kind === 'appearance') setAppearanceOpen(true);
         if (item.kind === 'settings') setSettingsOpen(true);
-        if (item.kinf === 'logout') setLogoutOPen(true);
+        if (item.kind === 'logout') setLogoutOpen(true);
         item.onClick?.(event);
-        if (item.closeOnSelect !== false && item.kind !== 'appearance' && item.kind !== 'settings') onClose?.();
+        if (
+            item.closeOnSelect !== false &&
+            item.kind !== 'appearance' &&
+            item.kind !== 'settings' &&
+            item.kind !== 'logout'
+        ) onClose?.();
     };
 
     return (
@@ -138,6 +156,7 @@ export default function OptionsModal({
                                     attachRef(node, rowRefs, item.id ?? i, item.buttonRef);
                                     if (item.kind === 'appearance') appearanceRef.current = node;
                                     if (item.kind === 'settings') settingsRef.current = node;
+                                    if (item.kind === 'logout') logoutRef.current = node;
                                 }}
                                 type="button"
                                 role="menuitem"
@@ -163,7 +182,7 @@ export default function OptionsModal({
             open={appearanceOpen}
                 onClose={() => setAppearanceOpen(false)}
                 triggerRef={appearanceRef}
-                animation={APPEARANCE_ANIMATION}
+                animation={OVER_MENU_ANIMATION}
             />
 
             <SettingsModal
@@ -176,10 +195,10 @@ export default function OptionsModal({
             />
             <ModalCloseSection
                 open={logoutOpen}
-                onClose={() => setLogoutOPen(false)}
-                animation={anchoredAnimation}
-                onCLoseSession={console.log('session cerrada')}
-
+                onClose={() => setLogoutOpen(false)}
+                triggerRef={logoutRef}
+                animation={OVER_ROW_ANIMATION}
+                onCloseSession={() => console.log('sesión cerrada')}
             />
         </CustomModal>
     );

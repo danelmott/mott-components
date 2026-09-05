@@ -516,7 +516,7 @@ export class MorphAnimation extends ModalAnimation {
 // from the trigger and settles on top of it. Quicker beats, and it fades the ghost back in on close
 // because the trigger stays hidden underneath the whole time.
 export class AnchoredAnimation extends MorphAnimation {
-    constructor({ cover = 6, align = 'corner', anchor = 'trigger', ...options } = {}) {
+    constructor({ cover = 6, gap = 12, align = 'corner', anchor = 'trigger', ...options } = {}) {
         super({
             openDuration: DURATION.slow,
             closeDuration: DURATION.slow,
@@ -541,6 +541,7 @@ export class AnchoredAnimation extends MorphAnimation {
             ...options,
         });
         this.cover = cover;
+        this.gap = gap;
         this.align = align;
         this.anchor = anchor;
     }
@@ -572,7 +573,7 @@ export class AnchoredAnimation extends MorphAnimation {
       `cover` px past the trigger's bottom - and grows upwards instead. Mirrored, not improvised: the
       overlap over the trigger is the same in both directions. The clamp stays as the last resort for a
       panel too tall to fit either way.*/
-    computeAnchoredPosition(triggerRect, panelRect) {
+    computeAnchoredPosition(anchorRect, panelRect, triggerRect = anchorRect) {
         const margin = 8;
         const fit = (value, size, viewport) =>
             Math.max(margin, Math.min(value, viewport - size - margin));
@@ -585,8 +586,8 @@ export class AnchoredAnimation extends MorphAnimation {
           tendria nada que ver con el boton que lo abrio.*/
         if (this.align === 'center') {
             return {
-                left: fit(triggerRect.left + (triggerRect.width - panelRect.width) / 2, panelRect.width, window.innerWidth),
-                top: fit(triggerRect.top + (triggerRect.height - panelRect.height) / 2, panelRect.height, window.innerHeight),
+                left: fit(anchorRect.left + (anchorRect.width - panelRect.width) / 2, panelRect.width, window.innerWidth),
+                top: fit(anchorRect.top + (anchorRect.height - panelRect.height) / 2, panelRect.height, window.innerHeight),
             };
         }
         
@@ -598,19 +599,70 @@ export class AnchoredAnimation extends MorphAnimation {
           que explicar - se lee como una hoja puesta encima de la otra.*/
         if (this.align === 'edge') {
             return {
-                left: fit(triggerRect.left, panelRect.width, window.innerWidth),
-                top: fit(triggerRect.top, panelRect.height, window.innerHeight),
+                left: fit(anchorRect.left, panelRect.width, window.innerWidth),
+                top: fit(anchorRect.top, panelRect.height, window.innerHeight),
             };
         }
         
-        const downwards = triggerRect.top - this.cover;
+        /*`side`: AL LADO de la caja de referencia, no encima. Comparte el borde de arriba - que es lo
+          que hace que se lean como dos hojas de la misma pila - pero se separa `gap` px en
+          horizontal, asi que la caja de la que sale sigue entera a la vista. Es lo que quiere una
+          confirmacion: tapar el menu que la abrio esconde justo el contexto de lo que se esta
+          confirmando.
+
+          Se abre hacia la derecha y, si no cabe, hacia la izquierda: espejo, no improvisado - la
+          separacion es la misma en los dos sentidos. El `fit` final sigue siendo el ultimo recurso
+          para un panel que no quepa a ningun lado.*/
+        if (this.align === 'side') {
+            const toTheRight = anchorRect.right + this.gap;
+            const fitsRight = toTheRight + panelRect.width <= window.innerWidth - margin;
+            return {
+                left: fit(
+                    fitsRight ? toTheRight : anchorRect.left - this.gap - panelRect.width,
+                    panelRect.width,
+                    window.innerWidth,
+                ),
+                top: fit(anchorRect.top, panelRect.height, window.innerHeight),
+            };
+        }
+
+        /*`row`: el unico modo que mezcla las dos cajas. En horizontal se alinea con la caja de
+          referencia - con `anchor: 'panel'`, el borde izquierdo del menu - y en vertical se apoya
+          SOBRE el trigger, tapandolo, con el mismo desborde de `cover` px y el mismo volteo hacia
+          arriba que el modo `corner`.
+
+          Es lo que quiere una confirmacion que sale de una fila de menu: aparece justo sobre la fila
+          que la abrio (asi que no hay que buscarla, sale donde estaba el cursor), pero sin colgar de
+          su esquina - compartir el borde izquierdo con el menu es lo que evita que un panel mas
+          ancho asome descuadrado por la izquierda.*/
+        if (this.align === 'row') {
+            const over = triggerRect.top + (triggerRect.height - panelRect.height) / 2;
+
+            /*Y ademas se queda DENTRO de la caja de referencia siempre que quepa en ella. Centrar
+              sobre la fila es lo que se quiere mientras el panel sea bajito, pero la fila que abre
+              una confirmacion suele ser la ultima del menu: en cuanto el panel crece, la mitad que
+              le sobra por abajo se sale del menu y cuelga en el vacio, sin nada detras con lo que
+              alinearse. Sujetandolo a los bordes del menu la confirmacion se sigue leyendo como una
+              hoja puesta sobre el, que es de donde salio. Si no cabe ni asi, manda el centrado sobre
+              la fila y el `fit` de la ventana hace de ultimo recurso, como en los demas modos.*/
+            const withinAnchor = panelRect.height <= anchorRect.height
+                ? Math.max(anchorRect.top, Math.min(over, anchorRect.bottom - panelRect.height))
+                : over;
+
+            return {
+                left: fit(anchorRect.left, panelRect.width, window.innerWidth),
+                top: fit(withinAnchor, panelRect.height, window.innerHeight),
+            };
+        }
+
+        const downwards = anchorRect.top - this.cover;
         const fitsDownwards = downwards + panelRect.height <= window.innerHeight - margin;
         const top = fitsDownwards
             ? downwards
-            : triggerRect.bottom + this.cover - panelRect.height;
+            : anchorRect.bottom + this.cover - panelRect.height;
         
         return {
-            left: fit(triggerRect.left - this.cover, panelRect.width, window.innerWidth),
+            left: fit(anchorRect.left - this.cover, panelRect.width, window.innerWidth),
             top: fit(top, panelRect.height, window.innerHeight),
         };
     }
@@ -623,6 +675,7 @@ export class AnchoredAnimation extends MorphAnimation {
         const { left, top } = this.computeAnchoredPosition(
             this.anchorRect(trigger),
             panel.getBoundingClientRect(),
+            trigger.getBoundingClientRect(),
         );
         gsap.set(panel, { left, top });
     }

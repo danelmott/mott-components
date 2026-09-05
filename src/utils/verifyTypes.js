@@ -545,11 +545,20 @@ export function verifyTypesSettingsModal({ open, onClose, triggerRef, animation,
     return true;
 }
 
-export function verifyTypesGradientProfile({ name, email, showControls, verifiedLabel } = {}) {
+export function verifyTypesModalCloseSection({ open, onClose, triggerRef, animation, onCloseSession } = {}) {
+    assertType('ModalCloseSection', 'open', open, 'boolean');
+    assertType('ModalCloseSection', 'onClose', onClose, 'function');
+    assertRef('ModalCloseSection', 'triggerRef', triggerRef);
+    assertAnimation('ModalCloseSection', 'animation', animation);
+    assertType('ModalCloseSection', 'onCloseSession', onCloseSession, 'function');
+    return true;
+}
+
+export function verifyTypesGradientProfile({ name, email, size, fill } = {}) {
     assertType('GeneratorGradientProfile', 'name', name, 'string');
     assertType('GeneratorGradientProfile', 'email', email, 'string');
-    assertType('GeneratorGradientProfile', 'showControls', showControls, 'boolean');
-    assertType('GeneratorGradientProfile', 'verifiedLabel', verifiedLabel, 'string');
+    assertType('GeneratorGradientProfile', 'size', size, 'number');
+    assertType('GeneratorGradientProfile', 'fill', fill, 'boolean');
     return true;
 }
 
